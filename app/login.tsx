@@ -1,35 +1,77 @@
 import { Link, useRouter } from "expo-router";
-import { ScrollView,Text, View, StyleSheet, Pressable} from "react-native";
+import { ScrollView, Text, View, StyleSheet, Pressable, Alert } from "react-native";
 import { Button, TextInput } from "react-native";
+import { useState } from "react";
+import { login } from "@/hooks/authentication/AuthenticationHooks";
+
 
 export default function Login() {
     const router = useRouter();
 
+    const [username, setUsername] = useState("");
+    const [password, setPassword] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [secureText, setSecureText] = useState(true); // Pour afficher/masquer le mot de passe
+
+    const handleLogin = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const result = await login(username, password);
+            Alert.alert("Connexion réussie !");
+            router.replace("//(tabs)/index"); // Redirige vers la page d'accueil après connexion
+        } catch (err) {
+            if (err instanceof Error) {
+                setError(err.message);
+            } else {
+                setError("Une erreur est survenue.");
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
         <ScrollView style={styles.container}>
             <Text style={styles.label}>Nom d'utilisateur</Text>
-            <TextInput style={styles.input} placeholder="Nom d'utilisateur" />
-            
+            <TextInput
+                style={styles.input}
+                placeholder="Nom d'utilisateur"
+                value={username}
+                onChangeText={setUsername}
+            />
+
             <Text style={styles.label}>Mot de passe</Text>
-            {/*Need to add a reveal secureText button in the input*/}
-            <TextInput style={styles.input} placeholder="Mot de passe" secureTextEntry />
-            
-            {/*Need to add a forgot password button*/}
-            <Link href={"/register"} style={styles.forgotpass}>
+            <View style={styles.passwordContainer}>
+                <TextInput
+                    style={styles.inputPassword}
+                    placeholder="Mot de passe"
+                    secureTextEntry={secureText}
+                    value={password}
+                    onChangeText={setPassword}
+                />
+                <Pressable onPress={() => setSecureText(!secureText)} style={styles.toggleButton}>
+                    <Text>{secureText ? "👁️" : "🙈"}</Text>
+                </Pressable>
+            </View>
+
+            {error && <Text style={styles.error}>{error}</Text>}
+
+            <Link href={"/"} style={styles.forgotpass}>
                 Forgot your password ?
             </Link>
 
-            {/*Divider*/}
-            <View style={{height: 1, marginVertical: 8}} />
+            <View style={{ height: 1, marginVertical: 8 }} />
 
-            <Button title="Se connecter" onPress={() => alert("Connexion réussie !")} />
-            
-            {/*Separator*/}
-            <View style={{height: 1, backgroundColor: 'black', marginVertical: 12}} />
+            <Button title={loading ? "Connexion..." : "Se connecter"} onPress={handleLogin} disabled={loading} />
 
-            {/*Google login button*/}
-            <Button title="Se connecter avec Google" onPress={() => alert("Connexion réussie !")} />
-            <View style={{height: 1, marginVertical: 8}} />
+            <View style={{ height: 1, backgroundColor: 'black', marginVertical: 12 }} />
+
+            <Button title="Se connecter avec Google" onPress={() => alert("Connexion Google")} />
+
+            <View style={{ height: 1, marginVertical: 8 }} />
+
             <Pressable onPress={() => router.replace("/register")}>
                 <Text style={styles.linkButton}>Don't have an account ?</Text>
             </Pressable>
@@ -55,6 +97,28 @@ const styles = StyleSheet.create({
         textDecorationLine: "underline",
         color: "blue",
         textAlign: "right",
+    },
+    inputPassword: {
+        borderWidth: 1,
+        padding: 10,
+        borderRadius: 5,
+        flex: 1,
+    },
+    passwordContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        borderWidth: 1,
+        borderRadius: 5,
+        paddingRight: 10,
+        marginBottom: 10,
+    },
+    toggleButton: {
+        padding: 10,
+    },
+    error: {
+        color: "red",
+        fontSize: 14,
+        marginBottom: 10,
     },
 
     container: {
