@@ -40,3 +40,6 @@ app-example
 # IDE files
 .vscode/
 .idea/
+
+# .env
+.env
