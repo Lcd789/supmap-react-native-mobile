@@ -10,11 +10,11 @@
     "newArchEnabled": true,
     "ios": {
       "config": {
-        "googleMaps": {
-          "apiKey": "${EXPO_PUBLIC_GOOGLE_API_KEY}"
-        }
+        "usesNonExemptEncryption": false
       },
-
+      "infoPlist": {
+        "GMSApiKey": "${EXPO_PUBLIC_GOOGLE_API_KEY}"
+      },
       "supportsTablet": true
     },
     "android": {
@@ -43,7 +43,8 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
-      ]
+      ],
+      "expo-build-properties"
     ],
     "experiments": {
       "typedRoutes": true

@@ -26,9 +26,7 @@ export default function Home() {
     const { routeInfo, isLoading, error, calculateRoute } = useRoute();
 
     const handleAddWaypoint = useCallback(() => {
-        setWaypoints(prev => [
-            ...prev,
-            { address: "", id: Date.now().toString() }]);
+        setWaypoints(prev => [...prev, { address: "" }]);
     }, []);
 
     const handleRemoveWaypoint = useCallback((index: number) => {
@@ -40,53 +38,18 @@ export default function Home() {
     }, []);
 
     const handleSearch = useCallback(async () => {
-
-        console.log('Début de la recherche avec les paramètres suivants :');
-        console.log('origin : ' + origin);
-        console.log('destination : ' + destination);
-        console.log('waypoints : ' + JSON.stringify(waypoints));
-        console.log('mode :'+ selectedMode);
-
-        if(!origin.trim()) {
-            console.error('Point de départ manquant : ' + JSON.stringify(origin));
-            return;
+        const routeResult = await calculateRoute(origin, destination, waypoints, selectedMode);
+        if (routeResult) {
+            const { bounds } = routeResult;
+            const newRegion = {
+                latitude: (bounds.northeast.lat + bounds.southwest.lat) / 2,
+                longitude: (bounds.northeast.lng + bounds.southwest.lng) / 2,
+                latitudeDelta: Math.abs(bounds.northeast.lat - bounds.southwest.lat) * 1.5,
+                longitudeDelta: Math.abs(bounds.northeast.lng - bounds.southwest.lng) * 1.5,
+            };
+            setMapRegion(newRegion);
+            mapRef.current?.animateToRegion(newRegion, 1000);
         }
-        if(!destination.trim()) {
-            console.error('Point d\'arrivée manquant : ' + JSON.stringify(destination));
-            return;
-        }
-
-        const validWaypoints = waypoints.filter(wp => wp.address.trim() !== '');
-        if(waypoints.length !== validWaypoints.length) {
-            console.warn('Des points de passage sont vides : ' + JSON.stringify(waypoints));
-        }
-
-        try{
-            const routeResult = await calculateRoute(origin, destination, waypoints, selectedMode);
-            console.log('Résultat de calculateRoute :'+ routeResult);
-            if (routeResult) {
-                const { bounds } = routeResult;
-                console.log('Bounds reçus', bounds);
-
-                const newRegion = {
-                    latitude: (bounds.northeast.lat + bounds.southwest.lat) / 2,
-                    longitude: (bounds.northeast.lng + bounds.southwest.lng) / 2,
-                    latitudeDelta: Math.abs(bounds.northeast.lat - bounds.southwest.lat) * 1.5,
-                    longitudeDelta: Math.abs(bounds.northeast.lng - bounds.southwest.lng) * 1.5,
-                };
-                console.log('Nouvelle région calculée', newRegion);
-
-                setMapRegion(newRegion);
-                mapRef.current?.animateToRegion(newRegion, 1000);
-            }
-            else{
-                console.log('Aucun résultat reçu de calculateRoute');
-            }
-        }catch(error)
-        {
-            console.log('Erreur lors du calcul de l\'itinéraire : ' + error);
-        }
-        
     }, [origin, destination, waypoints, selectedMode, calculateRoute, setMapRegion]);
 
     const handleReverse = useCallback(() => {

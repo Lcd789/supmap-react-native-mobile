@@ -1,22 +1,25 @@
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 export default function RootLayout() {
   return (
     <>
-    <StatusBar style="dark" />
-      <Stack>
-        {/* Tabs at the bottom, name = directory, each file inside becomes a tab */}
-        <Stack.Screen 
-        name="(tabs)" 
-        options={{ 
-          headerShown: false 
-        }} 
-        />
-        <Stack.Screen name="login" options={{}} />
-        <Stack.Screen name="register" options={{}} />
-        <Stack.Screen name="+not-found" options={{}} />
-      </Stack>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+        <StatusBar style="dark" />
+        <Stack>
+          {/* Tabs at the bottom, name = directory, each file inside becomes a tab */}
+          <Stack.Screen 
+          name="(tabs)" 
+          options={{ 
+            headerShown: false 
+          }} 
+          />
+          <Stack.Screen name="login" options={{}} />
+          <Stack.Screen name="register" options={{}} />
+          <Stack.Screen name="+not-found" options={{}} />
+        </Stack>
+      </GestureHandlerRootView>
     </>
   );
 }
