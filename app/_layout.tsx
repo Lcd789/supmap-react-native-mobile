@@ -15,8 +15,6 @@ export default function RootLayout() {
             headerShown: false 
           }} 
           />
-          <Stack.Screen name="login" options={{}} />
-          <Stack.Screen name="register" options={{}} />
           <Stack.Screen name="+not-found" options={{}} />
         </Stack>
       </GestureHandlerRootView>
