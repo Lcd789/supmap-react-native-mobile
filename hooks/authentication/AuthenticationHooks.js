@@ -1,22 +1,5 @@
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
 
-export async function verifyEmail(token) {
-
-    const response = await fetch(`${API_BASE_URL}/auth/confirm-email?token=${token}`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        }
-    });
-
-    if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const text = await response.text();
-    return text ? JSON.parse(text) : {};
-
-}
 
 export async function sendValidationEmailAgain(email) {
     const response = await fetch(`${API_BASE_URL}/auth/resend-confirmation-email`, {

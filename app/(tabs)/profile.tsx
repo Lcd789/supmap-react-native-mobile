@@ -1,24 +1,46 @@
 import { ScrollView, Text, View, StyleSheet, TextInput, Alert } from "react-native";
 import * as ImageSelector from "expo-image-picker";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Pencil, Save, Trash2 } from "lucide-react-native";
 import { TouchableOpacity } from "react-native";
 import { Image } from "expo-image";
+import { getUserData, deleteProfile } from "@/hooks/user/UserHooks";
+import * as SecureStore from "expo-secure-store";
+import { useRouter } from "expo-router";
+
 
 const DefaultProfileImage = require("../../assets/images/default-profile.png");
 
 export default function Profile() {
+    const router = useRouter();
     // États pour les données utilisateur
     const [selectedImage, setSelectedImage] = useState<string | undefined>(undefined);
-    const [username, setUsername] = useState("John Doe");
-    const [email, setEmail] = useState("john.doe@example.com");
+    const [username, setUsername] = useState("");
+    const [email, setEmail] = useState("");
     const [isEditingUsername, setIsEditingUsername] = useState(false);
     const [isEditingEmail, setIsEditingEmail] = useState(false);
     const [hasChanges, setHasChanges] = useState(false);
+    const [profileImage, setProfileImage] = useState<string | undefined>(undefined); 
 
     // État temporaire pour stocker les valeurs pendant l'édition
     const [tempUsername, setTempUsername] = useState(username);
     const [tempEmail, setTempEmail] = useState(email);
+
+    useEffect(() => {
+        async function fetchUserData() {
+            const userData = await getUserData();
+            console.log(userData);
+            if (userData) {
+                setUsername(userData.username || ""); 
+                setEmail(userData.email || "");
+                setTempUsername(userData.username || "");
+                setTempEmail(userData.email || "");
+                setProfileImage(userData.profileImage || undefined); 
+            }
+        }
+
+        fetchUserData();
+    }, []);
 
     const pickImageAsync = async () => {
         let result = await ImageSelector.launchImageLibraryAsync({
@@ -35,25 +57,38 @@ export default function Profile() {
 
     const handleSave = () => {
         // Ici, vous implementerez la logique pour sauvegarder les changements
+        setUsername(tempUsername);
+        setEmail(tempEmail);
         setHasChanges(false);
         Alert.alert("Succès", "Profil mis à jour avec succès");
     };
 
-    const handleDeleteAccount = () => {
-        Alert.alert(
-            "Confirmer la suppression",
-            "Êtes-vous sûr de vouloir supprimer votre compte ? Cette action est irréversible.",
-            [
-                { text: "Annuler", style: "cancel" },
-                { 
-                    text: "Supprimer", 
-                    style: "destructive",
-                    onPress: () => {
-                        // Ici, vous implementerez la logique de suppression
+    const handleDeleteAccount = async () => {
+        Alert.alert("Confirmation", "Voulez-vous vraiment supprimer votre profil ?", [
+            {
+                text: "Annuler",
+                style: "cancel",
+            },
+            {
+                text: "Supprimer",
+                onPress: async () => {
+                    try {
+                        await deleteProfile();
+                        Alert.alert("Profil supprimé", "Votre profil a été supprimé avec succès.");
+                        // Réinitialisation après suppression
+                        setUsername("");
+                        setEmail("");
+                        setProfileImage(undefined);
+                        setSelectedImage(undefined);
+                        await SecureStore.deleteItemAsync("authToken");
+                        router.replace("/login");
+                    } catch (error) {
+                        Alert.alert("Erreur", "La suppression du profil a échoué. Veuillez réessayer.");
                     }
-                }
-            ]
-        );
+                },
+                style: "destructive",
+            },
+        ]);
     };
 
     return (
@@ -63,7 +98,7 @@ export default function Profile() {
                 <View style={styles.imageSection}>
                     <View style={styles.imageContainer}>
                         <Image 
-                            source={selectedImage ? { uri: selectedImage } : DefaultProfileImage}
+                            source={selectedImage ? { uri: selectedImage } : profileImage ? { uri: profileImage } : DefaultProfileImage}
                             style={styles.profileImage}
                         />
                     </View>
@@ -151,6 +186,7 @@ export default function Profile() {
         </ScrollView>
     );
 }
+
 
 const styles = StyleSheet.create({
     container: {

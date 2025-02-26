@@ -2,6 +2,7 @@ import { useRouter } from "expo-router";
 import { ScrollView, Text, View, StyleSheet, Pressable, Alert, Button, TextInput } from "react-native";
 import { useState } from "react";
 import { login } from "@/hooks/authentication/AuthenticationHooks";
+import * as SecureStore from "expo-secure-store";
 
 export default function Login() {
     const router = useRouter();
@@ -16,10 +17,11 @@ export default function Login() {
         setLoading(true);
         setError(null);
         try {
-            const result = await login(username, password);
+            const authToken = await login(username, password);
+            await SecureStore.setItemAsync("authToken", authToken);
             Alert.alert("Connexion réussie !");
             try {
-                router.replace("//(tabs)/index"); // Correction ici
+                router.replace("/(tabs)/profile"); 
             } catch (routerError) {
                 setError("Erreur de redirection après connexion.");
             }
