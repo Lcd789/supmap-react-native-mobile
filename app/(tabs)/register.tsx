@@ -1,13 +1,17 @@
-import {Link, useRouter} from "expo-router";
-import { ScrollView, Text, View, StyleSheet, Pressable, Alert } from "react-native";
+import { Link, useRouter } from "expo-router";
+import {
+    ScrollView,
+    Text,
+    View,
+    StyleSheet,
+    Pressable,
+    Alert,
+} from "react-native";
 import { Button, TextInput } from "react-native";
 import { useState } from "react";
 import { register } from "@/hooks/authentication/AuthenticationHooks";
 
-
-
 export default function Register() {
-
     const router = useRouter();
     const [username, setUsername] = useState("");
     const [email, setEmail] = useState("");
@@ -30,8 +34,7 @@ export default function Register() {
                 // @ts-ignore
                 setError("Une erreur est survenue.");
             }
-        }
-        finally {
+        } finally {
             setLoading(false);
         }
     };
@@ -68,7 +71,11 @@ export default function Register() {
 
             <View style={{ height: 1, marginVertical: 8 }} />
 
-            <Button title={loading ? "Inscription..." : "S'inscrire"} onPress={handleRegister} disabled={loading} />
+            <Button
+                title={loading ? "Inscription..." : "S'inscrire"}
+                onPress={handleRegister}
+                disabled={loading}
+            />
 
             <View style={{ height: 1, marginVertical: 8 }} />
 
@@ -87,7 +94,7 @@ const styles = StyleSheet.create({
         fontSize: 16,
         marginBottom: 5,
     },
-    input:{
+    input: {
         borderWidth: 1,
         padding: 10,
         borderRadius: 5,

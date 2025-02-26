@@ -1,5 +1,14 @@
 import { useRouter } from "expo-router";
-import { ScrollView, Text, View, StyleSheet, Pressable, Alert, Button, TextInput } from "react-native";
+import {
+    ScrollView,
+    Text,
+    View,
+    StyleSheet,
+    Pressable,
+    Alert,
+    Button,
+    TextInput,
+} from "react-native";
 import { useState } from "react";
 import { login } from "@/hooks/authentication/AuthenticationHooks";
 import * as SecureStore from "expo-secure-store";
@@ -21,7 +30,7 @@ export default function Login() {
             await SecureStore.setItemAsync("authToken", authToken);
             Alert.alert("Connexion réussie !");
             try {
-                router.replace("/(tabs)/profile"); 
+                router.replace("/(tabs)/profile");
             } catch (routerError) {
                 setError("Erreur de redirection après connexion.");
             }
@@ -57,7 +66,10 @@ export default function Login() {
                     value={password}
                     onChangeText={setPassword}
                 />
-                <Pressable onPress={() => setSecureText(!secureText)} style={styles.toggleButton}>
+                <Pressable
+                    onPress={() => setSecureText(!secureText)}
+                    style={styles.toggleButton}
+                >
                     <Text>{secureText ? "👁️" : "🙈"}</Text>
                 </Pressable>
             </View>
@@ -70,11 +82,24 @@ export default function Login() {
 
             <View style={{ height: 1, marginVertical: 8 }} />
 
-            <Button title={loading ? "Connexion..." : "Se connecter"} onPress={handleLogin} disabled={loading} />
+            <Button
+                title={loading ? "Connexion..." : "Se connecter"}
+                onPress={handleLogin}
+                disabled={loading}
+            />
 
-            <View style={{ height: 1, backgroundColor: "black", marginVertical: 12 }} />
+            <View
+                style={{
+                    height: 1,
+                    backgroundColor: "black",
+                    marginVertical: 12,
+                }}
+            />
 
-            <Button title="Se connecter avec Google" onPress={() => alert("Connexion Google")} />
+            <Button
+                title="Se connecter avec Google"
+                onPress={() => alert("Connexion Google")}
+            />
 
             <View style={{ height: 1, marginVertical: 8 }} />
 

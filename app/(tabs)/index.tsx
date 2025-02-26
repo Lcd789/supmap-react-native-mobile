@@ -1,13 +1,20 @@
-import React, { useRef, useState, useCallback } from 'react';
-import { View, StyleSheet, Animated, Text, TouchableOpacity, KeyboardAvoidingView } from 'react-native';
-import MapView from 'react-native-maps';
-import { useLocation } from '../../hooks/useLocation';
-import { useRoute } from '../../hooks/useRoute';
-import { SearchBar } from '../../components/MapComponents/SearchBar';
-import { RouteMap } from '../../components/MapComponents/RouteMap';
-import { RouteInfo } from '../../components/MapComponents/RouteInfo';
-import { TransportMode, Waypoint } from '../../types';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import React, { useRef, useState, useCallback } from "react";
+import {
+    View,
+    StyleSheet,
+    Animated,
+    Text,
+    TouchableOpacity,
+    KeyboardAvoidingView,
+} from "react-native";
+import MapView from "react-native-maps";
+import { useLocation } from "../../hooks/useLocation";
+import { useRoute } from "../../hooks/useRoute";
+import { SearchBar } from "../../components/MapComponents/SearchBar";
+import { RouteMap } from "../../components/MapComponents/RouteMap";
+import { RouteInfo } from "../../components/MapComponents/RouteInfo";
+import { TransportMode, Waypoint } from "../../types";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 
 export default function Home() {
     const [origin, setOrigin] = useState<string>("");
@@ -15,7 +22,7 @@ export default function Home() {
     const [waypoints, setWaypoints] = useState<Waypoint[]>([]);
     const [selectedMode, setSelectedMode] = useState<TransportMode>("driving");
     const [showSteps, setShowSteps] = useState<boolean>(false);
-    
+
     const mapRef = useRef<MapView | null>(null);
     const stepsAnimation = useRef(new Animated.Value(0)).current;
 
@@ -26,68 +33,96 @@ export default function Home() {
     const { routeInfo, isLoading, error, calculateRoute } = useRoute();
 
     const handleAddWaypoint = useCallback(() => {
-        setWaypoints(prev => [
+        setWaypoints((prev) => [
             ...prev,
-            { address: "", id: Date.now().toString() }]);
+            { address: "", id: Date.now().toString() },
+        ]);
     }, []);
 
     const handleRemoveWaypoint = useCallback((index: number) => {
-        setWaypoints(prev => prev.filter((_, i) => i !== index));
+        setWaypoints((prev) => prev.filter((_, i) => i !== index));
     }, []);
 
-    const handleUpdateWaypoint = useCallback((index: number, address: string) => {
-        setWaypoints(prev => prev.map((wp, i) => i === index ? { ...wp, address } : wp));
-    }, []);
+    const handleUpdateWaypoint = useCallback(
+        (index: number, address: string) => {
+            setWaypoints((prev) =>
+                prev.map((wp, i) => (i === index ? { ...wp, address } : wp))
+            );
+        },
+        []
+    );
 
     const handleSearch = useCallback(async () => {
+        console.log("Début de la recherche avec les paramètres suivants :");
+        console.log("origin : " + origin);
+        console.log("destination : " + destination);
+        console.log("waypoints : " + JSON.stringify(waypoints));
+        console.log("mode :" + selectedMode);
 
-        console.log('Début de la recherche avec les paramètres suivants :');
-        console.log('origin : ' + origin);
-        console.log('destination : ' + destination);
-        console.log('waypoints : ' + JSON.stringify(waypoints));
-        console.log('mode :'+ selectedMode);
-
-        if(!origin.trim()) {
-            console.error('Point de départ manquant : ' + JSON.stringify(origin));
+        if (!origin.trim()) {
+            console.error(
+                "Point de départ manquant : " + JSON.stringify(origin)
+            );
             return;
         }
-        if(!destination.trim()) {
-            console.error('Point d\'arrivée manquant : ' + JSON.stringify(destination));
+        if (!destination.trim()) {
+            console.error(
+                "Point d'arrivée manquant : " + JSON.stringify(destination)
+            );
             return;
         }
 
-        const validWaypoints = waypoints.filter(wp => wp.address.trim() !== '');
-        if(waypoints.length !== validWaypoints.length) {
-            console.warn('Des points de passage sont vides : ' + JSON.stringify(waypoints));
+        const validWaypoints = waypoints.filter(
+            (wp) => wp.address.trim() !== ""
+        );
+        if (waypoints.length !== validWaypoints.length) {
+            console.warn(
+                "Des points de passage sont vides : " +
+                    JSON.stringify(waypoints)
+            );
         }
 
-        try{
-            const routeResult = await calculateRoute(origin, destination, waypoints, selectedMode);
-            console.log('Résultat de calculateRoute :'+ routeResult);
+        try {
+            const routeResult = await calculateRoute(
+                origin,
+                destination,
+                waypoints,
+                selectedMode
+            );
+            console.log("Résultat de calculateRoute :" + routeResult);
             if (routeResult) {
                 const { bounds } = routeResult;
-                console.log('Bounds reçus', bounds);
+                console.log("Bounds reçus", bounds);
 
                 const newRegion = {
                     latitude: (bounds.northeast.lat + bounds.southwest.lat) / 2,
-                    longitude: (bounds.northeast.lng + bounds.southwest.lng) / 2,
-                    latitudeDelta: Math.abs(bounds.northeast.lat - bounds.southwest.lat) * 1.5,
-                    longitudeDelta: Math.abs(bounds.northeast.lng - bounds.southwest.lng) * 1.5,
+                    longitude:
+                        (bounds.northeast.lng + bounds.southwest.lng) / 2,
+                    latitudeDelta:
+                        Math.abs(bounds.northeast.lat - bounds.southwest.lat) *
+                        1.5,
+                    longitudeDelta:
+                        Math.abs(bounds.northeast.lng - bounds.southwest.lng) *
+                        1.5,
                 };
-                console.log('Nouvelle région calculée', newRegion);
+                console.log("Nouvelle région calculée", newRegion);
 
                 setMapRegion(newRegion);
                 mapRef.current?.animateToRegion(newRegion, 1000);
+            } else {
+                console.log("Aucun résultat reçu de calculateRoute");
             }
-            else{
-                console.log('Aucun résultat reçu de calculateRoute');
-            }
-        }catch(error)
-        {
-            console.log('Erreur lors du calcul de l\'itinéraire : ' + error);
+        } catch (error) {
+            console.log("Erreur lors du calcul de l'itinéraire : " + error);
         }
-        
-    }, [origin, destination, waypoints, selectedMode, calculateRoute, setMapRegion]);
+    }, [
+        origin,
+        destination,
+        waypoints,
+        selectedMode,
+        calculateRoute,
+        setMapRegion,
+    ]);
 
     const handleReverse = useCallback(() => {
         const temp = origin;
@@ -95,12 +130,11 @@ export default function Home() {
         setDestination(temp);
     }, [origin, destination]);
 
-
     const toggleSteps = useCallback(() => {
         Animated.timing(stepsAnimation, {
             toValue: showSteps ? 0 : 300,
             duration: 300,
-            useNativeDriver: false
+            useNativeDriver: false,
         }).start();
         setShowSteps(!showSteps);
     }, [showSteps, stepsAnimation]);
@@ -132,7 +166,7 @@ export default function Home() {
                 <RouteInfo
                     routeSummary={{
                         duration: routeInfo.duration,
-                        distance: routeInfo.distance
+                        distance: routeInfo.distance,
                     }}
                     routeInfo={routeInfo}
                     showSteps={showSteps}
@@ -158,20 +192,20 @@ const styles = StyleSheet.create({
     reverseButton: {
         padding: 8,
         borderRadius: 5,
-        backgroundColor: 'transparent', // Or a light background color
+        backgroundColor: "transparent", // Or a light background color
     },
     errorContainer: {
-        position: 'absolute',
+        position: "absolute",
         top: 100,
         left: 20,
         right: 20,
-        backgroundColor: '#ffebee',
+        backgroundColor: "#ffebee",
         padding: 10,
         borderRadius: 4,
         elevation: 5,
     },
     errorText: {
-        color: '#c62828',
-        textAlign: 'center',
+        color: "#c62828",
+        textAlign: "center",
     },
 });
