@@ -1,4 +1,4 @@
-import { Text, View, StyleSheet} from "react-native";
+import { Text, View, StyleSheet } from "react-native";
 
 export default function Settings() {
     return (
@@ -19,6 +19,6 @@ const styles = StyleSheet.create({
         color: "white",
     },
     imageContainer: {
-        flex : 1,
-    }
+        flex: 1,
+    },
 });

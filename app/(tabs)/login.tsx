@@ -1,9 +1,17 @@
-import { Link, useRouter } from "expo-router";
-import { ScrollView, Text, View, StyleSheet, Pressable, Alert } from "react-native";
-import { Button, TextInput } from "react-native";
+import { useRouter } from "expo-router";
+import {
+    ScrollView,
+    Text,
+    View,
+    StyleSheet,
+    Pressable,
+    Alert,
+    Button,
+    TextInput,
+} from "react-native";
 import { useState } from "react";
 import { login } from "@/hooks/authentication/AuthenticationHooks";
-
+import * as SecureStore from "expo-secure-store";
 
 export default function Login() {
     const router = useRouter();
@@ -18,9 +26,14 @@ export default function Login() {
         setLoading(true);
         setError(null);
         try {
-            const result = await login(username, password);
+            const authToken = await login(username, password);
+            await SecureStore.setItemAsync("authToken", authToken);
             Alert.alert("Connexion réussie !");
-            router.replace("//(tabs)/index"); // Redirige vers la page d'accueil après connexion
+            try {
+                router.replace("/(tabs)/profile");
+            } catch (routerError) {
+                setError("Erreur de redirection après connexion.");
+            }
         } catch (err) {
             if (err instanceof Error) {
                 setError(err.message);
@@ -40,6 +53,8 @@ export default function Login() {
                 placeholder="Nom d'utilisateur"
                 value={username}
                 onChangeText={setUsername}
+                autoCapitalize="none" // Évite la mise en majuscule automatique
+                autoCorrect={false} // Désactive la correction automatique
             />
 
             <Text style={styles.label}>Mot de passe</Text>
@@ -51,29 +66,45 @@ export default function Login() {
                     value={password}
                     onChangeText={setPassword}
                 />
-                <Pressable onPress={() => setSecureText(!secureText)} style={styles.toggleButton}>
+                <Pressable
+                    onPress={() => setSecureText(!secureText)}
+                    style={styles.toggleButton}
+                >
                     <Text>{secureText ? "👁️" : "🙈"}</Text>
                 </Pressable>
             </View>
 
             {error && <Text style={styles.error}>{error}</Text>}
 
-            <Link href={"/"} style={styles.forgotpass}>
-                Forgot your password ?
-            </Link>
+            <Pressable onPress={() => router.push("/")}>
+                <Text style={styles.forgotpass}>Mot de passe oublié ?</Text>
+            </Pressable>
 
             <View style={{ height: 1, marginVertical: 8 }} />
 
-            <Button title={loading ? "Connexion..." : "Se connecter"} onPress={handleLogin} disabled={loading} />
+            <Button
+                title={loading ? "Connexion..." : "Se connecter"}
+                onPress={handleLogin}
+                disabled={loading}
+            />
 
-            <View style={{ height: 1, backgroundColor: 'black', marginVertical: 12 }} />
+            <View
+                style={{
+                    height: 1,
+                    backgroundColor: "black",
+                    marginVertical: 12,
+                }}
+            />
 
-            <Button title="Se connecter avec Google" onPress={() => alert("Connexion Google")} />
+            <Button
+                title="Se connecter avec Google"
+                onPress={() => alert("Connexion Google")}
+            />
 
             <View style={{ height: 1, marginVertical: 8 }} />
 
             <Pressable onPress={() => router.replace("/register")}>
-                <Text style={styles.linkButton}>Don't have an account ?</Text>
+                <Text style={styles.linkButton}>Pas encore de compte ?</Text>
             </Pressable>
         </ScrollView>
     );
@@ -84,14 +115,13 @@ const styles = StyleSheet.create({
         color: "white",
     },
     imageContainer: {
-        flex : 1,
+        flex: 1,
     },
     linkButton: {
         fontSize: 20,
         textDecorationLine: "underline",
         color: "blue",
     },
-
     forgotpass: {
         fontSize: 14,
         textDecorationLine: "underline",
@@ -120,7 +150,6 @@ const styles = StyleSheet.create({
         fontSize: 14,
         marginBottom: 10,
     },
-
     container: {
         padding: 20,
     },
@@ -128,10 +157,10 @@ const styles = StyleSheet.create({
         fontSize: 16,
         marginBottom: 5,
     },
-    input:{
+    input: {
         borderWidth: 1,
         padding: 10,
         borderRadius: 5,
         marginBottom: 10,
-    }
+    },
 });
