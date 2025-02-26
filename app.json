@@ -13,6 +13,9 @@
         "usesNonExemptEncryption": false
       },
       "infoPlist": {
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true
+        },
         "GMSApiKey": "${EXPO_PUBLIC_GOOGLE_API_KEY}"
       },
       "supportsTablet": true
@@ -44,7 +47,14 @@
           "backgroundColor": "#ffffff"
         }
       ],
-      "expo-build-properties"
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static"
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
