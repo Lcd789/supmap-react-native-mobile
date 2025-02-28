@@ -12,9 +12,11 @@ import {
 import { useState } from "react";
 import { login } from "@/hooks/authentication/AuthenticationHooks";
 import * as SecureStore from "expo-secure-store";
+import { useAuth } from "@/hooks/user/AuthContext";
 
 export default function Login() {
     const router = useRouter();
+    const { setAuthenticated } = useAuth(); 
 
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
@@ -28,18 +30,14 @@ export default function Login() {
         try {
             const authToken = await login(username, password);
             await SecureStore.setItemAsync("authToken", authToken);
+            
+            // ✅ Met à jour l'état d'authentification
+            setAuthenticated(true);
+
             Alert.alert("Connexion réussie !");
-            try {
-                router.replace("/(tabs)/profile");
-            } catch (routerError) {
-                setError("Erreur de redirection après connexion.");
-            }
+            router.replace("/(tabs)/profile");
         } catch (err) {
-            if (err instanceof Error) {
-                setError(err.message);
-            } else {
-                setError("Une erreur est survenue.");
-            }
+            setError(err instanceof Error ? err.message : "Une erreur est survenue.");
         } finally {
             setLoading(false);
         }

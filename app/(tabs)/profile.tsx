@@ -14,6 +14,8 @@ import { Image } from "expo-image";
 import { getUserData, deleteProfile } from "@/hooks/user/UserHooks";
 import * as SecureStore from "expo-secure-store";
 import { useRouter } from "expo-router";
+import { useAuth } from "@/hooks/user/AuthContext";
+
 
 const DefaultProfileImage = require("../../assets/images/default-profile.png");
 
@@ -27,6 +29,7 @@ export default function Profile() {
     const [isEditingEmail, setIsEditingEmail] = useState(false);
     const [hasChanges, setHasChanges] = useState(false);
     const [profileImage, setProfileImage] = useState<string | undefined>(undefined);
+    const { setAuthenticated } = useAuth(); 
 
     // État temporaire pour stocker les valeurs pendant l'édition
     const [tempUsername, setTempUsername] = useState(username);
@@ -92,7 +95,9 @@ export default function Profile() {
                             setEmail("");
                             setProfileImage(undefined);
                             setSelectedImage(undefined);
-                            await SecureStore.deleteItemAsync("authToken");
+                            const token = await SecureStore.deleteItemAsync("authToken");
+                            console.log("Token après suppression :", token);
+                            setAuthenticated(false);
                             router.replace("/login");
                         } catch (error) {
                             Alert.alert(
@@ -109,6 +114,7 @@ export default function Profile() {
 
     const handleLogout = async () => {
         await SecureStore.deleteItemAsync("authToken");
+        setAuthenticated(false);
         router.replace("/(tabs)");
     };
 
