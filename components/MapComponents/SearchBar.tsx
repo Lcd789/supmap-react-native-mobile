@@ -1,9 +1,16 @@
-import React, { useState } from 'react';
-import { View, TextInput, TouchableOpacity, Text, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
+import React, { useState } from "react";
+import {
+    View,
+    TextInput,
+    TouchableOpacity,
+    Text,
+    ScrollView,
+    StyleSheet,
+    ActivityIndicator,
+} from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
-import { Swipeable } from "react-native-gesture-handler";
-import { TransportMode, Waypoint } from '../../types';
-import { TransportModeSelector } from './TransportModeSelector';
+import { TransportMode, Waypoint } from "../../types";
+import { TransportModeSelector } from "./TransportModeSelector";
 
 interface SearchBarProps {
     origin: string;
@@ -47,27 +54,32 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                 />
 
                 {waypoints.map((waypoint, index) => (
-                    <Swipeable
-                        key={index}
-                        renderRightActions={() => (
-                            <TouchableOpacity
-                                style={styles.deleteWaypoint}
-                                onPress={() => onWaypointRemove(index)}
-                            >
-                                <MaterialIcons name="delete" size={24} color="white" />
-                            </TouchableOpacity>
-                        )}
-                    >
+                    <View key={index} style={styles.waypointContainer}>
                         <TextInput
                             style={styles.input}
                             placeholder={`Étape ${index + 1}`}
                             value={waypoint.address}
-                            onChangeText={(text) => onWaypointUpdate(index, text)}
+                            onChangeText={(text) =>
+                                onWaypointUpdate(index, text)
+                            }
                         />
-                    </Swipeable>
+                        <TouchableOpacity
+                            style={styles.deleteWaypointIcon}
+                            onPress={() => onWaypointRemove(index)}
+                        >
+                            <MaterialIcons
+                                name="close"
+                                size={24}
+                                color="#ff4444"
+                            />
+                        </TouchableOpacity>
+                    </View>
                 ))}
 
-                <TouchableOpacity style={styles.reverseButton} onPress={onReverse}>
+                <TouchableOpacity
+                    style={styles.reverseButton}
+                    onPress={onReverse}
+                >
                     <MaterialIcons name="swap-vert" size={24} color="blue" />
                 </TouchableOpacity>
 
@@ -83,7 +95,9 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                     onPress={onWaypointAdd}
                 >
                     <MaterialIcons name="add" size={24} color="#2196F3" />
-                    <Text style={styles.addWaypointText}>Ajouter une étape</Text>
+                    <Text style={styles.addWaypointText}>
+                        Ajouter une étape
+                    </Text>
                 </TouchableOpacity>
             </ScrollView>
 
@@ -113,11 +127,11 @@ const styles = StyleSheet.create({
         backgroundColor: "#fff",
     },
     searchContainer: {
-        position: 'absolute',
+        position: "absolute",
         top: 40,
         left: 10,
         right: 10,
-        backgroundColor: 'white',
+        backgroundColor: "white",
         borderRadius: 8,
         padding: 10,
         zIndex: 1,
@@ -127,52 +141,52 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.25,
         shadowRadius: 3.84,
         //maxHeight: '40%',
-        flexDirection: 'column',
+        flexDirection: "column",
         //alignItems: 'center'
     },
     inputsContainer: {
         maxHeight: 300,
-        width: '100%',
+        width: "100%",
     },
     input: {
         borderWidth: 1,
-        borderColor: '#ddd',
+        borderColor: "#ddd",
         borderRadius: 4,
         padding: 8,
         marginVertical: 5,
-        backgroundColor: 'white',
+        backgroundColor: "white",
+        flex: 1,
     },
-    addWaypointButton: {
+    waypointContainer: {
         flexDirection: 'row',
         alignItems: 'center',
+    },
+    deleteWaypointIcon: {
+        marginLeft: 8,
+    },
+    addWaypointButton: {
+        flexDirection: "row",
+        alignItems: "center",
         padding: 8,
         marginVertical: 5,
     },
     addWaypointText: {
-        color: '#2196F3',
+        color: "#2196F3",
         marginLeft: 8,
     },
-    deleteWaypoint: {
-        backgroundColor: '#ff4444',
-        justifyContent: 'center',
-        alignItems: 'center',
-        width: 70,
-        height: '100%',
-    },
     searchButton: {
-        backgroundColor: '#2196F3',
+        backgroundColor: "#2196F3",
         padding: 12,
         borderRadius: 4,
-        alignItems: 'center',
+        alignItems: "center",
     },
     searchButtonText: {
-        color: 'white',
-        fontWeight: 'bold',
+        color: "white",
+        fontWeight: "bold",
     },
     reverseButton: {
         padding: 8,
         borderRadius: 5,
-        backgroundColor: 'transparent',
-        
+        backgroundColor: "transparent",
     },
 });

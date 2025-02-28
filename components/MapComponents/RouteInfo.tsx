@@ -1,7 +1,18 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, Animated, ScrollView, StyleSheet } from 'react-native';
+import React from "react";
+import {
+    View,
+    Text,
+    TouchableOpacity,
+    ScrollView,
+    StyleSheet,
+} from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
-import { Step } from '../../types';
+import { Step } from "../../types";
+import Animated, {
+    useAnimatedStyle,
+    interpolate,
+    SharedValue,
+} from "react-native-reanimated";
 
 interface RouteInfoProps {
     routeSummary: {
@@ -12,7 +23,7 @@ interface RouteInfoProps {
         steps: Step[];
     } | null;
     showSteps: boolean;
-    stepsAnimation: Animated.Value;
+    stepsAnimation: SharedValue<number>;
     onToggleSteps: () => void;
 }
 
@@ -21,14 +32,13 @@ export const RouteInfo: React.FC<RouteInfoProps> = ({
     routeInfo,
     showSteps,
     stepsAnimation,
-    onToggleSteps
+    onToggleSteps,
 }) => {
-
     const getManeuverIcon = (maneuver: string): string => {
         const icons: { [key: string]: string } = {
             "turn-right": "turn-right",
             "turn-left": "turn-left",
-            "straight": "straight",
+            straight: "straight",
             "roundabout-right": "rotate-right",
             "roundabout-left": "rotate-left",
             "uturn-right": "u-turn-right",
@@ -37,34 +47,65 @@ export const RouteInfo: React.FC<RouteInfoProps> = ({
         return icons[maneuver] || "arrow-forward";
     };
 
+    // Créer un style animé qui utilise la valeur partagée de stepsAnimation
+    const animatedStyle = useAnimatedStyle(() => {
+        return {
+            maxHeight: interpolate(stepsAnimation.value, [0, 1], [0, 300]),
+            overflow: "hidden",
+            marginTop: 10,
+        };
+    });
 
-    const renderStep = (step: Step, index: number) => (
-        <View key={index} style={styles.stepItem}>
-            {step.maneuver && (
-                <MaterialIcons
-                    name={getManeuverIcon(step.maneuver) as keyof typeof MaterialIcons.glyphMap}
-                    size={24}
-                    color="#2196F3"
-                    style={styles.stepIcon}
-                />
-            )}
-            <View style={styles.stepTextContainer}>
-                <Text style={styles.stepInstruction}>
-                    {step.html_instructions.replace(/<[^>]*>/g, '')}
-                </Text>
-                <Text style={styles.stepDistance}>
-                    {step.distance.text} - {step.duration.text}
-                </Text>
+    const renderStep = (step: Step, index: number) => {
+        // Gestion flexible des différentes structures possibles de step
+        const instruction =
+            typeof step.html_instructions === "string"
+                ? step.html_instructions.replace(/<[^>]*>/g, "")
+                : step.instruction || "Étape " + (index + 1);
+
+        let distanceText = "";
+
+        if (typeof step.distance === "object" && step.distance?.text) {
+            distanceText = step.duration?.text
+                ? `${step.distance.text} - ${step.duration.text}`
+                : step.distance.text;
+        } else if (
+            typeof step.distance === "string" ||
+            typeof step.distance === "number"
+        ) {
+            // Conversion explicite en chaîne de caractères
+            distanceText = String(step.distance);
+        }
+
+        return (
+            <View key={index} style={styles.stepItem}>
+                {step.maneuver && (
+                    <MaterialIcons
+                        name={
+                            getManeuverIcon(
+                                step.maneuver
+                            ) as keyof typeof MaterialIcons.glyphMap
+                        }
+                        size={24}
+                        color="#2196F3"
+                        style={styles.stepIcon}
+                    />
+                )}
+                <View style={styles.stepTextContainer}>
+                    <Text style={styles.stepInstruction}>{instruction}</Text>
+                    <Text style={styles.stepDistance}>{distanceText}</Text>
+                </View>
             </View>
-        </View>
-    );
+        );
+    };
 
     return (
-        <TouchableOpacity
-            style={styles.routeInfoContainer}
-            onPress={onToggleSteps}
-        >
-            <View style={styles.routeInfoHeader}>
+        <View style={styles.routeInfoContainer}>
+            <TouchableOpacity
+                style={styles.routeInfoHeader}
+                onPress={onToggleSteps}
+                activeOpacity={0.7}
+            >
                 <View>
                     <Text style={styles.routeInfoTitle}>
                         Durée: {routeSummary.duration}
@@ -78,35 +119,22 @@ export const RouteInfo: React.FC<RouteInfoProps> = ({
                     size={24}
                     color="#2196F3"
                 />
-            </View>
+            </TouchableOpacity>
 
-            <Animated.View
-                style={[
-                    styles.stepsContainer,
-                    {
-                        maxHeight: stepsAnimation.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: [0, 300]
-                        })
-                    }
-                ]}
-            >
+            <Animated.View style={animatedStyle}>
                 <ScrollView>
-                    {routeInfo?.steps.map((step, index) => renderStep(step, index))}
+                    {routeInfo?.steps.map((step, index) =>
+                        renderStep(step, index)
+                    )}
                 </ScrollView>
             </Animated.View>
-        </TouchableOpacity>
+        </View>
     );
 };
 
 const styles = StyleSheet.create({
-
     routeInfoContainer: {
-        position: 'absolute',
-        bottom: 20,
-        left: 10,
-        right: 10,
-        backgroundColor: 'white',
+        backgroundColor: "white",
         borderRadius: 8,
         padding: 15,
         elevation: 5,
@@ -116,29 +144,25 @@ const styles = StyleSheet.create({
         shadowRadius: 3.84,
     },
     routeInfoHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
     },
     routeInfoTitle: {
         fontSize: 18,
-        fontWeight: 'bold',
+        fontWeight: "bold",
     },
     routeInfoSubtitle: {
         fontSize: 14,
-        color: '#666',
+        color: "#666",
         marginTop: 4,
     },
-    stepsContainer: {
-        overflow: 'hidden',
-        marginTop: 10,
-    },
     stepItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
+        flexDirection: "row",
+        alignItems: "center",
         paddingVertical: 10,
         borderBottomWidth: 1,
-        borderBottomColor: '#eee',
+        borderBottomColor: "#eee",
     },
     stepIcon: {
         marginRight: 10,
@@ -151,7 +175,7 @@ const styles = StyleSheet.create({
     },
     stepDistance: {
         fontSize: 12,
-        color: '#666',
+        color: "#666",
         marginTop: 4,
     },
 });

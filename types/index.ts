@@ -6,9 +6,10 @@ export interface RouteCoordinate {
 export type TransportMode = "driving" | "walking" | "bicycling" | "transit";
 
 export interface Step {
-    distance: { text: string };
-    duration: { text: string };
-    html_instructions: string;
+    instruction?: string;
+    distance?: { text: string } | string | number;
+    duration?: { text: string };
+    html_instructions?: string;
     maneuver?: string;
 }
 
