@@ -40,7 +40,7 @@ const styles = StyleSheet.create({
     transportMode: {
         flexDirection: 'row',
         justifyContent: 'space-around',
-        marginVertical: 10,
+        marginVertical: 25,
     },
     modeButton: {
         padding: 8,
