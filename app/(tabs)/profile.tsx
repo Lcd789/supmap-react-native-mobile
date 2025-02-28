@@ -29,7 +29,8 @@ export default function Profile() {
     const [isEditingEmail, setIsEditingEmail] = useState(false);
     const [hasChanges, setHasChanges] = useState(false);
     const [profileImage, setProfileImage] = useState<string | undefined>(undefined);
-    const { setAuthenticated } = useAuth(); 
+    const {isAuthenticated,setAuthenticated} = useAuth();    
+    const authToken =SecureStore.getItemAsync("authToken"); 
 
     // État temporaire pour stocker les valeurs pendant l'édition
     const [tempUsername, setTempUsername] = useState(username);
@@ -49,7 +50,7 @@ export default function Profile() {
         }
 
         fetchUserData();
-    }, []);
+    }, [isAuthenticated]);
 
     const pickImageAsync = async () => {
         let result = await ImageSelector.launchImageLibraryAsync({
@@ -64,12 +65,40 @@ export default function Profile() {
         }
     };
 
-    const handleSave = () => {
-        // Ici, vous implementerez la logique pour sauvegarder les changements
-        setUsername(tempUsername);
-        setEmail(tempEmail);
-        setHasChanges(false);
-        Alert.alert("Succès", "Profil mis à jour avec succès");
+    const handleSave = async () => {
+        try {
+            const updatedData = {
+                username: tempUsername,
+                email: tempEmail,
+            };
+            const authToken = await SecureStore.getItemAsync("authToken");
+    
+            const response = await fetch("https://supmap-api.up.railway.app/user/update", {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${authToken}`, // Assurez-vous d'avoir un token valide
+                },
+                body: JSON.stringify({ username: tempUsername,  email: tempEmail }),
+            });
+    
+            if (!response.ok) {
+                throw new Error("Erreur lors de la mise à jour");
+            }
+    
+            const data = await response.json();
+    
+            setUsername(data.username);
+            setEmail(data.email);
+            setHasChanges(false);
+            Alert.alert("Succès", "Profil mis à jour avec succès");
+        } catch (error) {
+            if (error instanceof Error) {
+                Alert.alert("Erreur", error.message || "Une erreur est survenue");
+            } else {
+                Alert.alert("Erreur", "Une erreur est survenue");
+            }
+        }
     };
 
     const handleDeleteAccount = async () => {
@@ -90,7 +119,7 @@ export default function Profile() {
                                 "Profil supprimé",
                                 "Votre profil a été supprimé avec succès."
                             );
-                            // Réinitialisation après suppression
+                            
                             setUsername("");
                             setEmail("");
                             setProfileImage(undefined);
@@ -114,6 +143,10 @@ export default function Profile() {
 
     const handleLogout = async () => {
         await SecureStore.deleteItemAsync("authToken");
+        setUsername("");
+        setEmail("");
+        setProfileImage(undefined);
+        setSelectedImage(undefined);
         setAuthenticated(false);
         router.replace("/(tabs)");
     };

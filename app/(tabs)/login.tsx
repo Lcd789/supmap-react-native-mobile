@@ -1,4 +1,4 @@
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import {
     ScrollView,
     Text,
@@ -13,6 +13,7 @@ import { useState } from "react";
 import { login } from "@/hooks/authentication/AuthenticationHooks";
 import * as SecureStore from "expo-secure-store";
 import { useAuth } from "@/hooks/user/AuthContext";
+import { useCallback } from "react";
 
 export default function Login() {
     const router = useRouter();
@@ -24,6 +25,14 @@ export default function Login() {
     const [error, setError] = useState<string | null>(null);
     const [secureText, setSecureText] = useState(true); // Pour afficher/masquer le mot de passe
 
+    useFocusEffect(
+        useCallback(() => {
+            setUsername("");
+            setPassword("");
+            setError(null);
+        }, [])
+    );
+
     const handleLogin = async () => {
         setLoading(true);
         setError(null);
@@ -31,7 +40,7 @@ export default function Login() {
             const authToken = await login(username, password);
             await SecureStore.setItemAsync("authToken", authToken);
             
-            // ✅ Met à jour l'état d'authentification
+        
             setAuthenticated(true);
 
             Alert.alert("Connexion réussie !");

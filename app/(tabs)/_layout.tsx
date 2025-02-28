@@ -4,10 +4,10 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/user/AuthContext";
 
 export default function TabsLayout() {
-    const { isAuthenticated } = useAuth(); // ✅ Utilisation du contexte d'authentification
+    const { isAuthenticated } = useAuth(); 
     const [authState, setAuthState] = useState(isAuthenticated);
 
-    // ✅ Met à jour `authState` à chaque changement d'authentification
+    
     useEffect(() => {
         setAuthState(isAuthenticated);
     }, [isAuthenticated]);
