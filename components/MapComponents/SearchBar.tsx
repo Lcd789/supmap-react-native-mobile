@@ -1,10 +1,10 @@
-import React, { useState } from "react";
+import React from "react";
 import {
     View,
     TextInput,
     TouchableOpacity,
     Text,
-    ScrollView,
+    FlatList,
     StyleSheet,
     ActivityIndicator,
 } from "react-native";
@@ -43,22 +43,27 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     onSearch,
     onReverse,
 }) => {
+    const isReverseButtonVisible = waypoints.length === 0;
+
     return (
         <View style={styles.searchContainer}>
-            <ScrollView style={styles.inputsContainer}>
-                <TextInput
-                    style={styles.input}
-                    placeholder="Point de départ"
-                    value={origin}
-                    onChangeText={onOriginChange}
-                />
+            <TextInput
+                style={styles.input}
+                placeholder="Point de départ"
+                value={origin}
+                onChangeText={onOriginChange}
+            />
 
-                {waypoints.map((waypoint, index) => (
-                    <View key={index} style={styles.waypointContainer}>
+            {/* Liste des étapes avec FlatList */}
+            <FlatList
+                data={waypoints}
+                keyExtractor={(item, index) => index.toString()}
+                renderItem={({ item, index }) => (
+                    <View style={styles.waypointContainer}>
                         <TextInput
                             style={styles.input}
                             placeholder={`Étape ${index + 1}`}
-                            value={waypoint.address}
+                            value={item.address}
                             onChangeText={(text) =>
                                 onWaypointUpdate(index, text)
                             }
@@ -74,38 +79,61 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                             />
                         </TouchableOpacity>
                     </View>
-                ))}
+                )}
+                style={styles.waypointList}
+                keyboardShouldPersistTaps="handled"
+            />
+            {/* Conteneur des boutons Reverse & Ajouter une étape */}
+            <View
+                style={[
+                    styles.buttonContainer,
+                    isReverseButtonVisible
+                        ? { justifyContent: "space-between" }
+                        : { justifyContent: "center" },
+                ]}
+            >
+                {isReverseButtonVisible && (
+                    <TouchableOpacity
+                        style={styles.reverseButton}
+                        onPress={onReverse}
+                    >
+                        <MaterialIcons
+                            name="swap-vert"
+                            size={24}
+                            color="blue"
+                        />
+                    </TouchableOpacity>
+                )}
 
                 <TouchableOpacity
-                    style={styles.reverseButton}
-                    onPress={onReverse}
-                >
-                    <MaterialIcons name="swap-vert" size={24} color="blue" />
-                </TouchableOpacity>
-
-                <TextInput
-                    style={styles.input}
-                    placeholder="Destination"
-                    value={destination}
-                    onChangeText={onDestinationChange}
-                />
-
-                <TouchableOpacity
-                    style={styles.addWaypointButton}
+                    style={[
+                        styles.addWaypointButton,
+                        waypoints.length >= 5 && { opacity: 0.5 },
+                    ]}
                     onPress={onWaypointAdd}
+                    disabled={waypoints.length >= 5}
                 >
                     <MaterialIcons name="add" size={24} color="#2196F3" />
                     <Text style={styles.addWaypointText}>
-                        Ajouter une étape
+                        Ajouter une étape ({waypoints.length}/5)
                     </Text>
                 </TouchableOpacity>
-            </ScrollView>
+            </View>
 
+            <TextInput
+                style={styles.input}
+                placeholder="Destination"
+                value={destination}
+                onChangeText={onDestinationChange}
+            />
+
+            {/* Sélecteur de mode de transport */}
             <TransportModeSelector
                 selectedMode={selectedMode}
                 onModeSelect={onModeSelect}
             />
 
+            {/* Bouton de recherche */}
             <TouchableOpacity
                 style={styles.searchButton}
                 onPress={onSearch}
@@ -158,8 +186,8 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     waypointContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
+        flexDirection: "row",
+        alignItems: "center",
     },
     deleteWaypointIcon: {
         marginLeft: 8,
@@ -168,7 +196,6 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         padding: 8,
-        marginVertical: 5,
     },
     addWaypointText: {
         color: "#2196F3",
@@ -188,5 +215,14 @@ const styles = StyleSheet.create({
         padding: 8,
         borderRadius: 5,
         backgroundColor: "transparent",
+    },
+    waypointList: {
+        flexGrow: 1,
+        width: "100%",
+    },
+    buttonContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginVertical: 5,
     },
 });

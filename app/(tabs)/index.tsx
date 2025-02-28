@@ -50,7 +50,7 @@ export default function Home() {
     useEffect(() => {
         if (routeInfo) {
             routeInfoAnimation.value = withDelay(
-                300, // Delay to wait for map animation to finish
+                200, // Delay to wait for map animation to finish
                 withSpring(1, {
                     damping: 15,
                     stiffness: 100,
@@ -58,7 +58,7 @@ export default function Home() {
             );
         } else {
             routeInfoAnimation.value = withTiming(0, {
-                duration: 300,
+                duration: 200,
                 easing: Easing.bezier(0.25, 0.1, 0.25, 1),
             });
         }
@@ -125,7 +125,7 @@ export default function Home() {
                 // to create a sequential animation
                 setTimeout(() => {
                     toggleSearchBar();
-                }, 300);
+                }, 200);
             }
         } catch (error) {
             console.error("Erreur lors du calcul de l'itinéraire :", error);
