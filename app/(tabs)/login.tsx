@@ -12,6 +12,15 @@ import {
 import { useState } from "react";
 import { login } from "@/hooks/authentication/AuthenticationHooks";
 import * as SecureStore from "expo-secure-store";
+<<<<<<< Updated upstream
+=======
+<<<<<<< Updated upstream
+import { useAuth } from "@/hooks/user/AuthContext";
+import { useCallback } from "react";
+=======
+import { loginStyles } from "../../styles/globalStyles";
+>>>>>>> Stashed changes
+>>>>>>> Stashed changes
 
 export default function Login() {
     const router = useRouter();
@@ -46,10 +55,10 @@ export default function Login() {
     };
 
     return (
-        <ScrollView style={styles.container}>
-            <Text style={styles.label}>Nom d'utilisateur</Text>
+        <ScrollView style={loginStyles.container}>
+            <Text style={loginStyles.label}>Nom d'utilisateur</Text>
             <TextInput
-                style={styles.input}
+                style={loginStyles.input}
                 placeholder="Nom d'utilisateur"
                 value={username}
                 onChangeText={setUsername}
@@ -57,10 +66,10 @@ export default function Login() {
                 autoCorrect={false} // Désactive la correction automatique
             />
 
-            <Text style={styles.label}>Mot de passe</Text>
-            <View style={styles.passwordContainer}>
+            <Text style={loginStyles.label}>Mot de passe</Text>
+            <View style={loginStyles.passwordContainer}>
                 <TextInput
-                    style={styles.inputPassword}
+                    style={loginStyles.inputPassword}
                     placeholder="Mot de passe"
                     secureTextEntry={secureText}
                     value={password}
@@ -68,16 +77,16 @@ export default function Login() {
                 />
                 <Pressable
                     onPress={() => setSecureText(!secureText)}
-                    style={styles.toggleButton}
+                    style={loginStyles.toggleButton}
                 >
                     <Text>{secureText ? "👁️" : "🙈"}</Text>
                 </Pressable>
             </View>
 
-            {error && <Text style={styles.error}>{error}</Text>}
+            {error && <Text style={loginStyles.error}>{error}</Text>}
 
             <Pressable onPress={() => router.push("/")}>
-                <Text style={styles.forgotpass}>Mot de passe oublié ?</Text>
+                <Text style={loginStyles.forgotpass}>Mot de passe oublié ?</Text>
             </Pressable>
 
             <View style={{ height: 1, marginVertical: 8 }} />
@@ -104,63 +113,8 @@ export default function Login() {
             <View style={{ height: 1, marginVertical: 8 }} />
 
             <Pressable onPress={() => router.replace("/register")}>
-                <Text style={styles.linkButton}>Pas encore de compte ?</Text>
+                <Text style={loginStyles.linkButton}>Pas encore de compte ?</Text>
             </Pressable>
         </ScrollView>
     );
 }
-
-const styles = StyleSheet.create({
-    text: {
-        color: "white",
-    },
-    imageContainer: {
-        flex: 1,
-    },
-    linkButton: {
-        fontSize: 20,
-        textDecorationLine: "underline",
-        color: "blue",
-    },
-    forgotpass: {
-        fontSize: 14,
-        textDecorationLine: "underline",
-        color: "blue",
-        textAlign: "right",
-    },
-    inputPassword: {
-        borderWidth: 1,
-        padding: 10,
-        borderRadius: 5,
-        flex: 1,
-    },
-    passwordContainer: {
-        flexDirection: "row",
-        alignItems: "center",
-        borderWidth: 1,
-        borderRadius: 5,
-        paddingRight: 10,
-        marginBottom: 10,
-    },
-    toggleButton: {
-        padding: 10,
-    },
-    error: {
-        color: "red",
-        fontSize: 14,
-        marginBottom: 10,
-    },
-    container: {
-        padding: 20,
-    },
-    label: {
-        fontSize: 16,
-        marginBottom: 5,
-    },
-    input: {
-        borderWidth: 1,
-        padding: 10,
-        borderRadius: 5,
-        marginBottom: 10,
-    },
-});

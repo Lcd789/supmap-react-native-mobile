@@ -14,6 +14,15 @@ import { Image } from "expo-image";
 import { getUserData, deleteProfile } from "@/hooks/user/UserHooks";
 import * as SecureStore from "expo-secure-store";
 import { useRouter } from "expo-router";
+<<<<<<< Updated upstream
+=======
+<<<<<<< Updated upstream
+import { useAuth } from "@/hooks/user/AuthContext";
+
+=======
+import { profileStyles } from "../../styles/globalStyles";
+>>>>>>> Stashed changes
+>>>>>>> Stashed changes
 
 const DefaultProfileImage = require("../../assets/images/default-profile.png");
 
@@ -113,11 +122,11 @@ export default function Profile() {
     };
 
     return (
-        <ScrollView contentContainerStyle={styles.container}>
-            <View style={styles.content}>
+        <ScrollView contentContainerStyle={profileStyles.container}>
+            <View style={profileStyles.content}>
                 {/* Section Photo de profil */}
-                <View style={styles.imageSection}>
-                    <View style={styles.imageContainer}>
+                <View style={profileStyles.imageSection}>
+                    <View style={profileStyles.imageContainer}>
                         <Image
                             source={
                                 selectedImage
@@ -126,24 +135,24 @@ export default function Profile() {
                                     ? { uri: profileImage }
                                     : DefaultProfileImage
                             }
-                            style={styles.profileImage}
+                            style={profileStyles.profileImage}
                         />
                     </View>
                     <TouchableOpacity
-                        style={styles.editImageButton}
+                        style={profileStyles.editImageButton}
                         onPress={pickImageAsync}
                     >
-                        <Text style={styles.editImageText}>
+                        <Text style={profileStyles.editImageText}>
                             Edit profile picture
                         </Text>
                     </TouchableOpacity>
                 </View>
 
                 {/* Section Informations */}
-                <View style={styles.infoSection}>
-                    <View style={styles.inputContainer}>
+                <View style={profileStyles.infoSection}>
+                    <View style={profileStyles.inputContainer}>
                         <TextInput
-                            style={styles.input}
+                            style={profileStyles.input}
                             value={isEditingUsername ? tempUsername : username}
                             onChangeText={(text) => {
                                 setTempUsername(text);
@@ -153,7 +162,7 @@ export default function Profile() {
                             placeholder="Username"
                         />
                         <TouchableOpacity
-                            style={styles.editButton}
+                            style={profileStyles.editButton}
                             onPress={() => {
                                 if (isEditingUsername) {
                                     setUsername(tempUsername);
@@ -165,9 +174,9 @@ export default function Profile() {
                         </TouchableOpacity>
                     </View>
 
-                    <View style={styles.inputContainer}>
+                    <View style={profileStyles.inputContainer}>
                         <TextInput
-                            style={styles.input}
+                            style={profileStyles.input}
                             value={isEditingEmail ? tempEmail : email}
                             onChangeText={(text) => {
                                 setTempEmail(text);
@@ -178,7 +187,7 @@ export default function Profile() {
                             keyboardType="email-address"
                         />
                         <TouchableOpacity
-                            style={styles.editButton}
+                            style={profileStyles.editButton}
                             onPress={() => {
                                 if (isEditingEmail) {
                                     setEmail(tempEmail);
@@ -192,148 +201,36 @@ export default function Profile() {
                 </View>
 
                 {/* Boutons d'action */}
-                <View style={styles.actionButtons}>
+                <View style={profileStyles.actionButtons}>
                     {hasChanges && (
                         <TouchableOpacity
-                            style={styles.saveButton}
+                            style={profileStyles.saveButton}
                             onPress={handleSave}
                         >
                             <Save size={20} color="white" />
-                            <Text style={styles.saveButtonText}>
+                            <Text style={profileStyles.saveButtonText}>
                                 Save Changes
                             </Text>
                         </TouchableOpacity>
                     )}
                     <TouchableOpacity
-                        style={styles.deleteButton}
+                        style={profileStyles.deleteButton}
                         onPress={handleDeleteAccount}
                     >
                         <Trash2 size={20} color="white" />
-                        <Text style={styles.deleteButtonText}>
+                        <Text style={profileStyles.deleteButtonText}>
                             Delete my account
                         </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                        style={styles.logOutButton}
+                        style={profileStyles.logOutButton}
                         onPress={handleLogout}
                     >
                         <LogOutIcon size={20} color="white" />
-                        <Text style={styles.logOutButtonText}>Log out</Text>
+                        <Text style={profileStyles.logOutButtonText}>Log out</Text>
                     </TouchableOpacity>
                 </View>
             </View>
         </ScrollView>
     );
 }
-
-const styles = StyleSheet.create({
-    container: {
-        flexGrow: 1,
-        backgroundColor: "#F5F5F5",
-    },
-    content: {
-        flex: 1,
-        padding: 20,
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    imageSection: {
-        alignItems: "center",
-        marginBottom: 30,
-    },
-    imageContainer: {
-        width: 120,
-        height: 120,
-        borderRadius: 60,
-        overflow: "hidden",
-        backgroundColor: "#E1E1E1",
-        marginBottom: 10,
-    },
-    profileImage: {
-        width: "100%",
-        height: "100%",
-    },
-    editImageButton: {
-        padding: 8,
-    },
-    editImageText: {
-        color: "#007AFF",
-        fontSize: 16,
-    },
-    infoSection: {
-        width: "100%",
-        marginBottom: 30,
-    },
-    inputContainer: {
-        flexDirection: "row",
-        alignItems: "center",
-        marginBottom: 15,
-        backgroundColor: "white",
-        borderRadius: 10,
-        padding: 5,
-        shadowColor: "#000",
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.1,
-        shadowRadius: 3,
-        elevation: 3,
-    },
-    input: {
-        flex: 1,
-        padding: 12,
-        fontSize: 16,
-    },
-    editButton: {
-        padding: 10,
-    },
-    actionButtons: {
-        width: "100%",
-        alignItems: "center",
-    },
-    saveButton: {
-        flexDirection: "row",
-        alignItems: "center",
-        backgroundColor: "#00CF00",
-        padding: 15,
-        borderRadius: 10,
-        marginBottom: 15,
-        width: "100%",
-        justifyContent: "center",
-    },
-    saveButtonText: {
-        color: "white",
-        fontSize: 16,
-        marginLeft: 10,
-    },
-    deleteButton: {
-        flexDirection: "row",
-        alignItems: "center",
-        backgroundColor: "#FF3B30",
-        padding: 15,
-        borderRadius: 10,
-        width: "100%",
-        justifyContent: "center",
-    },
-    deleteButtonText: {
-        color: "white",
-        fontSize: 16,
-        marginLeft: 10,
-    },
-    logOutButton: {
-        flexDirection: "row",
-        alignItems: "center",
-        backgroundColor: "#007AFF",
-        padding: 15,
-        marginTop: 15,
-        borderRadius: 10,
-        width: "100%",
-        justifyContent: "center",
-    },
-    logOutButtonText: {
-        color: "white",
-        fontSize: 16,
-        marginLeft: 10,
-    },
-});

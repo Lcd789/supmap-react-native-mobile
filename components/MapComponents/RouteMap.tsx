@@ -3,6 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE, Region } from "react-native-maps";
 import { MaterialIcons } from "@expo/vector-icons";
 import { RouteCoordinate, Waypoint } from '../../types';
+import { routeMapStyles } from "../../styles/globalStyles";
 
 interface RouteMapProps {
     mapRegion: Region;
@@ -20,7 +21,7 @@ export const RouteMap: React.FC<RouteMapProps> = ({
     return (
         <MapView
             ref={mapRef}
-            style={styles.map}
+            style={routeMapStyles.map}
             provider={PROVIDER_GOOGLE}
             initialRegion={mapRegion}
             region={mapRegion}
@@ -59,28 +60,3 @@ export const RouteMap: React.FC<RouteMapProps> = ({
         </MapView>
     );
 };
-
-const styles = StyleSheet.create({
-    map: {
-        flex: 1,
-        width: "100%",
-        height: "100%",
-    },
-
-    location: {
-        position: "absolute",
-        bottom: 160,
-        right: 20,
-        backgroundColor: "white",
-        height: 50,
-        width: 50,
-        borderRadius: 25,
-        alignItems: "center",
-        justifyContent: "center",
-        elevation: 5,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 3.84,
-    },
-});
