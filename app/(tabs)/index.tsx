@@ -14,26 +14,7 @@ import { SearchBar } from "../../components/MapComponents/SearchBar";
 import { RouteMap } from "../../components/MapComponents/RouteMap";
 import { RouteInfo } from "../../components/MapComponents/RouteInfo";
 import { TransportMode, Waypoint } from "../../types";
-<<<<<<< Updated upstream
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-=======
-<<<<<<< Updated upstream
-import Animated, {
-    useSharedValue,
-    useAnimatedStyle,
-    withTiming,
-    Easing,
-    interpolate,
-    runOnJS,
-    withSpring,
-    withDelay,
-} from "react-native-reanimated";
-import { MaterialIcons } from "@expo/vector-icons";
-=======
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { homeStyles } from "../../styles/globalStyles";
->>>>>>> Stashed changes
->>>>>>> Stashed changes
 
 export default function Home() {
     const [origin, setOrigin] = useState<string>("");
@@ -158,13 +139,7 @@ export default function Home() {
         setShowSteps(!showSteps);
     }, [showSteps, stepsAnimation]);
     return (
-<<<<<<< Updated upstream
         <View style={styles.container}>
-<<<<<<< Updated upstream
-=======
-=======
-        <View style={homeStyles.container}>
->>>>>>> Stashed changes
             <SearchBar
                 origin={origin}
                 destination={destination}
@@ -180,10 +155,6 @@ export default function Home() {
                 onSearch={handleSearch}
                 onReverse={handleReverse}
             />
-<<<<<<< Updated upstream
-=======
->>>>>>> Stashed changes
->>>>>>> Stashed changes
             <RouteMap
                 mapRegion={mapRegion}
                 decodedPoints={routeInfo?.polyline || []}
@@ -205,13 +176,12 @@ export default function Home() {
             )}
 
             {error && (
-                <View style={homeStyles.errorContainer}>
-                    <Text style={homeStyles.errorText}>{error}</Text>
+                <View style={styles.errorContainer}>
+                    <Text style={styles.errorText}>{error}</Text>
                 </View>
             )}
         </View>
     );
-<<<<<<< Updated upstream
 }
 
 const styles = StyleSheet.create({
@@ -239,6 +209,3 @@ const styles = StyleSheet.create({
         textAlign: "center",
     },
 });
-=======
-}
->>>>>>> Stashed changes
