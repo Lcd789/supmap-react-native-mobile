@@ -24,6 +24,7 @@ import Animated, {
     withDelay,
 } from "react-native-reanimated";
 import { MaterialIcons } from "@expo/vector-icons";
+import { homeStyles } from "../../styles/styles";
 
 export default function Home() {
     const [origin, setOrigin] = useState<string>("");
@@ -275,7 +276,7 @@ export default function Home() {
     });
 
     return (
-        <View style={styles.container}>
+        <View style={homeStyles.container}>
             <RouteMap
                 mapRegion={mapRegion}
                 decodedPoints={routeInfo?.polyline || []}
@@ -308,7 +309,7 @@ export default function Home() {
             <Animated.View style={floatingButtonStyle}>
                 <TouchableOpacity
                     onPress={toggleSearchBar}
-                    style={styles.floatingButton}
+                    style={homeStyles.floatingButton}
                 >
                     <MaterialIcons name="map" size={24} color="#fff" />
                 </TouchableOpacity>
@@ -330,96 +331,16 @@ export default function Home() {
             )}
 
             {error && (
-                <View style={styles.errorContainer}>
-                    <Text style={styles.errorText}>{error}</Text>
+                <View style={homeStyles.errorContainer}>
+                    <Text style={homeStyles.errorText}>{error}</Text>
                 </View>
             )}
 
             {isLoading && (
-                <View style={styles.loadingContainer}>
+                <View style={homeStyles.loadingContainer}>
                     <ActivityIndicator size="large" color="#2196F3" />
                 </View>
             )}
         </View>
     );
 }
-
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: "#fff",
-    },
-    errorContainer: {
-        position: "absolute",
-        top: 100,
-        left: 20,
-        right: 20,
-        backgroundColor: "#ffebee",
-        padding: 10,
-        borderRadius: 4,
-        elevation: 5,
-    },
-    errorText: {
-        color: "#c62828",
-        textAlign: "center",
-    },
-    loadingContainer: {
-        position: "absolute",
-        top: "50%",
-        left: "50%",
-        marginLeft: -25,
-        marginTop: -25,
-    },
-    floatingButton: {
-        width: "100%",
-        height: "100%",
-        justifyContent: "center",
-        alignItems: "center",
-        borderRadius: 25,
-    },
-    routeInfoContainer: {
-        backgroundColor: "#fff",
-        borderTopLeftRadius: 15,
-        borderTopRightRadius: 15,
-        padding: 15,
-        elevation: 8,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: -3 },
-        shadowOpacity: 0.2,
-        shadowRadius: 5,
-    },
-    routeSummary: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-        paddingBottom: 10,
-        borderBottomWidth: 1,
-        borderBottomColor: "#f0f0f0",
-    },
-    routeInfoTitle: {
-        fontSize: 18,
-        fontWeight: "bold",
-        color: "#212121",
-    },
-    stepsToggleButton: {
-        padding: 5,
-    },
-    stepItem: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-        paddingVertical: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: "#f0f0f0",
-    },
-    stepInstruction: {
-        flex: 1,
-        fontSize: 14,
-        color: "#424242",
-    },
-    stepDistance: {
-        fontSize: 14,
-        color: "#757575",
-        marginLeft: 10,
-    },
-});

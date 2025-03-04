@@ -9,6 +9,7 @@ import Animated, {
     runOnJS,
 } from "react-native-reanimated";
 import { MaterialIcons } from "@expo/vector-icons";
+import { settingsStyles } from "../../styles/styles";
 
 export default function Settings() {
     const [isExpanded, setIsExpanded] = useState(true);
@@ -94,18 +95,18 @@ export default function Settings() {
     };
 
     return (
-        <View style={styles.container}>
-            {isExpanded && <Text style={styles.title}>Mon Application</Text>}
+        <View style={settingsStyles.container}>
+            {isExpanded && <Text style={settingsStyles.title}>Mon Application</Text>}
 
             <Pressable onPress={toggleAnimation}>
-                <Animated.View style={[styles.button, buttonAnimatedStyle]}>
+                <Animated.View style={[settingsStyles.button, buttonAnimatedStyle]}>
                     <Animated.Text
-                        style={[styles.buttonText, textAnimatedStyle]}
+                        style={[settingsStyles.buttonText, textAnimatedStyle]}
                     >
                         Chercher
                     </Animated.Text>
                     <Animated.View
-                        style={[styles.iconContainer, iconAnimatedStyle]}
+                        style={[settingsStyles.iconContainer, iconAnimatedStyle]}
                     >
                         <MaterialIcons name="map" size={24} color="white" />
                     </Animated.View>
@@ -113,11 +114,11 @@ export default function Settings() {
             </Pressable>
 
             {isExpanded && (
-                <View style={styles.content}>
-                    <Text style={styles.text}>
+                <View style={settingsStyles.content}>
+                    <Text style={settingsStyles.text}>
                         Contenu principal de l'application
                     </Text>
-                    <Text style={styles.text}>
+                    <Text style={settingsStyles.text}>
                         Appuyez sur "Chercher" pour réduire
                     </Text>
                 </View>
@@ -125,46 +126,3 @@ export default function Settings() {
         </View>
     );
 }
-
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-        backgroundColor: "#25292e",
-        padding: 20,
-    },
-    title: {
-        fontSize: 24,
-        fontWeight: "bold",
-        color: "white",
-        marginBottom: 30,
-    },
-    text: {
-        color: "white",
-        marginVertical: 5,
-        textAlign: "center",
-    },
-    content: {
-        marginTop: 30,
-        alignItems: "center",
-    },
-    button: {
-        backgroundColor: "#007AFF",
-        height: 50,
-        justifyContent: "center",
-        alignItems: "center",
-        flexDirection: "row",
-        paddingHorizontal: 20,
-    },
-    buttonText: {
-        color: "white",
-        fontWeight: "bold",
-        fontSize: 16,
-    },
-    iconContainer: {
-        position: "absolute",
-        justifyContent: "center",
-        alignItems: "center",
-    },
-});
