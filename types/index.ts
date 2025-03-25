@@ -47,6 +47,7 @@ export interface GoogleMapsResponse {
 }
 
 export interface Waypoint {
+    id : string;
     address: string;
     location?: {
         latitude: number;
