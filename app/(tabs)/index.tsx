@@ -105,8 +105,8 @@ export default function Home() {
                 selectedMode
             );
 
-            if (routeResult) {
-                const { bounds } = routeResult;
+            if (routeResult && routeResult.length > 0) {
+                const { bounds } = routeResult[0];
                 const newRegion = {
                     latitude: (bounds.northeast.lat + bounds.southwest.lat) / 2,
                     longitude:

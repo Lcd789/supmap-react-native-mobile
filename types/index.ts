@@ -75,4 +75,7 @@ export interface RouteBounds {
 export interface RouteCalculationResult {
     polyline: RouteCoordinate[];
     bounds: RouteBounds;
+    duration: string;
+    distance: string;
+    steps: Step[];
 }
