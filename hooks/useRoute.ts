@@ -1,144 +1,87 @@
-import {
-    RouteInfo,
-    Waypoint,
-    TransportMode,
-    RouteCalculationResult,
-    GoogleMapsResponse,
-} from "@/types";
-import { decodePolyline } from "@/utils/mapUtils";
-import { useState, useCallback } from "react";
-import { Alert } from "react-native";
+import { useState } from "react";
+import { RouteCalculationResult, Step, Waypoint, TransportMode } from "@/types";
+import polyline from "@mapbox/polyline";
+import Constants from "expo-constants";
 
-export const useRoute = () => {
-    const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
-    const [isLoading, setIsLoading] = useState<boolean>(false);
-    const [error, setError] = useState<string | null>(null);
+const API_KEY = process.env.EXPO_PUBLIC_GOOGLE_API_KEY;
 
-    const calculateRoute = useCallback(
-        async (
-            origin: string,
-            destination: string,
-            waypoints: Waypoint[],
-            selectedMode: TransportMode
-        ): Promise<RouteCalculationResult[] | undefined> => {
-            if (!origin || !destination) {
-                const msg =
-                    "Veuillez saisir un point de départ et une destination";
-                setError(msg);
-                Alert.alert("Erreur", msg);
-                return undefined;
-            }
+export function useRoute() {
+  const [routeInfo, setRouteInfo] = useState<RouteCalculationResult[] | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
-            setIsLoading(true);
-            setError(null);
+  const calculateRoute = async (
+    origin: string,
+    destination: string,
+    waypoints: Waypoint[],
+    mode: TransportMode
+  ): Promise<RouteCalculationResult[] | null> => {
+    setIsLoading(true);
+    setError(null);
 
-            try {
-                // Construire l'URL
-                let waypointsString = "";
-                if (waypoints.length > 0) {
-                    waypointsString = `&waypoints=${waypoints
-                        .filter((wp) => wp.address) // Filtrer les waypoints vides
-                        .map((wp) => `via:${encodeURIComponent(wp.address)}`)
-                        .join("|")}`;
-                }
+    try {
+      const wpString = waypoints
+        .map((wp) => encodeURIComponent(wp.address))
+        .join("|");
 
-                const apiUrl = `https://maps.googleapis.com/maps/api/directions/json?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}${waypointsString}&mode=${selectedMode}&alternatives=true&key=${process.env.EXPO_PUBLIC_GOOGLE_API_KEY}`;
+      const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${encodeURIComponent(
+        origin
+      )}&destination=${encodeURIComponent(destination)}${
+        wpString ? `&waypoints=${wpString}` : ""
+      }&mode=${mode}&alternatives=true&key=${API_KEY}`;
 
-                console.log("Calling Google Maps API:", apiUrl);
+      console.log("Calling Google Maps API:", url);
 
-                const response = await fetch(apiUrl);
-                const data: GoogleMapsResponse = await response.json();
+      const response = await fetch(url);
+      const data = await response.json();
 
-                console.log("Google Maps API Response:", data);
+      console.log("Google Maps API Response:", data);
 
-                if (data.status !== "OK") {
-                    const errorMessage =
-                        data.error_message || `Erreur: ${data.status}`;
-                    setError(errorMessage);
-                    Alert.alert("Erreur", errorMessage);
-                    return undefined;
-                }
+      if (data.status !== "OK") {
+        throw new Error(data.error_message || "Erreur lors du calcul d'itinéraire");
+      }
 
-                if (!data.routes || data.routes.length === 0) {
-                    const msg = "Aucun itinéraire trouvé";
-                    setError(msg);
-                    Alert.alert("Erreur", msg);
-                    return undefined;
-                }
+      const parsedRoutes: RouteCalculationResult[] = data.routes.map((route: any) => {
+        const decodedPolyline = polyline.decode(route.overview_polyline.points).map(
+          ([lat, lng]: [number, number]) => ({
+            latitude: lat,
+            longitude: lng,
+          })
+        );
 
-                // Parcourir les itinéraires alternatifs
-                const results: RouteCalculationResult[] = data.routes.map(
-                    (route) => {
-                        const legs = route.legs[0];
-                        if (
-                            !legs ||
-                            !route.overview_polyline ||
-                            !route.bounds
-                        ) {
-                            throw new Error("Données d'itinéraire incomplètes");
-                        }
-                        return {
-                            polyline: decodePolyline(
-                                route.overview_polyline.points
-                            ),
-                            bounds: route.bounds,
-                            duration: legs.duration.text,
-                            distance: legs.distance.text,
-                            steps: legs.steps,
-                        };
-                    }
-                );
+        const steps: Step[] = route.legs[0].steps.map((step: any) => ({
+          html_instructions: step.html_instructions,
+          distance: step.distance,
+          duration: step.duration,
+          maneuver: step.maneuver,
+          start_location: step.start_location,
+          end_location: step.end_location,
+        }));
 
-                setRouteInfo({
-                    duration: results[0].duration,
-                    distance: results[0].distance,
-                    steps: results[0].steps,
-                });
-                console.log("Route Info:", routeInfo);
-                // besoin de sérialiser l'itineraire pour une lecture plus facile
-                console.log("Route Info:", JSON.stringify(routeInfo, null, 2));
+        return {
+          bounds: route.bounds,
+          duration: route.legs[0].duration.text,
+          distance: route.legs[0].distance.text,
+          polyline: decodedPolyline,
+          steps,
+        };
+      });
 
-                return results;
+      setRouteInfo(parsedRoutes);
+      return parsedRoutes;
+    } catch (err: any) {
+      console.error("Route error:", err);
+      setError(err.message || "Erreur inconnue");
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-                /*
-            const route = data.routes[0];
-            const legs = route.legs[0];
-
-            if (!legs || !route.overview_polyline || !route.bounds) {
-                const msg = "Données d'itinéraire incomplètes";
-                setError(msg);
-                Alert.alert("Erreur", msg);
-                return undefined;
-            }
-
-            setRouteInfo({
-                duration: legs.duration.text,
-                distance: legs.distance.text,
-                steps: legs.steps
-            });
-            
-            return {
-                polyline: decodePolyline(route.overview_polyline.points),
-                bounds: route.bounds
-            };*/
-            } catch (error) {
-                const errorMessage =
-                    error instanceof Error ? error.message : "Erreur inconnue";
-                console.error("Error in calculateRoute:", error);
-                setError(errorMessage);
-                Alert.alert("Erreur", "Impossible de calculer l'itinéraire");
-                return undefined;
-            } finally {
-                setIsLoading(false);
-            }
-        },
-        []
-    );
-
-    return {
-        routeInfo,
-        isLoading,
-        error,
-        calculateRoute,
-    };
-};
+  return {
+    routeInfo,
+    isLoading,
+    error,
+    calculateRoute,
+  };
+}

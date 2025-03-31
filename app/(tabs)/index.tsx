@@ -30,6 +30,8 @@ import {
 } from "../../types";
 import { homeStyles } from "../../styles/styles";
 
+type RouteWithId = RouteCalculationResult & { id: string };
+
 export default function Home() {
   const [origin, setOrigin] = useState<string>("");
   const [destination, setDestination] = useState<string>("");
@@ -38,14 +40,12 @@ export default function Home() {
   const [showSteps, setShowSteps] = useState<boolean>(false);
   const [isSearchVisible, setIsSearchVisible] = useState<boolean>(true);
 
-  // Gestion des itinéraires et du lancement de la navigation
-  const [alternativeRoutes, setAlternativeRoutes] = useState<RouteCalculationResult[]>([]);
+  const [alternativeRoutes, setAlternativeRoutes] = useState<RouteWithId[]>([]);
   const [selectedRoute, setSelectedRoute] = useState<RouteCalculationResult | null>(null);
   const [navigationLaunched, setNavigationLaunched] = useState<boolean>(false);
 
   const mapRef = useRef<any>(null);
 
-  // Valeurs d'animation
   const searchBarAnimation = useSharedValue(1);
   const routeInfoAnimation = useSharedValue(0);
   const stepsAnimation = useSharedValue(0);
@@ -55,13 +55,12 @@ export default function Home() {
   );
   const { routeInfo, isLoading, error, calculateRoute } = useRoute();
 
-  // Animation du panneau RouteInfo lorsque la navigation est lancée et qu'un itinéraire est sélectionné
   useEffect(() => {
     if (navigationLaunched && selectedRoute) {
       routeInfoAnimation.value = withDelay(
         200,
         withSpring(1, {
-          damping: 15,  
+          damping: 15,
           stiffness: 100,
         })
       );
@@ -99,9 +98,7 @@ export default function Home() {
       return;
     }
 
-    const validWaypoints = waypoints.filter(
-      (wp) => wp.address.trim() !== ""
-    );
+    const validWaypoints = waypoints.filter((wp) => wp.address.trim() !== "");
 
     try {
       const routeResult = await calculateRoute(
@@ -112,11 +109,15 @@ export default function Home() {
       );
 
       if (routeResult && routeResult.length > 0) {
-        // Stocke la liste des itinéraires alternatifs et sélectionne par défaut le premier
-        setAlternativeRoutes(routeResult);
-        setSelectedRoute(routeResult[0]);
+        const routesWithIds: RouteWithId[] = routeResult.map((r, index) => ({
+          ...r,
+          id: `route-${index}`,
+        }));
 
-        const { bounds } = routeResult[0];
+        setAlternativeRoutes(routesWithIds);
+        setSelectedRoute(routesWithIds[0]);
+
+        const { bounds } = routesWithIds[0];
         const newRegion = {
           latitude: (bounds.northeast.lat + bounds.southwest.lat) / 2,
           longitude: (bounds.northeast.lng + bounds.southwest.lng) / 2,
@@ -129,7 +130,6 @@ export default function Home() {
         setMapRegion(newRegion);
         mapRef.current?.animateToRegion(newRegion, 1000);
 
-        // Réduit la SearchBar après la recherche avec un léger délai
         setTimeout(() => {
           toggleSearchBar();
         }, 200);
@@ -158,18 +158,17 @@ export default function Home() {
     );
   }, [showSteps, stepsAnimation]);
 
-  // Animation de la SearchBar
   const toggleSearchBar = useCallback(() => {
     const newValue = isSearchVisible ? 0 : 1;
-  
+
     if (newValue === 1) {
       searchBarAnimation.value = withSpring(
         newValue,
         { damping: 18, stiffness: 120, mass: 1 },
         () => {
           runOnJS(setIsSearchVisible)(true);
-          runOnJS(setNavigationLaunched)(false); // Ferme RouteInfo
-          runOnJS(setAlternativeRoutes)([]);     // Ferme RouteSelector
+          runOnJS(setNavigationLaunched)(false);
+          runOnJS(setAlternativeRoutes)([]);
         }
       );
     } else {
@@ -182,9 +181,7 @@ export default function Home() {
       );
     }
   }, [isSearchVisible, searchBarAnimation]);
-  
 
-  // Styles animés pour la SearchBar
   const searchBarContainerStyle = useAnimatedStyle(() => ({
     position: "absolute",
     top: 0,
@@ -199,7 +196,6 @@ export default function Home() {
     ],
   }));
 
-  // Style animé pour le bouton flottant
   const floatingButtonStyle = useAnimatedStyle(() => ({
     position: "absolute",
     top: 20,
@@ -223,7 +219,6 @@ export default function Home() {
     ],
   }));
 
-  // Style animé pour l'affichage des infos d'itinéraire
   const routeInfoStyle = useAnimatedStyle(() => ({
     position: "absolute",
     bottom: 0,
@@ -237,17 +232,13 @@ export default function Home() {
 
   return (
     <View style={homeStyles.container}>
-    <RouteMap
-      region={mapRegion}
-      mapRef={mapRef}
-      alternativeRoutes={alternativeRoutes.map((route, index) => ({
-        id: index.toString(),
-        polyline: route.polyline,
-      }))}
-      selectedRoutePolyline={selectedRoute ? selectedRoute.polyline : []}
-    />
+      <RouteMap
+        region={mapRegion}
+        mapRef={mapRef}
+        alternativeRoutes={alternativeRoutes}
+        selectedRouteId={selectedRoute ? (selectedRoute as RouteWithId).id : undefined}
+      />
 
-      {/* Animated SearchBar */}
       <Animated.View style={searchBarContainerStyle}>
         {isSearchVisible && (
           <SearchBar
@@ -268,7 +259,6 @@ export default function Home() {
         )}
       </Animated.View>
 
-      {/* Bouton flottant pour afficher la SearchBar */}
       <Animated.View style={floatingButtonStyle}>
         <TouchableOpacity
           onPress={toggleSearchBar}
@@ -278,7 +268,6 @@ export default function Home() {
         </TouchableOpacity>
       </Animated.View>
 
-      {/* Affichage du RouteSelector si plusieurs itinéraires sont disponibles et la navigation n'est pas lancée */}
       {alternativeRoutes.length > 1 && !navigationLaunched && (
         <View style={styles.selectorContainer}>
           <RouteSelector
@@ -294,7 +283,6 @@ export default function Home() {
         </View>
       )}
 
-      {/* Affichage des détails de l'itinéraire uniquement après le lancement de la navigation */}
       {selectedRoute && navigationLaunched && (
         <Animated.View style={routeInfoStyle}>
           <RouteInfo
@@ -328,7 +316,7 @@ export default function Home() {
 const styles = StyleSheet.create({
   selectorContainer: {
     position: "absolute",
-    bottom: 0, // place complètement en bas de l'écran
+    bottom: 0,
     left: 0,
     right: 0,
     paddingHorizontal: 16,
