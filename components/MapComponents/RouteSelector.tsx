@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { RouteCalculationResult, Waypoint, TransportMode } from "@/types";
 import { useRoute } from "@/hooks/useRoute"; 
+import { MaterialIcons } from '@expo/vector-icons';
 
 interface RouteSelectorProps {
   origin: string;
@@ -89,18 +90,20 @@ const RouteSelector: React.FC<RouteSelectorProps> = ({
               ]}
               onPress={() => handleSelectRoute(item)}
             >
-              <Text style={styles.routeSummary}>
-                Itinéraire {index + 1} - {item.distance} - {item.duration}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.launchButton}
-              onPress={() => handleLaunchNavigation(item)}
-            >
-              <Text style={styles.launchButtonText}>Lancer la navigation</Text>
+              <View style={styles.routeRow}>
+                <Text style={styles.routeSummary}>
+                  Itinéraire {index + 1} - {item.distance} - {item.duration}
+                </Text>
+        
+                <TouchableOpacity onPress={() => handleLaunchNavigation(item)}>
+                  <MaterialIcons name="chevron-right" size={24} color="#2196F3" />
+                </TouchableOpacity>
+              </View>
             </TouchableOpacity>
           </View>
         )}
+        
+        
       />
     </View>
   );
@@ -109,7 +112,7 @@ const RouteSelector: React.FC<RouteSelectorProps> = ({
 const styles = StyleSheet.create({
   container: {
     padding: 16,
-    backgroundColor: "#fff", // Fond blanc pour une meilleure lisibilité
+    backgroundColor: "#fff",
     borderRadius: 10,
     margin: 16,
     shadowColor: "#000",
@@ -170,6 +173,11 @@ const styles = StyleSheet.create({
     color: "red",
     fontSize: 16,
   },
+  routeRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  }  
 });
 
 export default RouteSelector;

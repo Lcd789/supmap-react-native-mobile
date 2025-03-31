@@ -22,7 +22,7 @@ import { useRoute } from "../../hooks/useRoute";
 import { SearchBar } from "../../components/MapComponents/SearchBar";
 import { RouteMap } from "../../components/MapComponents/RouteMap";
 import { RouteInfo } from "../../components/MapComponents/RouteInfo";
-import { RouteSelector } from "../../components/MapComponents/RouteSelector";
+import RouteSelector from "../../components/MapComponents/RouteSelector";
 import {
   TransportMode,
   Waypoint,
