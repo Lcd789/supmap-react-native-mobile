@@ -23,7 +23,6 @@ export const homeStyles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: backgroundColor,
-        padding,
     },
     reverseButton: {
         padding: 8,
