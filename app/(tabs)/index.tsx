@@ -1,19 +1,12 @@
 import React, { useRef, useState, useCallback, useEffect } from "react";
 import {
   View,
-  StyleSheet,
   Text,
   ActivityIndicator,
   TouchableOpacity,
+  StyleSheet,
 } from "react-native";
-import MapView from "react-native-maps";
-import { useLocation } from "../../hooks/useLocation";
-import { useRoute } from "../../hooks/useRoute";
-import { SearchBar } from "../../components/MapComponents/SearchBar";
-import { RouteMap } from "../../components/MapComponents/RouteMap";
-import { RouteInfo } from "../../components/MapComponents/RouteInfo";
-import RouteSelector from "../../components/MapComponents/RouteSelector"; // Import du nouveau composant
-import { TransportMode, Waypoint, RouteCalculationResult } from "../../types";
+import { MaterialIcons } from "@expo/vector-icons";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -24,7 +17,17 @@ import Animated, {
   withSpring,
   withDelay,
 } from "react-native-reanimated";
-import { MaterialIcons } from "@expo/vector-icons";
+import { useLocation } from "../../hooks/useLocation";
+import { useRoute } from "../../hooks/useRoute";
+import { SearchBar } from "../../components/MapComponents/SearchBar";
+import { RouteMap } from "../../components/MapComponents/RouteMap";
+import { RouteInfo } from "../../components/MapComponents/RouteInfo";
+import { RouteSelector } from "../../components/MapComponents/RouteSelector";
+import {
+  TransportMode,
+  Waypoint,
+  RouteCalculationResult,
+} from "../../types";
 import { homeStyles } from "../../styles/styles";
 
 export default function Home() {
@@ -35,13 +38,14 @@ export default function Home() {
   const [showSteps, setShowSteps] = useState<boolean>(false);
   const [isSearchVisible, setIsSearchVisible] = useState<boolean>(true);
 
-  // Nouveaux états pour gérer les itinéraires alternatifs et l'itinéraire sélectionné
+  // Gestion des itinéraires et du lancement de la navigation
   const [alternativeRoutes, setAlternativeRoutes] = useState<RouteCalculationResult[]>([]);
   const [selectedRoute, setSelectedRoute] = useState<RouteCalculationResult | null>(null);
+  const [navigationLaunched, setNavigationLaunched] = useState<boolean>(false);
 
-  const mapRef = useRef<MapView | null>(null);
+  const mapRef = useRef<any>(null);
 
-  // Animation values
+  // Valeurs d'animation
   const searchBarAnimation = useSharedValue(1);
   const routeInfoAnimation = useSharedValue(0);
   const stepsAnimation = useSharedValue(0);
@@ -49,16 +53,15 @@ export default function Home() {
   const { mapRegion, setMapRegion, getCurrentLocation } = useLocation(
     (address) => setOrigin(address)
   );
-
   const { routeInfo, isLoading, error, calculateRoute } = useRoute();
 
-  // Effect pour animer le panneau RouteInfo lorsque l'itinéraire sélectionné change
+  // Animation du panneau RouteInfo lorsque la navigation est lancée et qu'un itinéraire est sélectionné
   useEffect(() => {
-    if (selectedRoute) {
+    if (navigationLaunched && selectedRoute) {
       routeInfoAnimation.value = withDelay(
-        200, // délai pour attendre la fin de l'animation de la carte
+        200,
         withSpring(1, {
-          damping: 15,
+          damping: 15,  
           stiffness: 100,
         })
       );
@@ -68,7 +71,7 @@ export default function Home() {
         easing: Easing.bezier(0.25, 0.1, 0.25, 1),
       });
     }
-  }, [selectedRoute]);
+  }, [selectedRoute, navigationLaunched]);
 
   const handleAddWaypoint = useCallback(() => {
     setWaypoints((prev) => [
@@ -134,14 +137,7 @@ export default function Home() {
     } catch (error) {
       console.error("Erreur lors du calcul de l'itinéraire :", error);
     }
-  }, [
-    origin,
-    destination,
-    waypoints,
-    selectedMode,
-    calculateRoute,
-    setMapRegion,
-  ]);
+  }, [origin, destination, waypoints, selectedMode, calculateRoute, setMapRegion]);
 
   const handleReverse = useCallback(() => {
     setOrigin(destination);
@@ -162,20 +158,18 @@ export default function Home() {
     );
   }, [showSteps, stepsAnimation]);
 
-  // Animation de la SearchBar avec spring et timing
+  // Animation de la SearchBar
   const toggleSearchBar = useCallback(() => {
     const newValue = isSearchVisible ? 0 : 1;
-
+  
     if (newValue === 1) {
       searchBarAnimation.value = withSpring(
         newValue,
-        {
-          damping: 18,
-          stiffness: 120,
-          mass: 1,
-        },
+        { damping: 18, stiffness: 120, mass: 1 },
         () => {
-          runOnJS(setIsSearchVisible)(!isSearchVisible);
+          runOnJS(setIsSearchVisible)(true);
+          runOnJS(setNavigationLaunched)(false); // Ferme RouteInfo
+          runOnJS(setAlternativeRoutes)([]);     // Ferme RouteSelector
         }
       );
     } else {
@@ -183,83 +177,75 @@ export default function Home() {
         newValue,
         { duration: 250, easing: Easing.bezier(0.25, 0.1, 0.25, 1) },
         () => {
-          runOnJS(setIsSearchVisible)(!isSearchVisible);
+          runOnJS(setIsSearchVisible)(false);
         }
       );
     }
   }, [isSearchVisible, searchBarAnimation]);
+  
 
   // Styles animés pour la SearchBar
-  const searchBarContainerStyle = useAnimatedStyle(() => {
-    return {
-      position: "absolute",
-      top: 0,
-      left: 0,
-      right: 0,
-      zIndex: 100,
-      elevation: 10,
-      opacity: interpolate(searchBarAnimation.value, [0, 1], [0, 1]),
-      transform: [
-        {
-          translateY: interpolate(searchBarAnimation.value, [0, 1], [-100, 0]),
-        },
-        {
-          scale: interpolate(searchBarAnimation.value, [0, 1], [0.8, 1]),
-        },
-      ],
-    };
-  });
+  const searchBarContainerStyle = useAnimatedStyle(() => ({
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 100,
+    elevation: 10,
+    opacity: interpolate(searchBarAnimation.value, [0, 1], [0, 1]),
+    transform: [
+      { translateY: interpolate(searchBarAnimation.value, [0, 1], [-100, 0]) },
+      { scale: interpolate(searchBarAnimation.value, [0, 1], [0.8, 1]) },
+    ],
+  }));
 
-  // Animation pour le bouton flottant
-  const floatingButtonStyle = useAnimatedStyle(() => {
-    return {
-      position: "absolute",
-      top: 20,
-      right: 20,
-      width: 50,
-      height: 50,
-      borderRadius: 25,
-      backgroundColor: "#2196F3",
-      justifyContent: "center",
-      alignItems: "center",
-      elevation: 5,
-      zIndex: 10,
-      opacity: interpolate(searchBarAnimation.value, [0, 0.3, 1], [1, 0.3, 0]),
-      transform: [
-        {
-          scale: interpolate(searchBarAnimation.value, [0, 0.5, 1], [1, 0.8, 0]),
-        },
-        {
-          translateY: interpolate(searchBarAnimation.value, [0, 1], [0, 20]),
-        },
-      ],
-    };
-  });
+  // Style animé pour le bouton flottant
+  const floatingButtonStyle = useAnimatedStyle(() => ({
+    position: "absolute",
+    top: 20,
+    right: 20,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: "#2196F3",
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 5,
+    zIndex: 10,
+    opacity: interpolate(
+      searchBarAnimation.value,
+      [0, 0.3, 1],
+      [1, 0.3, 0]
+    ),
+    transform: [
+      { scale: interpolate(searchBarAnimation.value, [0, 0.5, 1], [1, 0.8, 0]) },
+      { translateY: interpolate(searchBarAnimation.value, [0, 1], [0, 20]) },
+    ],
+  }));
 
-  // Style animé pour le composant RouteInfo
-  const routeInfoStyle = useAnimatedStyle(() => {
-    return {
-      position: "absolute",
-      bottom: 0,
-      left: 0,
-      right: 0,
-      opacity: routeInfoAnimation.value,
-      transform: [
-        {
-          translateY: interpolate(routeInfoAnimation.value, [0, 1], [100, 0]),
-        },
-      ],
-    };
-  });
+  // Style animé pour l'affichage des infos d'itinéraire
+  const routeInfoStyle = useAnimatedStyle(() => ({
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    opacity: routeInfoAnimation.value,
+    transform: [
+      { translateY: interpolate(routeInfoAnimation.value, [0, 1], [100, 0]) },
+    ],
+  }));
 
   return (
     <View style={homeStyles.container}>
-      <RouteMap
-        mapRegion={mapRegion}
-        decodedPoints={selectedRoute?.polyline || []}
-        waypoints={waypoints}
-        mapRef={mapRef}
-      />
+    <RouteMap
+      region={mapRegion}
+      mapRef={mapRef}
+      alternativeRoutes={alternativeRoutes.map((route, index) => ({
+        id: index.toString(),
+        polyline: route.polyline,
+      }))}
+      selectedRoutePolyline={selectedRoute ? selectedRoute.polyline : []}
+    />
 
       {/* Animated SearchBar */}
       <Animated.View style={searchBarContainerStyle}>
@@ -292,21 +278,24 @@ export default function Home() {
         </TouchableOpacity>
       </Animated.View>
 
-      {/* Si plusieurs itinéraires alternatifs sont disponibles, on affiche le RouteSelector */}
-      {alternativeRoutes.length > 1 && (
+      {/* Affichage du RouteSelector si plusieurs itinéraires sont disponibles et la navigation n'est pas lancée */}
+      {alternativeRoutes.length > 1 && !navigationLaunched && (
         <View style={styles.selectorContainer}>
           <RouteSelector
             origin={origin}
             destination={destination}
             waypoints={waypoints}
             selectedMode={selectedMode}
-            onSelectRoute={(route: RouteCalculationResult) => setSelectedRoute(route)}
+            onLaunchNavigation={(route: RouteCalculationResult) => {
+              setSelectedRoute(route);
+              setNavigationLaunched(true);
+            }}
           />
         </View>
       )}
 
-      {/* Affichage des détails de l'itinéraire sélectionné */}
-      {selectedRoute && (
+      {/* Affichage des détails de l'itinéraire uniquement après le lancement de la navigation */}
+      {selectedRoute && navigationLaunched && (
         <Animated.View style={routeInfoStyle}>
           <RouteInfo
             routeSummary={{
@@ -339,7 +328,7 @@ export default function Home() {
 const styles = StyleSheet.create({
   selectorContainer: {
     position: "absolute",
-    bottom: 120,
+    bottom: 0, // place complètement en bas de l'écran
     left: 0,
     right: 0,
     paddingHorizontal: 16,

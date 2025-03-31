@@ -16,6 +16,7 @@ interface RouteSelectorProps {
   waypoints?: Waypoint[];
   selectedMode: TransportMode;
   onSelectRoute?: (route: RouteCalculationResult) => void;
+  onLaunchNavigation?: (route: RouteCalculationResult) => void;
 }
 
 const RouteSelector: React.FC<RouteSelectorProps> = ({
@@ -24,6 +25,7 @@ const RouteSelector: React.FC<RouteSelectorProps> = ({
   waypoints = [],
   selectedMode,
   onSelectRoute,
+  onLaunchNavigation,
 }) => {
   const { calculateRoute, isLoading, error } = useRoute();
   const [routes, setRoutes] = useState<RouteCalculationResult[]>([]);
@@ -46,6 +48,13 @@ const RouteSelector: React.FC<RouteSelectorProps> = ({
     setSelectedRoute(route);
     if (onSelectRoute) {
       onSelectRoute(route);
+    }
+  };
+
+  const handleLaunchNavigation = (route: RouteCalculationResult) => {
+    setSelectedRoute(route);
+    if (onLaunchNavigation) {
+      onLaunchNavigation(route);
     }
   };
 
@@ -72,17 +81,25 @@ const RouteSelector: React.FC<RouteSelectorProps> = ({
         data={routes}
         keyExtractor={(_, index) => index.toString()}
         renderItem={({ item, index }) => (
-          <TouchableOpacity
-            style={[
-              styles.routeItem,
-              selectedRoute?.duration === item.duration && styles.selectedRoute,
-            ]}
-            onPress={() => handleSelectRoute(item)}
-          >
-            <Text style={styles.routeSummary}>
-              Itinéraire {index + 1} - {item.distance} - {item.duration}
-            </Text>
-          </TouchableOpacity>
+          <View style={styles.itemContainer}>
+            <TouchableOpacity
+              style={[
+                styles.routeItem,
+                selectedRoute?.duration === item.duration && styles.selectedRoute,
+              ]}
+              onPress={() => handleSelectRoute(item)}
+            >
+              <Text style={styles.routeSummary}>
+                Itinéraire {index + 1} - {item.distance} - {item.duration}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.launchButton}
+              onPress={() => handleLaunchNavigation(item)}
+            >
+              <Text style={styles.launchButtonText}>Lancer la navigation</Text>
+            </TouchableOpacity>
+          </View>
         )}
       />
     </View>
@@ -92,10 +109,22 @@ const RouteSelector: React.FC<RouteSelectorProps> = ({
 const styles = StyleSheet.create({
   container: {
     padding: 16,
+    backgroundColor: "#fff", // Fond blanc pour une meilleure lisibilité
+    borderRadius: 10,
+    margin: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   title: {
     fontSize: 18,
     fontWeight: "bold",
+    marginBottom: 12,
+    color: "#333",
+  },
+  itemContainer: {
     marginBottom: 12,
   },
   routeItem: {
@@ -103,13 +132,28 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#ccc",
     borderRadius: 6,
-    marginBottom: 8,
+    backgroundColor: "#fff",
   },
   selectedRoute: {
     borderColor: "#2196F3",
+    backgroundColor: "#e0f7fa",
   },
   routeSummary: {
     fontSize: 16,
+    fontWeight: "600",
+    color: "#333",
+  },
+  launchButton: {
+    marginTop: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: "#2196F3",
+    borderRadius: 6,
+    alignItems: "center",
+  },
+  launchButtonText: {
+    color: "#fff",
+    fontSize: 14,
     fontWeight: "600",
   },
   loadingContainer: {
@@ -129,3 +173,4 @@ const styles = StyleSheet.create({
 });
 
 export default RouteSelector;
+

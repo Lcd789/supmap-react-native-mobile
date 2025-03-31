@@ -1,60 +1,44 @@
 // RouteMap.tsx
 import React from "react";
-import { StyleSheet } from "react-native";
-import MapView, { Polyline, Marker } from "react-native-maps";
-import { Waypoint } from "@/types";
+import MapView, { Polyline, Region, MapViewProps } from "react-native-maps";
+import { RouteCoordinate } from "@/types";
 
-interface RouteMapProps {
-  mapRegion: {
-    latitude: number;
-    longitude: number;
-    latitudeDelta: number;
-    longitudeDelta: number;
-  };
-  decodedPoints: { latitude: number; longitude: number }[];
-  waypoints: Waypoint[];
-  mapRef: React.RefObject<MapView>;
+interface AlternativeRoute {
+  id: string;
+  polyline: RouteCoordinate[];
+}
+
+interface RouteMapProps extends MapViewProps {
+  region: Region;
+  alternativeRoutes?: AlternativeRoute[];
+  selectedRoutePolyline?: RouteCoordinate[];
+  mapRef?: React.Ref<MapView>;
 }
 
 export const RouteMap: React.FC<RouteMapProps> = ({
-  mapRegion,
-  decodedPoints,
-  waypoints,
+  region,
+  alternativeRoutes = [],
+  selectedRoutePolyline = [],
   mapRef,
+  ...mapProps
 }) => {
   return (
-    <MapView
-      style={styles.map}
-      region={mapRegion}
-      ref={mapRef}
-      showsUserLocation
-      followsUserLocation
-    >
-      {/* Affichage de la vue d'ensemble du trajet */}
-      {decodedPoints.length > 0 && (
+    <MapView ref={mapRef} region={region} style={{ flex: 1 }} {...mapProps}>
+      {alternativeRoutes.map((route) => (
         <Polyline
-          coordinates={decodedPoints}
+          key={route.id}
+          coordinates={route.polyline}
+          strokeColor="rgba(0,0,0,0.3)"
+          strokeWidth={4}
+        />
+      ))}
+      {selectedRoutePolyline.length > 0 && (
+        <Polyline
+          coordinates={selectedRoutePolyline}
           strokeColor="#2196F3"
-          strokeWidth={3}
+          strokeWidth={4}
         />
       )}
-
-      {/* Optionnel: Affichage des waypoints sous forme de marqueurs */}
-      {waypoints.map((wp) =>
-      wp.address && wp.location ? (
-      <Marker
-      key={wp.id} // Ici, wp.id existe bien
-      coordinate={wp.location} // Utilisation de la propriété 'location'
-      title={wp.address}
-    />
-  ) : null
-)}
     </MapView>
   );
 };
-
-const styles = StyleSheet.create({
-  map: {
-    flex: 1,
-  },
-});
