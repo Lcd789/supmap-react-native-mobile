@@ -368,6 +368,7 @@ export const routeInfoStyles = StyleSheet.create({
         borderRadius,
         padding: 15,
         ...shadow,
+        zIndex: 1000
     },
     routeInfoHeader: {
         flexDirection: "row",

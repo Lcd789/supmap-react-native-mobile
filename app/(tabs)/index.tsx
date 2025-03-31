@@ -224,10 +224,12 @@ export default function Home() {
     bottom: 0,
     left: 0,
     right: 0,
+    height: 300,
     opacity: routeInfoAnimation.value,
     transform: [
       { translateY: interpolate(routeInfoAnimation.value, [0, 1], [100, 0]) },
     ],
+    zIndex: 1000,
   }));
 
   return (
