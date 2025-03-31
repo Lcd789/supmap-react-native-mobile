@@ -262,7 +262,7 @@ export default function Home() {
       <Animated.View style={floatingButtonStyle}>
         <TouchableOpacity
           onPress={toggleSearchBar}
-          style={homeStyles.floatingButton}
+          //style={homeStyles.floatingButton}
         >
           <MaterialIcons name="map" size={24} color="#fff" />
         </TouchableOpacity>
