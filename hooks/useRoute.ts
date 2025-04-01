@@ -5,6 +5,10 @@ import Constants from "expo-constants";
 
 const API_KEY = process.env.EXPO_PUBLIC_GOOGLE_API_KEY;
 
+interface RouteOptions {
+  avoidTolls?: boolean;
+}
+
 export function useRoute() {
   const [routeInfo, setRouteInfo] = useState<RouteCalculationResult[] | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -14,7 +18,8 @@ export function useRoute() {
     origin: string,
     destination: string,
     waypoints: Waypoint[],
-    mode: TransportMode
+    mode: TransportMode,
+    options?: RouteOptions
   ): Promise<RouteCalculationResult[] | null> => {
     setIsLoading(true);
     setError(null);
@@ -24,11 +29,15 @@ export function useRoute() {
         .map((wp) => encodeURIComponent(wp.address))
         .join("|");
 
+      const avoidParams = [];
+      if (options?.avoidTolls) avoidParams.push("tolls");
+      const avoidQuery = avoidParams.length > 0 ? `&avoid=${avoidParams.join("|")}` : "";
+
       const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${encodeURIComponent(
         origin
       )}&destination=${encodeURIComponent(destination)}${
         wpString ? `&waypoints=${wpString}` : ""
-      }&mode=${mode}&alternatives=true&key=${API_KEY}`;
+      }&mode=${mode}&alternatives=true${avoidQuery}&key=${API_KEY}`;
 
       console.log("Calling Google Maps API:", url);
 

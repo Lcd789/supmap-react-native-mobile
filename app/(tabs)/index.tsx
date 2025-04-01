@@ -37,6 +37,7 @@ export default function Home() {
   const [destination, setDestination] = useState<string>("");
   const [waypoints, setWaypoints] = useState<Waypoint[]>([]);
   const [selectedMode, setSelectedMode] = useState<TransportMode>("driving");
+  const [avoidTolls, setAvoidTolls] = useState<boolean>(false);
   const [showSteps, setShowSteps] = useState<boolean>(false);
   const [isSearchVisible, setIsSearchVisible] = useState<boolean>(true);
 
@@ -100,12 +101,16 @@ export default function Home() {
 
     const validWaypoints = waypoints.filter((wp) => wp.address.trim() !== "");
 
+    setAlternativeRoutes([]);
+    setSelectedRoute(null);
+
     try {
       const routeResult = await calculateRoute(
         origin,
         destination,
         validWaypoints,
-        selectedMode
+        selectedMode,
+        { avoidTolls }
       );
 
       if (routeResult && routeResult.length > 0) {
@@ -137,7 +142,13 @@ export default function Home() {
     } catch (error) {
       console.error("Erreur lors du calcul de l'itinéraire :", error);
     }
-  }, [origin, destination, waypoints, selectedMode, calculateRoute, setMapRegion]);
+  }, [origin, destination, waypoints, selectedMode, avoidTolls, calculateRoute, setMapRegion]);
+
+  useEffect(() => {
+    if (origin && destination) {
+      handleSearch();
+    }
+  }, [avoidTolls]);
 
   const handleReverse = useCallback(() => {
     setOrigin(destination);
@@ -257,15 +268,14 @@ export default function Home() {
             onModeSelect={setSelectedMode}
             onSearch={handleSearch}
             onReverse={handleReverse}
+            avoidTolls={avoidTolls}
+            onToggleTolls={() => setAvoidTolls((prev) => !prev)}
           />
         )}
       </Animated.View>
 
       <Animated.View style={floatingButtonStyle}>
-        <TouchableOpacity
-          onPress={toggleSearchBar}
-          //style={homeStyles.floatingButton}
-        >
+        <TouchableOpacity onPress={toggleSearchBar}>
           <MaterialIcons name="map" size={24} color="#fff" />
         </TouchableOpacity>
       </Animated.View>
@@ -277,6 +287,10 @@ export default function Home() {
             destination={destination}
             waypoints={waypoints}
             selectedMode={selectedMode}
+            routes={alternativeRoutes}
+            onSelectRoute={(route: RouteCalculationResult) => {
+              setSelectedRoute(route);
+            }}
             onLaunchNavigation={(route: RouteCalculationResult) => {
               setSelectedRoute(route);
               setNavigationLaunched(true);

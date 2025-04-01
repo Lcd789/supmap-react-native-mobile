@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import {
   View,
   Text,
@@ -8,14 +8,14 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { RouteCalculationResult, Waypoint, TransportMode } from "@/types";
-import { useRoute } from "@/hooks/useRoute"; 
-import { MaterialIcons } from '@expo/vector-icons';
+import { MaterialIcons } from "@expo/vector-icons";
 
 interface RouteSelectorProps {
   origin: string;
   destination: string;
   waypoints?: Waypoint[];
   selectedMode: TransportMode;
+  routes: RouteCalculationResult[];
   onSelectRoute?: (route: RouteCalculationResult) => void;
   onLaunchNavigation?: (route: RouteCalculationResult) => void;
 }
@@ -25,25 +25,12 @@ const RouteSelector: React.FC<RouteSelectorProps> = ({
   destination,
   waypoints = [],
   selectedMode,
+  routes,
   onSelectRoute,
   onLaunchNavigation,
 }) => {
-  const { calculateRoute, isLoading, error } = useRoute();
-  const [routes, setRoutes] = useState<RouteCalculationResult[]>([]);
   const [selectedRoute, setSelectedRoute] =
-    useState<RouteCalculationResult | null>(null);
-
-  useEffect(() => {
-    if (origin && destination) {
-      calculateRoute(origin, destination, waypoints, selectedMode).then(
-        (results) => {
-          if (results) {
-            setRoutes(results);
-          }
-        }
-      );
-    }
-  }, [origin, destination, waypoints, selectedMode]);
+    React.useState<RouteCalculationResult | null>(null);
 
   const handleSelectRoute = (route: RouteCalculationResult) => {
     setSelectedRoute(route);
@@ -58,22 +45,6 @@ const RouteSelector: React.FC<RouteSelectorProps> = ({
       onLaunchNavigation(route);
     }
   };
-
-  if (isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#2196F3" />
-      </View>
-    );
-  }
-
-  if (error) {
-    return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>{error}</Text>
-      </View>
-    );
-  }
 
   return (
     <View style={styles.container}>
@@ -94,7 +65,7 @@ const RouteSelector: React.FC<RouteSelectorProps> = ({
                 <Text style={styles.routeSummary}>
                   Itinéraire {index + 1} - {item.distance} - {item.duration}
                 </Text>
-        
+
                 <TouchableOpacity onPress={() => handleLaunchNavigation(item)}>
                   <MaterialIcons name="chevron-right" size={24} color="#2196F3" />
                 </TouchableOpacity>
@@ -102,8 +73,6 @@ const RouteSelector: React.FC<RouteSelectorProps> = ({
             </TouchableOpacity>
           </View>
         )}
-        
-        
       />
     </View>
   );
@@ -146,39 +115,11 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#333",
   },
-  launchButton: {
-    marginTop: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    backgroundColor: "#2196F3",
-    borderRadius: 6,
-    alignItems: "center",
-  },
-  launchButtonText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  errorContainer: {
-    padding: 16,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  errorText: {
-    color: "red",
-    fontSize: 16,
-  },
   routeRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-  }  
+  },
 });
 
 export default RouteSelector;
-

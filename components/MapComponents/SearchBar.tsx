@@ -1,3 +1,4 @@
+// SearchBar.tsx
 import React from "react";
 import {
   View,
@@ -18,6 +19,7 @@ interface SearchBarProps {
   waypoints: Waypoint[];
   selectedMode: TransportMode;
   isLoading: boolean;
+  avoidTolls: boolean;
   onOriginChange: (text: string) => void;
   onDestinationChange: (text: string) => void;
   onWaypointAdd: () => void;
@@ -26,6 +28,7 @@ interface SearchBarProps {
   onModeSelect: (mode: TransportMode) => void;
   onSearch: () => void;
   onReverse: () => void;
+  onToggleTolls: () => void;
 }
 
 export const SearchBar: React.FC<SearchBarProps> = ({
@@ -34,6 +37,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   waypoints,
   selectedMode,
   isLoading,
+  avoidTolls,
   onOriginChange,
   onDestinationChange,
   onWaypointAdd,
@@ -42,6 +46,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   onModeSelect,
   onSearch,
   onReverse,
+  onToggleTolls,
 }) => {
   const isReverseButtonVisible = waypoints.length === 0;
 
@@ -120,6 +125,21 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         selectedMode={selectedMode}
         onModeSelect={onModeSelect}
       />
+
+      {/* Bouton éviter les péages */}
+      <TouchableOpacity
+        onPress={onToggleTolls}
+        style={{ flexDirection: "row", alignItems: "center", marginTop: 12 }}
+      >
+        <MaterialIcons
+          name={avoidTolls ? "toggle-on" : "toggle-off"}
+          size={32}
+          color={avoidTolls ? "#2196F3" : "#888"}
+        />
+        <Text style={{ marginLeft: 10, fontSize: 16 }}>
+          Éviter les routes à péages
+        </Text>
+      </TouchableOpacity>
 
       <TouchableOpacity
         style={searchBarStyles.searchButton}
