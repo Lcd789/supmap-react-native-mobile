@@ -90,7 +90,7 @@ export const NextStepBanner: React.FC<NextStepBannerProps> = ({
 const styles = StyleSheet.create({
     bannerContainer: {
         position: "absolute",
-        top: 10,
+        top: 20,
         left: 0,
         right: 0,
         borderBottomWidth: 1,

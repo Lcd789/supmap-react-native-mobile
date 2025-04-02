@@ -256,7 +256,7 @@ export default function Home() {
       
       {selectedRoute && (
         <NextStepBanner
-          nextStep={selectedRoute.steps[2]} // mettre à 1 pour voir une direction
+          nextStep={selectedRoute.steps[0]} // mettre à 1 pour voir une direction
           onToggleSteps={toggleSteps}
         />
       )}
