@@ -14,6 +14,11 @@ export function useRoute() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
+  const language = "fr";
+  const region = "FR";
+  const units = "metric";
+
+
   const calculateRoute = async (
     origin: string,
     destination: string,
@@ -37,7 +42,19 @@ export function useRoute() {
         origin
       )}&destination=${encodeURIComponent(destination)}${
         wpString ? `&waypoints=${wpString}` : ""
-      }&mode=${mode}&alternatives=true${avoidQuery}&key=${API_KEY}`;
+      }&mode=${
+        mode
+      }&language=${
+        language
+      }&region=${
+        region
+      }&units=${
+        units
+      }&alternatives=true${
+        avoidQuery
+      }&key=${
+        API_KEY
+      }`;
 
       console.log("Calling Google Maps API:", url);
 

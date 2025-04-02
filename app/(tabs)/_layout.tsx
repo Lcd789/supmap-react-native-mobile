@@ -18,6 +18,7 @@ export default function TabsLayout() {
                 name="index"
                 options={{
                     title: "SUPMAP",
+                    headerShown: false,
                     tabBarIcon: ({ focused, color }) => (
                         <Ionicons name={focused ? "home" : "home-outline"} size={24} color={color} />
                     ),

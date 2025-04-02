@@ -54,7 +54,7 @@ export const RouteInfo: React.FC<RouteInfoProps> = ({
     const renderStep = (step: Step, index: number) => {
         const instruction =
             typeof step.html_instructions === "string"
-                ? step.html_instructions.replace(/<[^>]*>/g, "")
+                ? step.html_instructions.replace(/<[^>]*>/g, " ")
                 : step.instruction || "Étape " + (index + 1);
 
         let distanceText = "";

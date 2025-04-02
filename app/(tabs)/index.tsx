@@ -23,12 +23,14 @@ import { SearchBar } from "../../components/MapComponents/SearchBar";
 import { RouteMap } from "../../components/MapComponents/RouteMap";
 import { RouteInfo } from "../../components/MapComponents/RouteInfo";
 import RouteSelector from "../../components/MapComponents/RouteSelector";
+import { NextStepBanner } from "@/components/MapComponents/NextStepBanner";
 import {
   TransportMode,
   Waypoint,
   RouteCalculationResult,
 } from "../../types";
 import { homeStyles } from "../../styles/styles";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 type RouteWithId = RouteCalculationResult & { id: string };
 
@@ -195,7 +197,7 @@ export default function Home() {
 
   const searchBarContainerStyle = useAnimatedStyle(() => ({
     position: "absolute",
-    top: 0,
+    top: 70,
     left: 0,
     right: 0,
     zIndex: 100,
@@ -209,7 +211,7 @@ export default function Home() {
 
   const floatingButtonStyle = useAnimatedStyle(() => ({
     position: "absolute",
-    top: 20,
+    top: 100,
     right: 20,
     width: 50,
     height: 50,
@@ -244,13 +246,20 @@ export default function Home() {
   }));
 
   return (
-    <View style={homeStyles.container}>
+    <SafeAreaView style={homeStyles.container}>
       <RouteMap
         region={mapRegion}
         mapRef={mapRef}
         alternativeRoutes={alternativeRoutes}
         selectedRouteId={selectedRoute ? (selectedRoute as RouteWithId).id : undefined}
       />
+      
+      {selectedRoute && (
+        <NextStepBanner
+          nextStep={selectedRoute.steps[2]} // mettre à 1 pour voir une direction
+          onToggleSteps={toggleSteps}
+        />
+      )}
 
       <Animated.View style={searchBarContainerStyle}>
         {isSearchVisible && (
@@ -325,7 +334,7 @@ export default function Home() {
           <ActivityIndicator size="large" color="#2196F3" />
         </View>
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
