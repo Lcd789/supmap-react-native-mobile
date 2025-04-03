@@ -31,6 +31,8 @@ interface SearchBarProps {
   onToggleTolls: () => void;
 }
 
+const GOOGLE_PLACES_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_API_KEY;
+
 export const SearchBar: React.FC<SearchBarProps> = ({
   origin,
   destination,
@@ -50,26 +52,113 @@ export const SearchBar: React.FC<SearchBarProps> = ({
 }) => {
   const isReverseButtonVisible = waypoints.length === 0;
 
+  const [originSuggestions, setOriginSuggestions] = React.useState<string[]>([]);
+  const [destinationSuggestions, setDestinationSuggestions] = React.useState<string[]>([]);
+  const [waypointSuggestions, setWaypointSuggestions] = React.useState<string[][]>([]);
+
+  const fetchSuggestions = async (input: string): Promise<string[]> => {
+    if (input.length < 3) return [];
+    try {
+      const response = await fetch(
+        `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(
+          input
+        )}&key=${GOOGLE_PLACES_API_KEY}&language=fr`
+      );
+      const data = await response.json();
+      if (data.status === "OK") {
+        return data.predictions.map((p: any) => p.description);
+      }
+    } catch (error) {
+      console.error("Erreur de complétion :", error);
+    }
+    return [];
+  };
+
+  const handleOriginChange = async (text: string) => {
+    onOriginChange(text);
+    const suggestions = await fetchSuggestions(text);
+    setOriginSuggestions(suggestions);
+  };
+
+  const handleDestinationChange = async (text: string) => {
+    onDestinationChange(text);
+    const suggestions = await fetchSuggestions(text);
+    setDestinationSuggestions(suggestions);
+  };
+
+  const handleWaypointChange = async (index: number, text: string) => {
+    onWaypointUpdate(index, text);
+    const suggestions = await fetchSuggestions(text);
+    setWaypointSuggestions((prev) => {
+      const updated = [...prev];
+      updated[index] = suggestions;
+      return updated;
+    });
+  };
+
+  const handleOriginSelect = (suggestion: string) => {
+    onOriginChange(suggestion);
+    setOriginSuggestions([]);
+  };
+
+  const handleDestinationSelect = (suggestion: string) => {
+    onDestinationChange(suggestion);
+    setDestinationSuggestions([]);
+  };
+
+  const handleWaypointSelect = (index: number, suggestion: string) => {
+    onWaypointUpdate(index, suggestion);
+    setWaypointSuggestions((prev) => {
+      const updated = [...prev];
+      updated[index] = [];
+      return updated;
+    });
+  };
+
   return (
     <View style={searchBarStyles.searchContainer}>
       <TextInput
         style={searchBarStyles.input}
         placeholder="Point de départ"
         value={origin}
-        onChangeText={onOriginChange}
+        onChangeText={handleOriginChange}
       />
+      {originSuggestions.length > 0 && (
+        <FlatList
+          data={originSuggestions}
+          keyExtractor={(item) => item}
+          renderItem={({ item }) => (
+            <TouchableOpacity onPress={() => handleOriginSelect(item)}>
+              <Text style={{ padding: 8, backgroundColor: "#eee" }}>{item}</Text>
+            </TouchableOpacity>
+          )}
+        />
+      )}
 
       <FlatList
         data={waypoints}
         keyExtractor={(item, index) => index.toString()}
         renderItem={({ item, index }) => (
           <View style={searchBarStyles.waypointContainer}>
-            <TextInput
-              style={searchBarStyles.input}
-              placeholder={`Étape ${index + 1}`}
-              value={item.address}
-              onChangeText={(text) => onWaypointUpdate(index, text)}
-            />
+            <View style={{ flex: 1 }}>
+              <TextInput
+                style={searchBarStyles.input}
+                placeholder={`Étape ${index + 1}`}
+                value={item.address}
+                onChangeText={(text) => handleWaypointChange(index, text)}
+              />
+              {waypointSuggestions[index]?.length > 0 && (
+                <FlatList
+                  data={waypointSuggestions[index]}
+                  keyExtractor={(item) => item}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity onPress={() => handleWaypointSelect(index, item)}>
+                      <Text style={{ padding: 8, backgroundColor: "#eee" }}>{item}</Text>
+                    </TouchableOpacity>
+                  )}
+                />
+              )}
+            </View>
             <TouchableOpacity
               style={searchBarStyles.deleteWaypointIcon}
               onPress={() => onWaypointRemove(index)}
@@ -118,8 +207,19 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         style={searchBarStyles.input}
         placeholder="Destination"
         value={destination}
-        onChangeText={onDestinationChange}
+        onChangeText={handleDestinationChange}
       />
+      {destinationSuggestions.length > 0 && (
+        <FlatList
+          data={destinationSuggestions}
+          keyExtractor={(item) => item}
+          renderItem={({ item }) => (
+            <TouchableOpacity onPress={() => handleDestinationSelect(item)}>
+              <Text style={{ padding: 8, backgroundColor: "#eee" }}>{item}</Text>
+            </TouchableOpacity>
+          )}
+        />
+      )}
 
       <TransportModeSelector
         selectedMode={selectedMode}
