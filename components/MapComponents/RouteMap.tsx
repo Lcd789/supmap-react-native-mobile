@@ -1,6 +1,11 @@
 // RouteMap.tsx
 import React from "react";
-import MapView, { Polyline, Region, MapViewProps } from "react-native-maps";
+import MapView, {
+  Polyline,
+  Region,
+  MapViewProps,
+  Marker,
+} from "react-native-maps";
 import { RouteCoordinate } from "@/types";
 
 interface AlternativeRoute {
@@ -13,6 +18,7 @@ interface RouteMapProps extends MapViewProps {
   alternativeRoutes?: AlternativeRoute[];
   selectedRouteId?: string;
   mapRef?: React.Ref<MapView>;
+  liveCoords?: { latitude: number; longitude: number } | null;
 }
 
 export const RouteMap: React.FC<RouteMapProps> = ({
@@ -20,6 +26,7 @@ export const RouteMap: React.FC<RouteMapProps> = ({
   alternativeRoutes = [],
   selectedRouteId,
   mapRef,
+  liveCoords,
   ...mapProps
 }) => {
   return (
@@ -36,6 +43,14 @@ export const RouteMap: React.FC<RouteMapProps> = ({
           />
         );
       })}
+
+      {liveCoords && (
+        <Marker
+          coordinate={liveCoords}
+          title="Ma position"
+          pinColor="blue"
+        />
+      )}
     </MapView>
   );
 };

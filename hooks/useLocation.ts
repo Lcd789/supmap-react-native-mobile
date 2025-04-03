@@ -1,54 +1,79 @@
-import { useState, useCallback } from 'react';
-import * as Location from 'expo-location';
-import { Alert } from 'react-native';
-import { Region } from 'react-native-maps';
-import { reverseGeocode } from '../utils/mapUtils';
+import { useEffect, useState } from "react";
+import Geolocation, {
+  GeoPosition,
+  GeoError,
+} from "react-native-geolocation-service";
+import { PermissionsAndroid, Platform } from "react-native";
+import { Region } from "react-native-maps";
+import { getAddressFromCoords } from "@/utils/geocoding";
 
-export const useLocation = (onLocationFound: (address: string) => void) => {
-    const [mapRegion, setMapRegion] = useState<Region>({
-        latitude: 48.8535,
-        longitude: 2.348392,
-        latitudeDelta: 0.0922,
-        longitudeDelta: 0.0421
-    });
+export const useLocation = (onLocationTextUpdate?: (address: string) => void) => {
+  const [mapRegion, setMapRegion] = useState<Region>({
+    latitude: 48.8566,
+    longitude: 2.3522,
+    latitudeDelta: 0.05,
+    longitudeDelta: 0.05,
+  });
 
-    const getCurrentLocation = useCallback(async (): Promise<void> => {
-        try {
-            const { status } = await Location.requestForegroundPermissionsAsync();
-            if (status !== "granted") {
-                Alert.alert(
-                    "Permission refusée",
-                    "L'accès à la localisation est nécessaire pour utiliser cette fonctionnalité"
-                );
-                return;
-            }
+  const [liveCoords, setLiveCoords] = useState<{ latitude: number; longitude: number } | null>(null);
 
-            const location = await Location.getCurrentPositionAsync({});
-            const newRegion: Region = {
-                latitude: location.coords.latitude,
-                longitude: location.coords.longitude,
-                latitudeDelta: 0.0922,
-                longitudeDelta: 0.042
-            };
+  const getCurrentLocation = async () => {
+    const hasPermission = await requestLocationPermission();
+    if (!hasPermission) return;
 
-            setMapRegion(newRegion);
+    Geolocation.getCurrentPosition(
+      async (position: GeoPosition) => {
+        const { latitude, longitude } = position.coords;
 
-            const address = await reverseGeocode(
-                location.coords.latitude,
-                location.coords.longitude,
-                process.env.EXPO_PUBLIC_GOOGLE_API_KEY as string
-            );
-            onLocationFound(address);
-        } catch (error) {Alert.alert(
-            "Erreur",
-            "Impossible d'obtenir votre position actuelle"
-        );
-    }
-}, [onLocationFound]);
+        setMapRegion({
+          latitude,
+          longitude,
+          latitudeDelta: 0.05,
+          longitudeDelta: 0.05,
+        });
 
-return {
+        const address = await getAddressFromCoords(latitude, longitude);
+        if (onLocationTextUpdate && address) onLocationTextUpdate(address);
+      },
+      (error: GeoError) => {
+        console.error("Erreur localisation :", error);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 10000 }
+    );
+  };
+
+  useEffect(() => {
+    getCurrentLocation();
+
+    const watchId = Geolocation.watchPosition(
+      (position: GeoPosition) => {
+        const { latitude, longitude } = position.coords;
+        setLiveCoords({ latitude, longitude });
+      },
+      (error: GeoError) => console.error("Erreur de suivi GPS :", error),
+      {
+        enableHighAccuracy: true,
+        distanceFilter: 10,
+        interval: 5000,
+        fastestInterval: 2000,
+      }
+    );
+
+    return () => Geolocation.clearWatch(watchId);
+  }, []);
+
+  const requestLocationPermission = async (): Promise<boolean> => {
+    if (Platform.OS === "ios") return true;
+    const granted = await PermissionsAndroid.request(
+      PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
+    );
+    return granted === PermissionsAndroid.RESULTS.GRANTED;
+  };
+
+  return {
     mapRegion,
     setMapRegion,
-    getCurrentLocation
-};
+    getCurrentLocation,
+    liveCoords,
+  };
 };

@@ -31,6 +31,11 @@ import {
 } from "../../types";
 import { homeStyles } from "../../styles/styles";
 import { SafeAreaView } from "react-native-safe-area-context";
+const { mapRegion, setMapRegion, getCurrentLocation, liveCoords } = useLocation(
+  (address) => setOrigin(address)
+);
+
+
 
 type RouteWithId = RouteCalculationResult & { id: string };
 
@@ -247,12 +252,14 @@ export default function Home() {
 
   return (
     <SafeAreaView style={homeStyles.container}>
-      <RouteMap
-        region={mapRegion}
-        mapRef={mapRef}
-        alternativeRoutes={alternativeRoutes}
-        selectedRouteId={selectedRoute ? (selectedRoute as RouteWithId).id : undefined}
-      />
+    <RouteMap
+      region={mapRegion}
+      mapRef={mapRef}
+      alternativeRoutes={alternativeRoutes}
+      selectedRouteId={selectedRoute ? (selectedRoute as RouteWithId).id : undefined}
+      liveCoords={liveCoords}
+    />
+
       
       {selectedRoute && (
         <NextStepBanner
