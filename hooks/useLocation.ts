@@ -1,9 +1,5 @@
 import { useEffect, useState } from "react";
-import Geolocation, {
-  GeoPosition,
-  GeoError,
-} from "react-native-geolocation-service";
-import { PermissionsAndroid, Platform } from "react-native";
+import * as Location from "expo-location";
 import { Region } from "react-native-maps";
 import { getAddressFromCoords } from "@/utils/geocoding";
 
@@ -15,60 +11,73 @@ export const useLocation = (onLocationTextUpdate?: (address: string) => void) =>
     longitudeDelta: 0.05,
   });
 
-  const [liveCoords, setLiveCoords] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [liveCoords, setLiveCoords] = useState<{ latitude: number; longitude: number } | null>(
+    null
+  );
 
   const getCurrentLocation = async () => {
-    const hasPermission = await requestLocationPermission();
-    if (!hasPermission) return;
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        console.warn("Permission localisation refusée");
+        return;
+      }
 
-    Geolocation.getCurrentPosition(
-      async (position: GeoPosition) => {
-        const { latitude, longitude } = position.coords;
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
 
-        setMapRegion({
-          latitude,
-          longitude,
-          latitudeDelta: 0.05,
-          longitudeDelta: 0.05,
-        });
+      const { latitude, longitude } = location.coords;
 
-        const address = await getAddressFromCoords(latitude, longitude);
-        if (onLocationTextUpdate && address) onLocationTextUpdate(address);
-      },
-      (error: GeoError) => {
-        console.error("Erreur localisation :", error);
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 10000 }
-    );
+      setMapRegion({
+        latitude,
+        longitude,
+        latitudeDelta: 0.05,
+        longitudeDelta: 0.05,
+      });
+
+      setLiveCoords({ latitude, longitude });
+
+      const address = await getAddressFromCoords(latitude, longitude);
+      if (onLocationTextUpdate && address) onLocationTextUpdate(address);
+    } catch (err) {
+      console.error("Erreur lors de la récupération de la position :", err);
+    }
   };
 
   useEffect(() => {
     getCurrentLocation();
 
-    const watchId = Geolocation.watchPosition(
-      (position: GeoPosition) => {
-        const { latitude, longitude } = position.coords;
-        setLiveCoords({ latitude, longitude });
-      },
-      (error: GeoError) => console.error("Erreur de suivi GPS :", error),
-      {
-        enableHighAccuracy: true,
-        distanceFilter: 10,
-        interval: 5000,
-        fastestInterval: 2000,
+    let subscription: Location.LocationSubscription;
+
+    const startLiveTracking = async () => {
+      const { status } = await Location.getForegroundPermissionsAsync();
+      if (status !== "granted") return;
+
+      subscription = await Location.watchPositionAsync(
+        {
+          accuracy: Location.Accuracy.High,
+          distanceInterval: 10,
+          timeInterval: 3000,
+        },
+        (location) => {
+          const coords = {
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+          };
+          setLiveCoords(coords);
+        }
+      );
+    };
+
+    startLiveTracking();
+
+    return () => {
+      if (subscription) {
+        subscription.remove();
       }
-    );
-
-    return () => Geolocation.clearWatch(watchId);
+    };
   }, []);
-
-  const requestLocationPermission = async (): Promise<boolean> => {
-    if (Platform.OS === "ios") return true;
-    const granted = await PermissionsAndroid.request(
-      PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
-    );
-    return granted === PermissionsAndroid.RESULTS.GRANTED;
-  };
 
   return {
     mapRegion,

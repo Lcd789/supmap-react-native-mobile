@@ -21,11 +21,12 @@
       "supportsTablet": true
     },
     "android": {
-      "config": {
-        "googleMaps": {
-          "apiKey": "${EXPO_PUBLIC_GOOGLE_API_KEY}"
-        }
+    "config": {
+      "googleMaps": {
+        "apiKey": "${EXPO_PUBLIC_GOOGLE_API_KEY}"
+      }
       },
+      "permissions": ["ACCESS_FINE_LOCATION"],
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"

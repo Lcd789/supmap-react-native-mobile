@@ -1,45 +1,32 @@
-import React, { useRef, useState, useCallback, useEffect } from "react";
-import {
-  View,
-  Text,
-  ActivityIndicator,
-  TouchableOpacity,
-  StyleSheet,
-} from "react-native";
-import { MaterialIcons } from "@expo/vector-icons";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { View, ActivityIndicator, StyleSheet, Text, TouchableOpacity } from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
   Easing,
   interpolate,
-  runOnJS,
   withSpring,
   withDelay,
+  runOnJS,
 } from "react-native-reanimated";
-import { useLocation } from "../../hooks/useLocation";
-import { useRoute } from "../../hooks/useRoute";
-import { SearchBar } from "../../components/MapComponents/SearchBar";
-import { RouteMap } from "../../components/MapComponents/RouteMap";
-import { RouteInfo } from "../../components/MapComponents/RouteInfo";
-import RouteSelector from "../../components/MapComponents/RouteSelector";
-import { NextStepBanner } from "@/components/MapComponents/NextStepBanner";
-import {
-  TransportMode,
-  Waypoint,
-  RouteCalculationResult,
-} from "../../types";
-import { homeStyles } from "../../styles/styles";
 import { SafeAreaView } from "react-native-safe-area-context";
-const { mapRegion, setMapRegion, getCurrentLocation, liveCoords } = useLocation(
-  (address) => setOrigin(address)
-);
-
-
+import { MaterialIcons } from "@expo/vector-icons";
+import { useLocation } from "@/hooks/useLocation";
+import { useRoute } from "@/hooks/useRoute";
+import { useHistory } from "@/hooks/useHistory";
+import { SearchBar } from "@/components/MapComponents/SearchBar";
+import { RouteMap } from "@/components/MapComponents/RouteMap";
+import { RouteInfo } from "@/components/MapComponents/RouteInfo";
+import RouteSelector from "@/components/MapComponents/RouteSelector";
+import { NextStepBanner } from "@/components/MapComponents/NextStepBanner";
+import { homeStyles } from "@/styles/styles";
+import { RouteCalculationResult, TransportMode, Waypoint } from "@/types";
 
 type RouteWithId = RouteCalculationResult & { id: string };
 
 export default function Home() {
+  const { addToHistory } = useHistory();
   const [origin, setOrigin] = useState<string>("");
   const [destination, setDestination] = useState<string>("");
   const [waypoints, setWaypoints] = useState<Waypoint[]>([]);
@@ -47,10 +34,10 @@ export default function Home() {
   const [avoidTolls, setAvoidTolls] = useState<boolean>(false);
   const [showSteps, setShowSteps] = useState<boolean>(false);
   const [isSearchVisible, setIsSearchVisible] = useState<boolean>(true);
-
   const [alternativeRoutes, setAlternativeRoutes] = useState<RouteWithId[]>([]);
   const [selectedRoute, setSelectedRoute] = useState<RouteCalculationResult | null>(null);
   const [navigationLaunched, setNavigationLaunched] = useState<boolean>(false);
+
 
   const mapRef = useRef<any>(null);
 
@@ -58,9 +45,7 @@ export default function Home() {
   const routeInfoAnimation = useSharedValue(0);
   const stepsAnimation = useSharedValue(0);
 
-  const { mapRegion, setMapRegion, getCurrentLocation } = useLocation(
-    (address) => setOrigin(address)
-  );
+  const { mapRegion, setMapRegion, liveCoords } = useLocation();
   const { routeInfo, isLoading, error, calculateRoute } = useRoute();
 
   useEffect(() => {
@@ -79,26 +64,6 @@ export default function Home() {
       });
     }
   }, [selectedRoute, navigationLaunched]);
-
-  const handleAddWaypoint = useCallback(() => {
-    setWaypoints((prev) => [
-      ...prev,
-      { address: "", id: Date.now().toString() },
-    ]);
-  }, []);
-
-  const handleRemoveWaypoint = useCallback((index: number) => {
-    setWaypoints((prev) => prev.filter((_, i) => i !== index));
-  }, []);
-
-  const handleUpdateWaypoint = useCallback(
-    (index: number, address: string) => {
-      setWaypoints((prev) =>
-        prev.map((wp, i) => (i === index ? { ...wp, address } : wp))
-      );
-    },
-    []
-  );
 
   const handleSearch = useCallback(async () => {
     if (!origin.trim() || !destination.trim()) {
@@ -129,6 +94,14 @@ export default function Home() {
         setAlternativeRoutes(routesWithIds);
         setSelectedRoute(routesWithIds[0]);
 
+        // ✅ Ajout ici : une fois que la route est valide, on sauvegarde
+        addToHistory({
+          origin,
+          destination,
+          waypoints: validWaypoints.map((wp) => wp.address),
+          mode: selectedMode,
+        });
+
         const { bounds } = routesWithIds[0];
         const newRegion = {
           latitude: (bounds.northeast.lat + bounds.southwest.lat) / 2,
@@ -151,18 +124,29 @@ export default function Home() {
     }
   }, [origin, destination, waypoints, selectedMode, avoidTolls, calculateRoute, setMapRegion]);
 
-  useEffect(() => {
-    if (origin && destination) {
-      handleSearch();
-    }
-  }, [avoidTolls]);
-
   const handleReverse = useCallback(() => {
     setOrigin(destination);
     setDestination(origin);
   }, [origin, destination]);
 
-  const toggleSteps = useCallback(() => {
+  const handleAddWaypoint = () => {
+    setWaypoints((prev) => [
+      ...prev,
+      { address: "", id: Date.now().toString() },
+    ]);
+  };
+
+  const handleRemoveWaypoint = (index: number) => {
+    setWaypoints((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleUpdateWaypoint = (index: number, address: string) => {
+    setWaypoints((prev) =>
+      prev.map((wp, i) => (i === index ? { ...wp, address } : wp))
+    );
+  };
+
+  const toggleSteps = () => {
     const newValue = showSteps ? 0 : 1;
     stepsAnimation.value = withTiming(
       newValue,
@@ -174,9 +158,9 @@ export default function Home() {
         runOnJS(setShowSteps)(!showSteps);
       }
     );
-  }, [showSteps, stepsAnimation]);
+  };
 
-  const toggleSearchBar = useCallback(() => {
+  const toggleSearchBar = () => {
     const newValue = isSearchVisible ? 0 : 1;
 
     if (newValue === 1) {
@@ -198,7 +182,7 @@ export default function Home() {
         }
       );
     }
-  }, [isSearchVisible, searchBarAnimation]);
+  };
 
   const searchBarContainerStyle = useAnimatedStyle(() => ({
     position: "absolute",
@@ -252,18 +236,17 @@ export default function Home() {
 
   return (
     <SafeAreaView style={homeStyles.container}>
-    <RouteMap
-      region={mapRegion}
-      mapRef={mapRef}
-      alternativeRoutes={alternativeRoutes}
-      selectedRouteId={selectedRoute ? (selectedRoute as RouteWithId).id : undefined}
-      liveCoords={liveCoords}
-    />
+      <RouteMap
+        region={mapRegion}
+        mapRef={mapRef}
+        alternativeRoutes={alternativeRoutes}
+        selectedRouteId={selectedRoute ? (selectedRoute as RouteWithId).id : undefined}
+        liveCoords={liveCoords}
+      />
 
-      
       {selectedRoute && (
         <NextStepBanner
-          nextStep={selectedRoute.steps[0]} // mettre à 1 pour voir une direction
+          nextStep={selectedRoute.steps[0]}
           onToggleSteps={toggleSteps}
         />
       )}
@@ -286,6 +269,7 @@ export default function Home() {
             onReverse={handleReverse}
             avoidTolls={avoidTolls}
             onToggleTolls={() => setAvoidTolls((prev) => !prev)}
+            liveCoords={liveCoords}
           />
         )}
       </Animated.View>
@@ -304,12 +288,19 @@ export default function Home() {
             waypoints={waypoints}
             selectedMode={selectedMode}
             routes={alternativeRoutes}
+            selectedRouteId={(selectedRoute as RouteWithId)?.id}
             onSelectRoute={(route: RouteCalculationResult) => {
               setSelectedRoute(route);
             }}
             onLaunchNavigation={(route: RouteCalculationResult) => {
               setSelectedRoute(route);
               setNavigationLaunched(true);
+              addToHistory({
+                origin,
+                destination,
+                waypoints: waypoints.map((wp) => wp.address),
+                mode: selectedMode,
+              });
             }}
           />
         </View>

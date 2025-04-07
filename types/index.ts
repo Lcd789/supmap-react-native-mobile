@@ -47,13 +47,25 @@ export interface GoogleMapsResponse {
 }
 
 export interface Waypoint {
-    id : string;
+    id: string;
     address: string;
     location?: {
         latitude: number;
         longitude: number;
     };
 }
+
+export interface SavedTrip {
+    id: string;
+    origin: string;
+    destination: string;
+    waypoints?: Waypoint[];
+    mode: TransportMode;
+    timestamp: number;
+    distance?: string;
+    duration?: string;
+  }
+  
 
 export interface RouteInfo {
     duration: string;
@@ -74,9 +86,14 @@ export interface RouteBounds {
 }
 
 export interface RouteCalculationResult {
-    polyline: RouteCoordinate[];
-    bounds: RouteBounds;
+    bounds: any;
     duration: string;
     distance: string;
+    polyline: { latitude: number; longitude: number }[];
     steps: Step[];
+    durationValue?: number;
+    distanceValue?: number;
+    summary?: string;
 }
+
+export type RouteWithId = RouteCalculationResult & { id: string };

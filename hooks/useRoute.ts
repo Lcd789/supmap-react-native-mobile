@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { RouteCalculationResult, Step, Waypoint, TransportMode } from "@/types";
 import polyline from "@mapbox/polyline";
-import Constants from "expo-constants";
 
 const API_KEY = process.env.EXPO_PUBLIC_GOOGLE_API_KEY;
 
@@ -18,7 +17,6 @@ export function useRoute() {
   const region = "FR";
   const units = "metric";
 
-
   const calculateRoute = async (
     origin: string,
     destination: string,
@@ -30,9 +28,13 @@ export function useRoute() {
     setError(null);
 
     try {
-      const wpString = waypoints
-        .map((wp) => encodeURIComponent(wp.address))
-        .join("|");
+      const validWaypoints = waypoints
+        .filter((wp) => wp.address.trim() !== "")
+        .map((wp) => encodeURIComponent(wp.address));
+
+      const wpString = validWaypoints.length > 0
+        ? `&waypoints=optimize:true|${validWaypoints.join("|")}`
+        : "";
 
       const avoidParams = [];
       if (options?.avoidTolls) avoidParams.push("tolls");
@@ -40,21 +42,7 @@ export function useRoute() {
 
       const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${encodeURIComponent(
         origin
-      )}&destination=${encodeURIComponent(destination)}${
-        wpString ? `&waypoints=${wpString}` : ""
-      }&mode=${
-        mode
-      }&language=${
-        language
-      }&region=${
-        region
-      }&units=${
-        units
-      }&alternatives=true${
-        avoidQuery
-      }&key=${
-        API_KEY
-      }`;
+      )}&destination=${encodeURIComponent(destination)}${wpString}&mode=${mode}&language=${language}&region=${region}&units=${units}&alternatives=true${avoidQuery}&key=${API_KEY}`;
 
       console.log("Calling Google Maps API:", url);
 
@@ -75,14 +63,20 @@ export function useRoute() {
           })
         );
 
-        const steps: Step[] = route.legs[0].steps.map((step: any) => ({
-          html_instructions: step.html_instructions,
-          distance: step.distance,
-          duration: step.duration,
-          maneuver: step.maneuver,
-          start_location: step.start_location,
-          end_location: step.end_location,
-        }));
+        // total distance and duration across all legs
+        const totalDistance = route.legs.reduce((sum: number, leg: any) => sum + leg.distance.value, 0);
+        const totalDuration = route.legs.reduce((sum: number, leg: any) => sum + leg.duration.value, 0);
+
+        const steps: Step[] = route.legs.flatMap((leg: any) =>
+          leg.steps.map((step: any) => ({
+            html_instructions: step.html_instructions,
+            distance: step.distance,
+            duration: step.duration,
+            maneuver: step.maneuver,
+            start_location: step.start_location,
+            end_location: step.end_location,
+          }))
+        );
 
         return {
           bounds: route.bounds,
@@ -90,6 +84,8 @@ export function useRoute() {
           distance: route.legs[0].distance.text,
           polyline: decodedPolyline,
           steps,
+          durationValue: totalDuration,
+          distanceValue: totalDistance,
         };
       });
 

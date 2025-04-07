@@ -516,6 +516,20 @@ export const searchBarStyles = StyleSheet.create({
         marginVertical: 5,
         alignItems: "center",
     },
+    suggestionList: {
+        maxHeight: 150,
+        backgroundColor: "#fff",
+        borderRadius: 8,
+        elevation: 3,
+        marginBottom: 10,
+      },
+      
+      suggestionItem: {
+        padding: 12,
+        borderBottomWidth: 1,
+        borderColor: "#eee",
+      },
+      
 });
 
 /* ===========================

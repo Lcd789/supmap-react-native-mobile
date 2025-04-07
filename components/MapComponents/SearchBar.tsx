@@ -1,5 +1,4 @@
-// SearchBar.tsx
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   TextInput,
@@ -12,6 +11,10 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { TransportMode, Waypoint } from "../../types";
 import { TransportModeSelector } from "./TransportModeSelector";
 import { searchBarStyles } from "../../styles/styles";
+import { getAddressFromCoords } from "@/utils/geocoding";
+import { useHistory } from "@/hooks/useHistory";
+
+const GOOGLE_PLACES_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_API_KEY;
 
 interface SearchBarProps {
   origin: string;
@@ -20,6 +23,7 @@ interface SearchBarProps {
   selectedMode: TransportMode;
   isLoading: boolean;
   avoidTolls: boolean;
+  liveCoords: { latitude: number; longitude: number } | null;
   onOriginChange: (text: string) => void;
   onDestinationChange: (text: string) => void;
   onWaypointAdd: () => void;
@@ -31,8 +35,6 @@ interface SearchBarProps {
   onToggleTolls: () => void;
 }
 
-const GOOGLE_PLACES_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_API_KEY;
-
 export const SearchBar: React.FC<SearchBarProps> = ({
   origin,
   destination,
@@ -40,6 +42,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   selectedMode,
   isLoading,
   avoidTolls,
+  liveCoords,
   onOriginChange,
   onDestinationChange,
   onWaypointAdd,
@@ -52,68 +55,114 @@ export const SearchBar: React.FC<SearchBarProps> = ({
 }) => {
   const isReverseButtonVisible = waypoints.length === 0;
 
-  const [originSuggestions, setOriginSuggestions] = React.useState<string[]>([]);
-  const [destinationSuggestions, setDestinationSuggestions] = React.useState<string[]>([]);
-  const [waypointSuggestions, setWaypointSuggestions] = React.useState<string[][]>([]);
+  const [originSuggestions, setOriginSuggestions] = useState<
+    { description: string; isCurrentLocation?: boolean }[]
+  >([]);
+  const [destinationSuggestions, setDestinationSuggestions] = useState<
+    { description: string }[]
+  >([]);
+  const [waypointSuggestions, setWaypointSuggestions] = useState<
+    { [index: number]: { description: string }[] }
+  >({});
 
-  const fetchSuggestions = async (input: string): Promise<string[]> => {
-    if (input.length < 3) return [];
+  const { getHistory } = useHistory();
+  const [history, setHistory] = useState<any[]>([]);
+
+  useEffect(() => {
+    getHistory().then((h) => {
+      console.log("📋 Historique chargé dans SearchBar :", h);
+      setHistory(h);
+    });
+  }, []);
+
+  const fetchSuggestions = async (text: string): Promise<{ description: string }[]> => {
+    if (text.length < 3) return [];
     try {
       const response = await fetch(
         `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(
-          input
+          text
         )}&key=${GOOGLE_PLACES_API_KEY}&language=fr`
       );
       const data = await response.json();
       if (data.status === "OK") {
-        return data.predictions.map((p: any) => p.description);
+        return data.predictions.map((p: any) => ({
+          description: p.description,
+        }));
       }
-    } catch (error) {
-      console.error("Erreur de complétion :", error);
+    } catch (err) {
+      console.error("Erreur autocomplétion :", err);
     }
     return [];
   };
 
   const handleOriginChange = async (text: string) => {
     onOriginChange(text);
+    if (text.length < 3) {
+      setOriginSuggestions([{ description: "📍 Ma position", isCurrentLocation: true }]);
+      return;
+    }
     const suggestions = await fetchSuggestions(text);
-    setOriginSuggestions(suggestions);
+    setOriginSuggestions([{ description: "📍 Ma position", isCurrentLocation: true }, ...suggestions]);
   };
 
   const handleDestinationChange = async (text: string) => {
     onDestinationChange(text);
+    if (text.length < 3) {
+      setDestinationSuggestions([]);
+      return;
+    }
     const suggestions = await fetchSuggestions(text);
     setDestinationSuggestions(suggestions);
   };
 
-  const handleWaypointChange = async (index: number, text: string) => {
+  const handleWaypointChange = async (text: string, index: number) => {
     onWaypointUpdate(index, text);
     const suggestions = await fetchSuggestions(text);
-    setWaypointSuggestions((prev) => {
-      const updated = [...prev];
-      updated[index] = suggestions;
-      return updated;
-    });
+    setWaypointSuggestions((prev) => ({ ...prev, [index]: suggestions }));
   };
 
-  const handleOriginSelect = (suggestion: string) => {
-    onOriginChange(suggestion);
+  const handleOriginSelect = async (item: { description: string; isCurrentLocation?: boolean }) => {
+    if (item.isCurrentLocation) {
+      if (liveCoords) {
+        try {
+          const address = await getAddressFromCoords(liveCoords.latitude, liveCoords.longitude);
+          if (address) onOriginChange(address);
+          else alert("Impossible de récupérer l’adresse.");
+        } catch (err) {
+          console.error("Erreur reverse geocoding :", err);
+          alert("Erreur lors de la récupération de l’adresse.");
+        }
+      } else alert("Localisation non disponible.");
+    } else onOriginChange(item.description);
     setOriginSuggestions([]);
   };
 
-  const handleDestinationSelect = (suggestion: string) => {
-    onDestinationChange(suggestion);
+  const handleDestinationSelect = (item: { description: string }) => {
+    onDestinationChange(item.description);
     setDestinationSuggestions([]);
   };
 
-  const handleWaypointSelect = (index: number, suggestion: string) => {
-    onWaypointUpdate(index, suggestion);
-    setWaypointSuggestions((prev) => {
-      const updated = [...prev];
-      updated[index] = [];
-      return updated;
-    });
+  const handleWaypointSelect = (item: { description: string }, index: number) => {
+    onWaypointUpdate(index, item.description);
+    setWaypointSuggestions((prev) => ({ ...prev, [index]: [] }));
   };
+
+  const renderSuggestionItem = (
+    item: { description: string; isCurrentLocation?: boolean },
+    onPress: () => void
+  ) => (
+    <TouchableOpacity onPress={onPress} style={searchBarStyles.suggestionItem}>
+      <Text>
+        {item.isCurrentLocation ? (
+          <>
+            <MaterialIcons name="my-location" size={16} /> {item.description}
+          </>
+        ) : (
+          item.description
+        )}
+      </Text>
+    </TouchableOpacity>
+  );
 
   return (
     <View style={searchBarStyles.searchContainer}>
@@ -123,53 +172,92 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         value={origin}
         onChangeText={handleOriginChange}
       />
+      {origin.length < 3 && history.length > 0 && (
+        <FlatList
+          data={history}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={searchBarStyles.suggestionItem}
+              onPress={() => onOriginChange(item.origin)}
+            >
+              <Text>{item.origin} → {item.destination}</Text>
+            </TouchableOpacity>
+          )}
+          style={searchBarStyles.suggestionList}
+        />
+      )}
       {originSuggestions.length > 0 && (
         <FlatList
           data={originSuggestions}
-          keyExtractor={(item) => item}
-          renderItem={({ item }) => (
-            <TouchableOpacity onPress={() => handleOriginSelect(item)}>
-              <Text style={{ padding: 8, backgroundColor: "#eee" }}>{item}</Text>
-            </TouchableOpacity>
-          )}
+          keyExtractor={(item) => item.description}
+          renderItem={({ item }) =>
+            renderSuggestionItem(item, () => handleOriginSelect(item))
+          }
+          style={searchBarStyles.suggestionList}
         />
       )}
 
-      <FlatList
-        data={waypoints}
-        keyExtractor={(item, index) => index.toString()}
-        renderItem={({ item, index }) => (
-          <View style={searchBarStyles.waypointContainer}>
-            <View style={{ flex: 1 }}>
-              <TextInput
-                style={searchBarStyles.input}
-                placeholder={`Étape ${index + 1}`}
-                value={item.address}
-                onChangeText={(text) => handleWaypointChange(index, text)}
-              />
-              {waypointSuggestions[index]?.length > 0 && (
-                <FlatList
-                  data={waypointSuggestions[index]}
-                  keyExtractor={(item) => item}
-                  renderItem={({ item }) => (
-                    <TouchableOpacity onPress={() => handleWaypointSelect(index, item)}>
-                      <Text style={{ padding: 8, backgroundColor: "#eee" }}>{item}</Text>
-                    </TouchableOpacity>
-                  )}
-                />
-              )}
-            </View>
-            <TouchableOpacity
-              style={searchBarStyles.deleteWaypointIcon}
-              onPress={() => onWaypointRemove(index)}
-            >
-              <MaterialIcons name="close" size={24} color="#ff4444" />
-            </TouchableOpacity>
-          </View>
-        )}
-        style={searchBarStyles.waypointList}
-        keyboardShouldPersistTaps="handled"
+      <TextInput
+        style={searchBarStyles.input}
+        placeholder="Destination"
+        value={destination}
+        onChangeText={handleDestinationChange}
       />
+      {destination.length < 3 && history.length > 0 && (
+        <FlatList
+          data={history}
+          keyExtractor={(item) => item.id + "_dest"}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={searchBarStyles.suggestionItem}
+              onPress={() => onDestinationChange(item.destination)}
+            >
+              <Text>{item.origin} → {item.destination}</Text>
+            </TouchableOpacity>
+          )}
+          style={searchBarStyles.suggestionList}
+        />
+      )}
+      {destinationSuggestions.length > 0 && (
+        <FlatList
+          data={destinationSuggestions}
+          keyExtractor={(item) => item.description}
+          renderItem={({ item }) =>
+            renderSuggestionItem(item, () => handleDestinationSelect(item))
+          }
+          style={searchBarStyles.suggestionList}
+        />
+      )}
+
+      {waypoints.map((wp, index) => (
+        <View key={wp.id} style={[searchBarStyles.waypointContainer, { position: "relative", zIndex: 20 }]}>
+          <TextInput
+            style={searchBarStyles.input}
+            placeholder={`Étape ${index + 1}`}
+            value={wp.address}
+            onChangeText={(text) => handleWaypointChange(text, index)}
+          />
+          {waypointSuggestions[index]?.length > 0 && (
+            <View style={{ position: "absolute", top: 52, left: 0, right: 0, zIndex: 100 }}>
+              <FlatList
+                data={waypointSuggestions[index]}
+                keyExtractor={(item) => item.description}
+                renderItem={({ item }) =>
+                  renderSuggestionItem(item, () => handleWaypointSelect(item, index))
+                }
+                style={searchBarStyles.suggestionList}
+              />
+            </View>
+          )}
+          <TouchableOpacity
+            style={searchBarStyles.deleteWaypointIcon}
+            onPress={() => onWaypointRemove(index)}
+          >
+            <MaterialIcons name="close" size={24} color="#ff4444" />
+          </TouchableOpacity>
+        </View>
+      ))}
 
       <View
         style={[
@@ -203,30 +291,11 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         </TouchableOpacity>
       </View>
 
-      <TextInput
-        style={searchBarStyles.input}
-        placeholder="Destination"
-        value={destination}
-        onChangeText={handleDestinationChange}
-      />
-      {destinationSuggestions.length > 0 && (
-        <FlatList
-          data={destinationSuggestions}
-          keyExtractor={(item) => item}
-          renderItem={({ item }) => (
-            <TouchableOpacity onPress={() => handleDestinationSelect(item)}>
-              <Text style={{ padding: 8, backgroundColor: "#eee" }}>{item}</Text>
-            </TouchableOpacity>
-          )}
-        />
-      )}
-
       <TransportModeSelector
         selectedMode={selectedMode}
         onModeSelect={onModeSelect}
       />
 
-      {/* Bouton éviter les péages */}
       <TouchableOpacity
         onPress={onToggleTolls}
         style={{ flexDirection: "row", alignItems: "center", marginTop: 12 }}
