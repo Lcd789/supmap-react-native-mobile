@@ -5,20 +5,86 @@ import {
   TouchableOpacity,
   FlatList,
   StyleSheet,
-  ActivityIndicator,
+  Dimensions,
 } from "react-native";
-import { RouteCalculationResult, Waypoint, TransportMode } from "@/types";
 import { MaterialIcons } from "@expo/vector-icons";
+import { Waypoint, TransportMode, RouteCalculationResult } from "@/types";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from "react-native-reanimated";
+
+const screenWidth = Dimensions.get("window").width;
+
+type RouteWithId = RouteCalculationResult & { id: string };
 
 interface RouteSelectorProps {
   origin: string;
   destination: string;
   waypoints?: Waypoint[];
   selectedMode: TransportMode;
-  routes: RouteCalculationResult[];
-  onSelectRoute?: (route: RouteCalculationResult) => void;
-  onLaunchNavigation?: (route: RouteCalculationResult) => void;
+  avoidTolls?: boolean;
+  routes: RouteWithId[];
+  selectedRouteId?: string;
+  onSelectRoute?: (route: RouteWithId) => void;
+  onLaunchNavigation?: (route: RouteWithId) => void;
 }
+
+const RouteCard = ({
+  item,
+  index,
+  isSelected,
+  isFastest,
+  isEco,
+  isTollFree,
+  onSelect,
+  onLaunch,
+}: {
+  item: RouteWithId;
+  index: number;
+  isSelected: boolean;
+  isFastest: boolean;
+  isEco: boolean;
+  isTollFree: boolean;
+  onSelect: (route: RouteWithId) => void;
+  onLaunch: (route: RouteWithId) => void;
+}) => {
+  const scale = useSharedValue(1);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <Animated.View style={[styles.cardContainer, animatedStyle]}>
+      <TouchableOpacity
+        style={[styles.card, isSelected && styles.cardSelected]}
+        onPress={() => onSelect(item)}
+        onLongPress={() => onLaunch(item)}
+        onPressIn={() => (scale.value = withSpring(0.95))}
+        onPressOut={() => (scale.value = withSpring(1))}
+        activeOpacity={0.9}
+      >
+        <Text style={styles.title}>🚗 Itinéraire {index + 1}</Text>
+        <Text style={styles.summary}>{item.summary || "—"}</Text>
+        <Text style={styles.details}>
+          {item.distance} • {item.duration}
+        </Text>
+
+        <View style={styles.badgesRow}>
+          {isFastest && <Text style={[styles.badge, { backgroundColor: "#ffe0b2" }]}>⚡ Rapide</Text>}
+          {isEco && <Text style={[styles.badge, { backgroundColor: "#c8e6c9" }]}>🌱 Écolo</Text>}
+          {isTollFree && <Text style={[styles.badge, { backgroundColor: "#b3e5fc" }]}>🛣️ Sans péage</Text>}
+        </View>
+
+        <View style={styles.launchIcon}>
+          <MaterialIcons name="chevron-right" size={24} color="#2196F3" />
+        </View>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+};
 
 const RouteSelector: React.FC<RouteSelectorProps> = ({
   origin,
@@ -26,53 +92,57 @@ const RouteSelector: React.FC<RouteSelectorProps> = ({
   waypoints = [],
   selectedMode,
   routes,
-  onSelectRoute,
-  onLaunchNavigation,
+  selectedRouteId,
+  onSelectRoute = () => {},
+  onLaunchNavigation = () => {},
 }) => {
-  const [selectedRoute, setSelectedRoute] =
-    React.useState<RouteCalculationResult | null>(null);
+  const fastestId = React.useMemo(() => {
+    const fastest = routes.reduce((min, route) =>
+      (route.durationValue ?? Infinity) < (min.durationValue ?? Infinity) ? route : min
+    );
+    return fastest.id;
+  }, [routes]);
 
-  const handleSelectRoute = (route: RouteCalculationResult) => {
-    setSelectedRoute(route);
-    if (onSelectRoute) {
-      onSelectRoute(route);
-    }
-  };
+  const ecoId = React.useMemo(() => {
+    const shortest = routes.reduce((min, route) =>
+      (route.distanceValue ?? Infinity) < (min.distanceValue ?? Infinity) ? route : min
+    );
+    return shortest.id;
+  }, [routes]);
 
-  const handleLaunchNavigation = (route: RouteCalculationResult) => {
-    setSelectedRoute(route);
-    if (onLaunchNavigation) {
-      onLaunchNavigation(route);
-    }
-  };
+  const tollFreeIds = React.useMemo(() => {
+    return routes
+      .filter((route) =>
+        route.steps.every(
+          (step) =>
+            !(step.html_instructions?.toLowerCase().includes("péage") ?? false)
+        )
+      )
+      .map((r) => r.id);
+  }, [routes]);
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Choisissez votre itinéraire</Text>
+      <Text style={styles.heading}>Choisissez votre itinéraire</Text>
+
       <FlatList
         data={routes}
-        keyExtractor={(_, index) => index.toString()}
+        keyExtractor={(item) => item.id}
         renderItem={({ item, index }) => (
-          <View style={styles.itemContainer}>
-            <TouchableOpacity
-              style={[
-                styles.routeItem,
-                selectedRoute?.duration === item.duration && styles.selectedRoute,
-              ]}
-              onPress={() => handleSelectRoute(item)}
-            >
-              <View style={styles.routeRow}>
-                <Text style={styles.routeSummary}>
-                  Itinéraire {index + 1} - {item.distance} - {item.duration}
-                </Text>
-
-                <TouchableOpacity onPress={() => handleLaunchNavigation(item)}>
-                  <MaterialIcons name="chevron-right" size={24} color="#2196F3" />
-                </TouchableOpacity>
-              </View>
-            </TouchableOpacity>
-          </View>
+          <RouteCard
+            item={item}
+            index={index}
+            isSelected={item.id === selectedRouteId}
+            isFastest={item.id === fastestId}
+            isEco={item.id === ecoId}
+            isTollFree={tollFreeIds.includes(item.id)}
+            onSelect={onSelectRoute}
+            onLaunch={onLaunchNavigation}
+          />
         )}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 12 }}
       />
     </View>
   );
@@ -80,45 +150,68 @@ const RouteSelector: React.FC<RouteSelectorProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    padding: 16,
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    margin: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    position: "absolute",
+    bottom: 12,
+    left: 0,
+    right: 0,
+    paddingVertical: 8,
   },
-  title: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 12,
-    color: "#333",
-  },
-  itemContainer: {
-    marginBottom: 12,
-  },
-  routeItem: {
-    padding: 12,
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 6,
-    backgroundColor: "#fff",
-  },
-  selectedRoute: {
-    borderColor: "#2196F3",
-    backgroundColor: "#e0f7fa",
-  },
-  routeSummary: {
+  heading: {
+    textAlign: "center",
     fontSize: 16,
     fontWeight: "600",
-    color: "#333",
+    marginBottom: 8,
+    color: "#111",
   },
-  routeRow: {
+  cardContainer: {
+    marginRight: 12,
+  },
+  card: {
+    width: screenWidth * 0.72,
+    backgroundColor: "rgba(255,255,255,0.92)",
+    borderRadius: 16,
+    padding: 14,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: "#ddd",
+  },
+  cardSelected: {
+    borderColor: "#2196F3",
+    backgroundColor: "#e3f2fd",
+  },
+  title: {
+    fontSize: 15,
+    fontWeight: "bold",
+    marginBottom: 4,
+    color: "#222",
+  },
+  summary: {
+    fontSize: 14,
+    color: "#555",
+    marginBottom: 4,
+  },
+  details: {
+    fontSize: 14,
+    color: "#333",
+    marginBottom: 6,
+  },
+  badgesRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  badge: {
+    fontSize: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 16,
+    overflow: "hidden",
+    color: "#000",
+  },
+  launchIcon: {
+    position: "absolute",
+    right: 10,
+    top: 10,
   },
 });
 

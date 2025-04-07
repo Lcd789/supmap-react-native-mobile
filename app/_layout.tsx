@@ -17,7 +17,7 @@ export default function RootLayout() {
                     colorScheme === "dark" 
                     ? "light" 
                     : "dark"
-                } translucent={true} backgroundColor={colorScheme === "dark" ? "#000" : "#fff"} />
+                } backgroundColor={colorScheme === "dark" ? "#000" : "#fff"} />
                 <Stack>
                     {/* Tabs at the bottom, name = directory, each file inside becomes a tab */}
                     <Stack.Screen

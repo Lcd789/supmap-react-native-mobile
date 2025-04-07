@@ -77,7 +77,7 @@ export default function Profile() {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",
-                    Authorization: `Bearer ${authToken}`, // Assurez-vous d'avoir un token valide
+                    Authorization: `Bearer ${authToken}`,
                 },
                 body: JSON.stringify({ username: tempUsername,  email: tempEmail }),
             });

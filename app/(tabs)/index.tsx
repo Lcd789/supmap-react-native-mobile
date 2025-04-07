@@ -22,11 +22,6 @@ import RouteSelector from "@/components/MapComponents/RouteSelector";
 import { NextStepBanner } from "@/components/MapComponents/NextStepBanner";
 import { homeStyles } from "@/styles/styles";
 import { RouteCalculationResult, TransportMode, Waypoint } from "@/types";
-<<<<<<< HEAD
-import * as Location from "expo-location";
-import MapView, {Marker, Polyline} from "react-native-maps";
-=======
->>>>>>> parent of 7a8ac29 (Update index.tsx)
 
 type RouteWithId = RouteCalculationResult & { id: string };
 
@@ -240,50 +235,6 @@ export default function Home() {
   }));
 
   return (
-<<<<<<< HEAD
-      <SafeAreaView style={homeStyles.container}>
-        <MapView
-            ref={mapRef}
-            style={styles.map}
-            region={mapRegion}
-            initialRegion={{
-              latitude: markers[0].latitude,
-              longitude: markers[0].longitude,
-              latitudeDelta: 0.2,
-              longitudeDelta: 0.2,
-            }}
-        >
-          {markers.map((marker) => (
-              <Marker
-                  key={marker.id}
-                  coordinate={{ latitude: marker.latitude, longitude: marker.longitude }}
-                  title={marker.title}
-              >
-                <Image
-                    source={{ uri: categoryIcons[marker.category] }}
-                    style={{ width: 40, height: 40 }}
-                />
-              </Marker>
-          ))}
-
-          {alternativeRoutes.map((route, index) => (
-              <Polyline
-                  key={route.id || index}
-                  coordinates={'coordinates' in route && Array.isArray(route.coordinates) ? route.coordinates : []}
-                  strokeWidth={4}
-                  strokeColor={route.id === (selectedRoute as RouteWithId)?.id ? '#2196F3' : '#aaa'}
-              />
-          ))}
-
-          {liveCoords && <Marker coordinate={liveCoords} title="Position actuelle" />}
-        </MapView>
-
-        {selectedRoute && (
-            <NextStepBanner
-                nextStep={selectedRoute.steps[0]}
-                onToggleSteps={toggleSteps}
-            />
-=======
     <SafeAreaView style={homeStyles.container}>
       <RouteMap
         region={mapRegion}
@@ -320,122 +271,15 @@ export default function Home() {
             onToggleTolls={() => setAvoidTolls((prev) => !prev)}
             liveCoords={liveCoords}
           />
->>>>>>> parent of 7a8ac29 (Update index.tsx)
         )}
       </Animated.View>
 
-<<<<<<< HEAD
-        <Animated.View style={searchBarContainerStyle}>
-          {isSearchVisible && (
-              <SearchBar
-                  origin={origin}
-                  destination={destination}
-                  waypoints={waypoints}
-                  selectedMode={selectedMode}
-                  isLoading={isLoading}
-                  onOriginChange={setOrigin}
-                  onDestinationChange={setDestination}
-                  onWaypointAdd={handleAddWaypoint}
-                  onWaypointRemove={handleRemoveWaypoint}
-                  onWaypointUpdate={handleUpdateWaypoint}
-                  onModeSelect={setSelectedMode}
-                  onSearch={handleSearch}
-                  onReverse={handleReverse}
-                  avoidTolls={avoidTolls}
-                  onToggleTolls={() => setAvoidTolls((prev) => !prev)}
-                  liveCoords={liveCoords}
-              />
-          )}
-        </Animated.View>
-
-        <Animated.View style={floatingButtonStyle}>
-          <TouchableOpacity onPress={toggleSearchBar}>
-            <MaterialIcons name="map" size={24} color="#fff" />
-          </TouchableOpacity>
-        </Animated.View>
-
-        {alternativeRoutes.length > 1 && !navigationLaunched && (
-            <View style={styles.selectorContainer}>
-              <RouteSelector
-                  origin={origin}
-                  destination={destination}
-                  waypoints={waypoints}
-                  selectedMode={selectedMode}
-                  routes={alternativeRoutes}
-                  selectedRouteId={(selectedRoute as RouteWithId)?.id}
-                  onSelectRoute={(route) => setSelectedRoute(route)}
-                  onLaunchNavigation={(route) => {
-                    setSelectedRoute(route);
-                    setNavigationLaunched(true);
-                    addToHistory({
-                      origin,
-                      destination,
-                      waypoints: waypoints.map((wp) => wp.address),
-                      mode: selectedMode,
-                    });
-                  }}
-              />
-            </View>
-        )}
-
-        {selectedRoute && navigationLaunched && (
-            <Animated.View style={routeInfoStyle}>
-              <RouteInfo
-                  routeSummary={{
-                    duration: selectedRoute.duration,
-                    distance: selectedRoute.distance,
-                  }}
-                  routeInfo={selectedRoute}
-                  showSteps={showSteps}
-                  stepsAnimation={stepsAnimation}
-                  onToggleSteps={toggleSteps}
-              />
-            </Animated.View>
-        )}
-
-        <TouchableOpacity
-            onPress={() => setModalVisible(true)}
-            style={styles.floatingButton}
-        >
-          <MaterialIcons name="my-location" size={28} color="#fff" />
-=======
       <Animated.View style={floatingButtonStyle}>
         <TouchableOpacity onPress={toggleSearchBar}>
           <MaterialIcons name="map" size={24} color="#fff" />
->>>>>>> parent of 7a8ac29 (Update index.tsx)
         </TouchableOpacity>
       </Animated.View>
 
-<<<<<<< HEAD
-        <Modal
-            animationType="slide"
-            transparent={true}
-            visible={modalVisible}
-            onRequestClose={() => setModalVisible(false)}
-        >
-          <View style={styles.modalBackdrop}>
-            <View style={styles.modalContainer}>
-              <Text style={styles.modalTitle}>Que voyez-vous ?</Text>
-              <FlatList
-                  data={categories}
-                  numColumns={3}
-                  keyExtractor={(item) => item.value}
-                  renderItem={({ item }) => (
-                      <TouchableOpacity style={styles.categoryItem} onPress={() => handleGetGPS(item.value as MarkerData["category"])}
-                      >
-                        <Image source={{ uri: item.icon }} style={styles.categoryIcon} />
-                        <Text style={styles.categoryText}>{item.label}</Text>
-                      </TouchableOpacity>
-                  )}
-                  contentContainerStyle={{ justifyContent: 'center', alignItems: 'center' }}
-              />
-              <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeButton}>
-                <Text style={styles.closeText}>Fermer</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
-=======
       {alternativeRoutes.length > 1 && !navigationLaunched && (
         <View style={styles.selectorContainer}>
           <RouteSelector
@@ -461,7 +305,6 @@ export default function Home() {
           />
         </View>
       )}
->>>>>>> parent of 7a8ac29 (Update index.tsx)
 
       {selectedRoute && navigationLaunched && (
         <Animated.View style={routeInfoStyle}>

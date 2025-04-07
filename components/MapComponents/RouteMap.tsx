@@ -1,4 +1,3 @@
-// RouteMap.tsx
 import React from "react";
 import MapView, {
   Polyline,
@@ -30,7 +29,12 @@ export const RouteMap: React.FC<RouteMapProps> = ({
   ...mapProps
 }) => {
   return (
-    <MapView ref={mapRef} region={region} style={{ flex: 1 }} {...mapProps}>
+    <MapView
+      ref={mapRef}
+      region={region}
+      style={{ position: "absolute", top: 0, bottom: 0, left: 0, right: 0 }}
+      {...mapProps}
+    >
       {alternativeRoutes.map((route) => {
         const isSelected = route.id === selectedRouteId;
         return (
