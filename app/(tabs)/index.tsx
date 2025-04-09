@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import {View, ActivityIndicator, StyleSheet, Text, TouchableOpacity,Modal,FlatList,Image, Alert} from "react-native";
+import { View, ActivityIndicator, StyleSheet, Text, TouchableOpacity } from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -22,35 +22,13 @@ import RouteSelector from "@/components/MapComponents/RouteSelector";
 import { NextStepBanner } from "@/components/MapComponents/NextStepBanner";
 import { homeStyles } from "@/styles/styles";
 import { RouteCalculationResult, TransportMode, Waypoint } from "@/types";
+<<<<<<< HEAD
 import * as Location from "expo-location";
 import MapView, {Marker, Polyline} from "react-native-maps";
+=======
+>>>>>>> parent of 7a8ac29 (Update index.tsx)
 
 type RouteWithId = RouteCalculationResult & { id: string };
-
-interface MarkerData {
-  id: number;
-  latitude: number;
-  longitude: number;
-  title: string;
-  category: "police" | "embouteillage" | "travaux" | "obstacle" | "accident";
-}
-
-const categoryIcons: Record<MarkerData["category"], string> = {
-  police: "https://img.icons8.com/color/96/policeman-male.png",
-  embouteillage: "https://img.icons8.com/color/96/traffic-jam.png",
-  travaux: "https://img.icons8.com/color/96/under-construction.png",
-  obstacle: "https://img.icons8.com/color/96/error--v1.png",
-  accident: "https://img.icons8.com/color/96/car-crash.png"
-};
-
-const categories = [
-  { label: "Embouteillage", value: "embouteillage", icon: categoryIcons.embouteillage },
-  { label: "Police", value: "police", icon: categoryIcons.police },
-  { label: "Accident", value: "accident", icon: categoryIcons.accident },
-  { label: "Travaux", value: "travaux", icon: categoryIcons.travaux },
-  { label: "Obstacle", value: "obstacle", icon: categoryIcons.obstacle }
-];
-
 
 export default function Home() {
   const { addToHistory } = useHistory();
@@ -64,39 +42,6 @@ export default function Home() {
   const [alternativeRoutes, setAlternativeRoutes] = useState<RouteWithId[]>([]);
   const [selectedRoute, setSelectedRoute] = useState<RouteCalculationResult | null>(null);
   const [navigationLaunched, setNavigationLaunched] = useState<boolean>(false);
-
-
-  const [markers, setMarkers] = useState<MarkerData[]>([
-    { id: 1, latitude: 48.846191, longitude: 2.346079, title: "Paris", category: "accident" },
-  ]);
-
-
-  const [modalVisible, setModalVisible] = useState(false);
-
-
-  const handleGetGPS = async (category: MarkerData["category"]) => {
-    setModalVisible(false);
-    let { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission refusée', 'La localisation est nécessaire.');
-      return;
-    }
-
-    let location = await Location.getCurrentPositionAsync({});
-    const { latitude, longitude } = location.coords;
-
-    const newMarker: MarkerData = {
-      id: Date.now(),
-      latitude,
-      longitude,
-      title: category,
-      category,
-    };
-    setMarkers((prev) => [...prev, newMarker]);
-
-    Alert.alert("Coordonnées GPS", `Événement: ${category}\nLatitude : ${latitude}\nLongitude : ${longitude}`);
-  };
-
 
 
   const mapRef = useRef<any>(null);
@@ -295,6 +240,7 @@ export default function Home() {
   }));
 
   return (
+<<<<<<< HEAD
       <SafeAreaView style={homeStyles.container}>
         <MapView
             ref={mapRef}
@@ -337,8 +283,48 @@ export default function Home() {
                 nextStep={selectedRoute.steps[0]}
                 onToggleSteps={toggleSteps}
             />
-        )}
+=======
+    <SafeAreaView style={homeStyles.container}>
+      <RouteMap
+        region={mapRegion}
+        mapRef={mapRef}
+        alternativeRoutes={alternativeRoutes}
+        selectedRouteId={selectedRoute ? (selectedRoute as RouteWithId).id : undefined}
+        liveCoords={liveCoords}
+      />
 
+      {selectedRoute && (
+        <NextStepBanner
+          nextStep={selectedRoute.steps[0]}
+          onToggleSteps={toggleSteps}
+        />
+      )}
+
+      <Animated.View style={searchBarContainerStyle}>
+        {isSearchVisible && (
+          <SearchBar
+            origin={origin}
+            destination={destination}
+            waypoints={waypoints}
+            selectedMode={selectedMode}
+            isLoading={isLoading}
+            onOriginChange={setOrigin}
+            onDestinationChange={setDestination}
+            onWaypointAdd={handleAddWaypoint}
+            onWaypointRemove={handleRemoveWaypoint}
+            onWaypointUpdate={handleUpdateWaypoint}
+            onModeSelect={setSelectedMode}
+            onSearch={handleSearch}
+            onReverse={handleReverse}
+            avoidTolls={avoidTolls}
+            onToggleTolls={() => setAvoidTolls((prev) => !prev)}
+            liveCoords={liveCoords}
+          />
+>>>>>>> parent of 7a8ac29 (Update index.tsx)
+        )}
+      </Animated.View>
+
+<<<<<<< HEAD
         <Animated.View style={searchBarContainerStyle}>
           {isSearchVisible && (
               <SearchBar
@@ -412,8 +398,15 @@ export default function Home() {
             style={styles.floatingButton}
         >
           <MaterialIcons name="my-location" size={28} color="#fff" />
+=======
+      <Animated.View style={floatingButtonStyle}>
+        <TouchableOpacity onPress={toggleSearchBar}>
+          <MaterialIcons name="map" size={24} color="#fff" />
+>>>>>>> parent of 7a8ac29 (Update index.tsx)
         </TouchableOpacity>
+      </Animated.View>
 
+<<<<<<< HEAD
         <Modal
             animationType="slide"
             transparent={true}
@@ -442,21 +435,62 @@ export default function Home() {
             </View>
           </View>
         </Modal>
+=======
+      {alternativeRoutes.length > 1 && !navigationLaunched && (
+        <View style={styles.selectorContainer}>
+          <RouteSelector
+            origin={origin}
+            destination={destination}
+            waypoints={waypoints}
+            selectedMode={selectedMode}
+            routes={alternativeRoutes}
+            selectedRouteId={(selectedRoute as RouteWithId)?.id}
+            onSelectRoute={(route: RouteCalculationResult) => {
+              setSelectedRoute(route);
+            }}
+            onLaunchNavigation={(route: RouteCalculationResult) => {
+              setSelectedRoute(route);
+              setNavigationLaunched(true);
+              addToHistory({
+                origin,
+                destination,
+                waypoints: waypoints.map((wp) => wp.address),
+                mode: selectedMode,
+              });
+            }}
+          />
+        </View>
+      )}
+>>>>>>> parent of 7a8ac29 (Update index.tsx)
 
-        {error && (
-            <View style={homeStyles.errorContainer}>
-              <Text style={homeStyles.errorText}>{error}</Text>
-            </View>
-        )}
+      {selectedRoute && navigationLaunched && (
+        <Animated.View style={routeInfoStyle}>
+          <RouteInfo
+            routeSummary={{
+              duration: selectedRoute.duration,
+              distance: selectedRoute.distance,
+            }}
+            routeInfo={selectedRoute}
+            showSteps={showSteps}
+            stepsAnimation={stepsAnimation}
+            onToggleSteps={toggleSteps}
+          />
+        </Animated.View>
+      )}
 
-        {isLoading && (
-            <View style={homeStyles.loadingContainer}>
-              <ActivityIndicator size="large" color="#2196F3" />
-            </View>
-        )}
-      </SafeAreaView>
+      {error && (
+        <View style={homeStyles.errorContainer}>
+          <Text style={homeStyles.errorText}>{error}</Text>
+        </View>
+      )}
+
+      {isLoading && (
+        <View style={homeStyles.loadingContainer}>
+          <ActivityIndicator size="large" color="#2196F3" />
+        </View>
+      )}
+    </SafeAreaView>
   );
-
 }
 
 const styles = StyleSheet.create({
@@ -468,56 +502,4 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     zIndex: 5,
   },
-  container: { flex: 1 },
-  map: { width: "100%", height: "100%" },
-  floatingButton: {
-    position: 'absolute', bottom: 20, right: 20,
-    backgroundColor: '#4CAF50', width: 60, height: 60,
-    borderRadius: 30, justifyContent: 'center', alignItems: 'center', elevation: 6,
-  },
-  modalBackdrop: {
-    flex: 1,
-    justifyContent: "flex-end",
-    backgroundColor: "rgba(0,0,0,0.4)",
-  },
-  modalContainer: {
-    backgroundColor: "#fff",
-    padding: 20,
-    borderTopLeftRadius: 15,
-    borderTopRightRadius: 15,
-    alignItems: "center"
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 15
-  },
-  categoryItem: {
-    width: 100, // largeur fixe
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginVertical: 10,
-    marginHorizontal: 5,
-  },
-  categoryIcon: {
-    width: 50,
-    height: 50,
-  },
-  categoryText: {
-    textAlign: 'center',
-    fontSize: 14,
-    marginTop: 6,
-    color: '#333'
-  },
-  closeButton: {
-    marginTop: 15,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    backgroundColor: "#ddd",
-    borderRadius: 10
-  },
-  closeText: {
-    color: "#333",
-    fontSize: 16
-  }
 });
