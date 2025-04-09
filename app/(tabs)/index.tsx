@@ -23,7 +23,7 @@ import { NextStepBanner } from "@/components/MapComponents/NextStepBanner";
 import { homeStyles } from "@/styles/styles";
 import { RouteCalculationResult, TransportMode, Waypoint } from "@/types";
 import * as Location from "expo-location";
-import MapView, { Marker } from "react-native-maps";
+import MapView, {Marker, Polyline} from "react-native-maps";
 
 type RouteWithId = RouteCalculationResult & { id: string };
 
@@ -296,17 +296,10 @@ export default function Home() {
 
   return (
       <SafeAreaView style={homeStyles.container}>
-        <RouteMap
-            region={mapRegion}
-            mapRef={mapRef}
-            alternativeRoutes={alternativeRoutes}
-            selectedRouteId={selectedRoute ? (selectedRoute as RouteWithId).id : undefined}
-            liveCoords={liveCoords}
-        />
-
-        {/* Second MapView with markers merged here */}
         <MapView
+            ref={mapRef}
             style={styles.map}
+            region={mapRegion}
             initialRegion={{
               latitude: markers[0].latitude,
               longitude: markers[0].longitude,
@@ -326,6 +319,17 @@ export default function Home() {
                 />
               </Marker>
           ))}
+
+          {alternativeRoutes.map((route, index) => (
+              <Polyline
+                  key={route.id || index}
+                  coordinates={'coordinates' in route && Array.isArray(route.coordinates) ? route.coordinates : []}
+                  strokeWidth={4}
+                  strokeColor={route.id === (selectedRoute as RouteWithId)?.id ? '#2196F3' : '#aaa'}
+              />
+          ))}
+
+          {liveCoords && <Marker coordinate={liveCoords} title="Position actuelle" />}
         </MapView>
 
         {selectedRoute && (
@@ -373,10 +377,8 @@ export default function Home() {
                   selectedMode={selectedMode}
                   routes={alternativeRoutes}
                   selectedRouteId={(selectedRoute as RouteWithId)?.id}
-                  onSelectRoute={(route: RouteCalculationResult) => {
-                    setSelectedRoute(route);
-                  }}
-                  onLaunchNavigation={(route: RouteCalculationResult) => {
+                  onSelectRoute={(route) => setSelectedRoute(route)}
+                  onLaunchNavigation={(route) => {
                     setSelectedRoute(route);
                     setNavigationLaunched(true);
                     addToHistory({
@@ -426,7 +428,8 @@ export default function Home() {
                   numColumns={3}
                   keyExtractor={(item) => item.value}
                   renderItem={({ item }) => (
-                      <TouchableOpacity style={styles.categoryItem} onPress={() => handleGetGPS(item.value as MarkerData["category"])}>
+                      <TouchableOpacity style={styles.categoryItem} onPress={() => handleGetGPS(item.value as MarkerData["category"])}
+                      >
                         <Image source={{ uri: item.icon }} style={styles.categoryIcon} />
                         <Text style={styles.categoryText}>{item.label}</Text>
                       </TouchableOpacity>
