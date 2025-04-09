@@ -1,99 +1,109 @@
-import { RouteInfo, Waypoint, TransportMode, RouteCalculationResult, GoogleMapsResponse } from "@/types";
-import { decodePolyline } from "@/utils/mapUtils";
-import { useState, useCallback } from "react";
-import { Alert } from "react-native";
+import { useState } from "react";
+import { RouteCalculationResult, Step, Waypoint, TransportMode } from "@/types";
+import polyline from "@mapbox/polyline";
 
-export const useRoute = () => {
-    const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
-    const [isLoading, setIsLoading] = useState<boolean>(false);
-    const [error, setError] = useState<string | null>(null);
+const API_KEY = process.env.EXPO_PUBLIC_GOOGLE_API_KEY;
 
-    const calculateRoute = useCallback(async (
-        origin: string,
-        destination: string,
-        waypoints: Waypoint[],
-        selectedMode: TransportMode
-    ): Promise<RouteCalculationResult | undefined> => {
-        if (!origin || !destination) {
-            const msg = "Veuillez saisir un point de départ et une destination";
-            setError(msg);
-            Alert.alert("Erreur", msg);
-            return undefined;
-        }
+interface RouteOptions {
+  avoidTolls?: boolean;
+}
 
-        setIsLoading(true);
-        setError(null);
+export function useRoute() {
+  const [routeInfo, setRouteInfo] = useState<RouteCalculationResult[] | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
-        try {
-            // Construire l'URL
-            let waypointsString = "";
-            if (waypoints.length > 0) {
-                waypointsString = `&waypoints=${waypoints
-                    .filter(wp => wp.address) // Filtrer les waypoints vides
-                    .map(wp => `via:${encodeURIComponent(wp.address)}`)
-                    .join("|")}`;
-            }
+  const language = "fr";
+  const region = "FR";
+  const units = "metric";
 
-            const apiUrl = `https://maps.googleapis.com/maps/api/directions/json?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}${waypointsString}&mode=${selectedMode}&key=${process.env.EXPO_PUBLIC_GOOGLE_API_KEY}`;
-            
-            console.log('Calling Google Maps API:', apiUrl);
+  const calculateRoute = async (
+    origin: string,
+    destination: string,
+    waypoints: Waypoint[],
+    mode: TransportMode,
+    options?: RouteOptions
+  ): Promise<RouteCalculationResult[] | null> => {
+    setIsLoading(true);
+    setError(null);
 
-            const response = await fetch(apiUrl);
-            const data: GoogleMapsResponse = await response.json();
+    try {
+      const validWaypoints = waypoints
+        .filter((wp) => wp.address.trim() !== "")
+        .map((wp) => encodeURIComponent(wp.address));
 
-            console.log('Google Maps API Response:', data);
+      const wpString = validWaypoints.length > 0
+        ? `&waypoints=optimize:true|${validWaypoints.join("|")}`
+        : "";
 
-            if (data.status !== "OK") {
-                const errorMessage = data.error_message || `Erreur: ${data.status}`;
-                setError(errorMessage);
-                Alert.alert("Erreur", errorMessage);
-                return undefined;
-            }
+      const avoidParams = [];
+      if (options?.avoidTolls) avoidParams.push("tolls");
+      const avoidQuery = avoidParams.length > 0 ? `&avoid=${avoidParams.join("|")}` : "";
 
-            if (!data.routes || data.routes.length === 0) {
-                const msg = "Aucun itinéraire trouvé";
-                setError(msg);
-                Alert.alert("Erreur", msg);
-                return undefined;
-            }
+      const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${encodeURIComponent(
+        origin
+      )}&destination=${encodeURIComponent(destination)}${wpString}&mode=${mode}&language=${language}&region=${region}&units=${units}&alternatives=true${avoidQuery}&key=${API_KEY}`;
 
-            const route = data.routes[0];
-            const legs = route.legs[0];
+      console.log("Calling Google Maps API:", url);
 
-            if (!legs || !route.overview_polyline || !route.bounds) {
-                const msg = "Données d'itinéraire incomplètes";
-                setError(msg);
-                Alert.alert("Erreur", msg);
-                return undefined;
-            }
+      const response = await fetch(url);
+      const data = await response.json();
 
-            setRouteInfo({
-                duration: legs.duration.text,
-                distance: legs.distance.text,
-                steps: legs.steps
-            });
+      console.log("Google Maps API Response:", data);
 
-            // Important: retourner le résultat !
-            return {
-                polyline: decodePolyline(route.overview_polyline.points),
-                bounds: route.bounds
-            };
+      if (data.status !== "OK") {
+        throw new Error(data.error_message || "Erreur lors du calcul d'itinéraire");
+      }
 
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : "Erreur inconnue";
-            console.error('Error in calculateRoute:', error);
-            setError(errorMessage);
-            Alert.alert("Erreur", "Impossible de calculer l'itinéraire");
-            return undefined;
-        } finally {
-            setIsLoading(false);
-        }
-    }, []);
+      const parsedRoutes: RouteCalculationResult[] = data.routes.map((route: any) => {
+        const decodedPolyline = polyline.decode(route.overview_polyline.points).map(
+          ([lat, lng]: [number, number]) => ({
+            latitude: lat,
+            longitude: lng,
+          })
+        );
 
-    return {
-        routeInfo,
-        isLoading,
-        error,
-        calculateRoute
-    };
-};
+        // total distance and duration across all legs
+        const totalDistance = route.legs.reduce((sum: number, leg: any) => sum + leg.distance.value, 0);
+        const totalDuration = route.legs.reduce((sum: number, leg: any) => sum + leg.duration.value, 0);
+
+        const steps: Step[] = route.legs.flatMap((leg: any) =>
+          leg.steps.map((step: any) => ({
+            html_instructions: step.html_instructions,
+            distance: step.distance,
+            duration: step.duration,
+            maneuver: step.maneuver,
+            start_location: step.start_location,
+            end_location: step.end_location,
+          }))
+        );
+
+        return {
+          bounds: route.bounds,
+          duration: route.legs[0].duration.text,
+          distance: route.legs[0].distance.text,
+          polyline: decodedPolyline,
+          steps,
+          durationValue: totalDuration,
+          distanceValue: totalDistance,
+        };
+      });
+
+      setRouteInfo(parsedRoutes);
+      return parsedRoutes;
+    } catch (err: any) {
+      console.error("Route error:", err);
+      setError(err.message || "Erreur inconnue");
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return {
+    routeInfo,
+    isLoading,
+    error,
+    calculateRoute,
+  };
+}

@@ -1,54 +1,88 @@
-import { useState, useCallback } from 'react';
-import * as Location from 'expo-location';
-import { Alert } from 'react-native';
-import { Region } from 'react-native-maps';
-import { reverseGeocode } from '../utils/mapUtils';
+import { useEffect, useState } from "react";
+import * as Location from "expo-location";
+import { Region } from "react-native-maps";
+import { getAddressFromCoords } from "@/utils/geocoding";
 
-export const useLocation = (onLocationFound: (address: string) => void) => {
-    const [mapRegion, setMapRegion] = useState<Region>({
-        latitude: 48.8535,
-        longitude: 2.348392,
-        latitudeDelta: 0.0922,
-        longitudeDelta: 0.0421
-    });
+export const useLocation = (onLocationTextUpdate?: (address: string) => void) => {
+  const [mapRegion, setMapRegion] = useState<Region>({
+    latitude: 48.8566,
+    longitude: 2.3522,
+    latitudeDelta: 0.05,
+    longitudeDelta: 0.05,
+  });
 
-    const getCurrentLocation = useCallback(async (): Promise<void> => {
-        try {
-            const { status } = await Location.requestForegroundPermissionsAsync();
-            if (status !== "granted") {
-                Alert.alert(
-                    "Permission refusée",
-                    "L'accès à la localisation est nécessaire pour utiliser cette fonctionnalité"
-                );
-                return;
-            }
+  const [liveCoords, setLiveCoords] = useState<{ latitude: number; longitude: number } | null>(
+    null
+  );
 
-            const location = await Location.getCurrentPositionAsync({});
-            const newRegion: Region = {
-                latitude: location.coords.latitude,
-                longitude: location.coords.longitude,
-                latitudeDelta: 0.0922,
-                longitudeDelta: 0.042
-            };
+  const getCurrentLocation = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        console.warn("Permission localisation refusée");
+        return;
+      }
 
-            setMapRegion(newRegion);
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
 
-            const address = await reverseGeocode(
-                location.coords.latitude,
-                location.coords.longitude,
-                process.env.EXPO_PUBLIC_GOOGLE_API_KEY as string
-            );
-            onLocationFound(address);
-        } catch (error) {Alert.alert(
-            "Erreur",
-            "Impossible d'obtenir votre position actuelle"
-        );
+      const { latitude, longitude } = location.coords;
+
+      setMapRegion({
+        latitude,
+        longitude,
+        latitudeDelta: 0.05,
+        longitudeDelta: 0.05,
+      });
+
+      setLiveCoords({ latitude, longitude });
+
+      const address = await getAddressFromCoords(latitude, longitude);
+      if (onLocationTextUpdate && address) onLocationTextUpdate(address);
+    } catch (err) {
+      console.error("Erreur lors de la récupération de la position :", err);
     }
-}, [onLocationFound]);
+  };
 
-return {
+  useEffect(() => {
+    getCurrentLocation();
+
+    let subscription: Location.LocationSubscription;
+
+    const startLiveTracking = async () => {
+      const { status } = await Location.getForegroundPermissionsAsync();
+      if (status !== "granted") return;
+
+      subscription = await Location.watchPositionAsync(
+        {
+          accuracy: Location.Accuracy.High,
+          distanceInterval: 10,
+          timeInterval: 3000,
+        },
+        (location) => {
+          const coords = {
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+          };
+          setLiveCoords(coords);
+        }
+      );
+    };
+
+    startLiveTracking();
+
+    return () => {
+      if (subscription) {
+        subscription.remove();
+      }
+    };
+  }, []);
+
+  return {
     mapRegion,
     setMapRegion,
-    getCurrentLocation
-};
+    getCurrentLocation,
+    liveCoords,
+  };
 };
