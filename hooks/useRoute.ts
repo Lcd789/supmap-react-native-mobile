@@ -56,16 +56,26 @@ export function useRoute() {
       }
 
       const parsedRoutes: RouteCalculationResult[] = data.routes.map((route: any) => {
-        const decodedPolyline = polyline.decode(route.overview_polyline.points).map(
-          ([lat, lng]: [number, number]) => ({
-            latitude: lat,
-            longitude: lng,
-          })
+        // ✅ Polyline précise, segmentée par steps
+        const decodedPolyline = route.legs.flatMap((leg: any) =>
+          leg.steps.flatMap((step: any) =>
+            polyline.decode(step.polyline.points).map(
+              ([lat, lng]: [number, number]) => ({
+                latitude: lat,
+                longitude: lng,
+              })
+            )
+          )
         );
 
-        // total distance and duration across all legs
-        const totalDistance = route.legs.reduce((sum: number, leg: any) => sum + leg.distance.value, 0);
-        const totalDuration = route.legs.reduce((sum: number, leg: any) => sum + leg.duration.value, 0);
+        const totalDistance = route.legs.reduce(
+          (sum: number, leg: any) => sum + leg.distance.value,
+          0
+        );
+        const totalDuration = route.legs.reduce(
+          (sum: number, leg: any) => sum + leg.duration.value,
+          0
+        );
 
         const steps: Step[] = route.legs.flatMap((leg: any) =>
           leg.steps.map((step: any) => ({

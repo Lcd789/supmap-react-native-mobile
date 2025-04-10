@@ -20,8 +20,10 @@ import { RouteMap } from "@/components/MapComponents/RouteMap";
 import { RouteInfo } from "@/components/MapComponents/RouteInfo";
 import RouteSelector from "@/components/MapComponents/RouteSelector";
 import { NextStepBanner } from "@/components/MapComponents/NextStepBanner";
+import { AlertReporter, AlertMarker } from "@/components/MapComponents/AlertReporter"; // ✅ import ajouté
 import { homeStyles } from "@/styles/styles";
 import { RouteCalculationResult, TransportMode, Waypoint } from "@/types";
+import { AlertVerifier } from "@/components/MapComponents/AlertVerifier";
 
 type RouteWithId = RouteCalculationResult & { id: string };
 
@@ -37,7 +39,7 @@ export default function Home() {
   const [alternativeRoutes, setAlternativeRoutes] = useState<RouteWithId[]>([]);
   const [selectedRoute, setSelectedRoute] = useState<RouteCalculationResult | null>(null);
   const [navigationLaunched, setNavigationLaunched] = useState<boolean>(false);
-
+  const [alertMarkers, setAlertMarkers] = useState<AlertMarker[]>([]); // ✅ nouvel état
 
   const mapRef = useRef<any>(null);
 
@@ -64,6 +66,23 @@ export default function Home() {
       });
     }
   }, [selectedRoute, navigationLaunched]);
+
+{navigationLaunched && (
+  <>
+    <AlertReporter
+      onAddAlert={(marker) =>
+        setAlertMarkers((prev) => [...prev, { ...marker, createdByMe: true }])
+      }
+    />
+    <AlertVerifier
+      liveCoords={liveCoords}
+      alertMarkers={alertMarkers}
+      onDismiss={(id) =>
+        setAlertMarkers((prev) => prev.filter((m) => m.id !== id))
+      }
+    />
+  </>
+)}
 
   const handleSearch = useCallback(async () => {
     if (!origin.trim() || !destination.trim()) {
@@ -94,7 +113,6 @@ export default function Home() {
         setAlternativeRoutes(routesWithIds);
         setSelectedRoute(routesWithIds[0]);
 
-        // ✅ Ajout ici : une fois que la route est valide, on sauvegarde
         addToHistory({
           origin,
           destination,
@@ -113,7 +131,9 @@ export default function Home() {
         };
 
         setMapRegion(newRegion);
-        mapRef.current?.animateToRegion(newRegion, 1000);
+        if (!navigationLaunched) {
+          mapRef.current?.animateToRegion(newRegion, 1000);
+        }
 
         setTimeout(() => {
           toggleSearchBar();
@@ -242,6 +262,16 @@ export default function Home() {
         alternativeRoutes={alternativeRoutes}
         selectedRouteId={selectedRoute ? (selectedRoute as RouteWithId).id : undefined}
         liveCoords={liveCoords}
+        navigationLaunched={navigationLaunched}
+        nextStepCoord={
+          selectedRoute?.steps?.[1]?.end_location
+            ? {
+                latitude: selectedRoute.steps[1].end_location.lat,
+                longitude: selectedRoute.steps[1].end_location.lng,
+              }
+            : null
+        }
+        alertMarkers={alertMarkers} // ✅ affichage sur la carte
       />
 
       {selectedRoute && (
@@ -251,7 +281,7 @@ export default function Home() {
         />
       )}
 
-      <Animated.View style={searchBarContainerStyle}>
+      <Animated.View style={searchBarContainerStyle} pointerEvents="box-none">
         {isSearchVisible && (
           <SearchBar
             origin={origin}
@@ -274,13 +304,13 @@ export default function Home() {
         )}
       </Animated.View>
 
-      <Animated.View style={floatingButtonStyle}>
+      <Animated.View style={floatingButtonStyle} pointerEvents="box-none">
         <TouchableOpacity onPress={toggleSearchBar}>
           <MaterialIcons name="map" size={24} color="#fff" />
         </TouchableOpacity>
       </Animated.View>
 
-      {alternativeRoutes.length > 1 && !navigationLaunched && (
+      {alternativeRoutes.length > 0 && !navigationLaunched && (
         <View style={styles.selectorContainer}>
           <RouteSelector
             origin={origin}
@@ -307,7 +337,7 @@ export default function Home() {
       )}
 
       {selectedRoute && navigationLaunched && (
-        <Animated.View style={routeInfoStyle}>
+        <Animated.View style={routeInfoStyle} pointerEvents="box-none">
           <RouteInfo
             routeSummary={{
               duration: selectedRoute.duration,
@@ -320,6 +350,14 @@ export default function Home() {
           />
         </Animated.View>
       )}
+
+      {/* ✅ Bouton d'alerte */}
+      {navigationLaunched && (
+        <AlertReporter
+          onAddAlert={(marker) => setAlertMarkers((prev) => [...prev, marker])}
+        />
+      )}
+
 
       {error && (
         <View style={homeStyles.errorContainer}>

@@ -121,29 +121,46 @@ const RouteSelector: React.FC<RouteSelectorProps> = ({
       .map((r) => r.id);
   }, [routes]);
 
+  const isSingle = routes.length === 1;
+
   return (
     <View style={styles.container}>
-      <Text style={styles.heading}>Choisissez votre itinéraire</Text>
+      {isSingle ? (
+        <Text style={styles.heading}>Itinéraire proposé</Text>
+      ) : null}
 
-      <FlatList
-        data={routes}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item, index }) => (
-          <RouteCard
-            item={item}
-            index={index}
-            isSelected={item.id === selectedRouteId}
-            isFastest={item.id === fastestId}
-            isEco={item.id === ecoId}
-            isTollFree={tollFreeIds.includes(item.id)}
-            onSelect={onSelectRoute}
-            onLaunch={onLaunchNavigation}
-          />
-        )}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 12 }}
-      />
+      {isSingle ? (
+        <RouteCard
+          item={routes[0]}
+          index={0}
+          isSelected={true}
+          isFastest={true}
+          isEco={true}
+          isTollFree={tollFreeIds.includes(routes[0].id)}
+          onSelect={onSelectRoute}
+          onLaunch={onLaunchNavigation}
+        />
+      ) : (
+        <FlatList
+          data={routes}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item, index }) => (
+            <RouteCard
+              item={item}
+              index={index}
+              isSelected={item.id === selectedRouteId}
+              isFastest={item.id === fastestId}
+              isEco={item.id === ecoId}
+              isTollFree={tollFreeIds.includes(item.id)}
+              onSelect={onSelectRoute}
+              onLaunch={onLaunchNavigation}
+            />
+          )}
+          horizontal
+          showsHorizontalScrollIndicator={true} // ✅ Scroll visible
+          contentContainerStyle={{ paddingHorizontal: 12 }}
+        />
+      )}
     </View>
   );
 };
@@ -165,6 +182,7 @@ const styles = StyleSheet.create({
   },
   cardContainer: {
     marginRight: 12,
+    alignItems: "center",
   },
   card: {
     width: screenWidth * 0.72,

@@ -56,9 +56,9 @@ export const useLocation = (onLocationTextUpdate?: (address: string) => void) =>
 
       subscription = await Location.watchPositionAsync(
         {
-          accuracy: Location.Accuracy.High,
-          distanceInterval: 10,
-          timeInterval: 3000,
+          accuracy: Location.Accuracy.Highest,
+          distanceInterval: 1000,
+          timeInterval: 1
         },
         (location) => {
           const coords = {

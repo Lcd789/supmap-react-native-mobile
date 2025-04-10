@@ -2,6 +2,7 @@ import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Appearance } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { Step } from "../../types";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 interface NextStepBannerProps {
     nextStep: Step | null;
@@ -12,6 +13,8 @@ export const NextStepBanner: React.FC<NextStepBannerProps> = ({
     nextStep,
     onToggleSteps,
 }) => {
+    const insets = useSafeAreaInsets(); // 👈 Ajout ici
+
     const getManeuverIcon = (maneuver: string): string => {
         const icons: { [key: string]: string } = {
             "turn-right": "turn-right",
@@ -40,7 +43,7 @@ export const NextStepBanner: React.FC<NextStepBannerProps> = ({
     const instruction =
         typeof nextStep.html_instructions === "string"
             ? nextStep.html_instructions.replace(/<[^>]*>/g, " ")
-            : nextStep.instruction || "Étape suivante";
+            : "Étape suivante";
 
     let distanceText = "";
 
@@ -53,7 +56,6 @@ export const NextStepBanner: React.FC<NextStepBannerProps> = ({
         typeof nextStep.distance === "number"
     ) {
         distanceText = convertDistance(nextStep.distance);
-        console.log("Distance:", distanceText);
     }
 
     const colorScheme = Appearance.getColorScheme();
@@ -62,7 +64,10 @@ export const NextStepBanner: React.FC<NextStepBannerProps> = ({
 
     return (
         <TouchableOpacity
-            style={[styles.bannerContainer, { backgroundColor }]}
+            style={[
+                styles.bannerContainer,
+                { backgroundColor, paddingTop: insets.top + 8 } // 👈 Prend en compte l'encoche
+            ]}
             onPress={onToggleSteps}
         >
             <View style={styles.bannerContent}>
@@ -90,12 +95,13 @@ export const NextStepBanner: React.FC<NextStepBannerProps> = ({
 const styles = StyleSheet.create({
     bannerContainer: {
         position: "absolute",
-        top: 20,
+        top: 0,
         left: 0,
         right: 0,
         borderBottomWidth: 1,
         borderBottomColor: "#ccc",
-        padding: 8,
+        paddingHorizontal: 8,
+        paddingBottom: 8,
         zIndex: 1000,
     },
     bannerContent: {

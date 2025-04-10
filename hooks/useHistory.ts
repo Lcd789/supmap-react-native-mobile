@@ -36,7 +36,8 @@ export const useHistory = () => {
     try {
       const historyString = await AsyncStorage.getItem(HISTORY_KEY);
       const parsed = historyString ? JSON.parse(historyString) : [];
-      console.log("📜 Historique récupéré :", parsed); // ✅ correction ici
+      parsed.slice(-3);
+      console.log("📜 Historique récupéré :", parsed);
       return parsed;
     } catch (err) {
       console.error("Erreur de lecture de l'historique :", err);
