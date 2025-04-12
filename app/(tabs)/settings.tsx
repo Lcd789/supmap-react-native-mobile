@@ -1,65 +1,64 @@
-import React, { useState } from "react";
+import React from "react";
 import { View, Text, Switch, StyleSheet, ScrollView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTheme } from "@/utils/ThemeContext";
 
 const SettingsScreen = () => {
   const insets = useSafeAreaInsets();
+  const { darkMode, toggleDarkMode } = useTheme();
 
-  const [avoidTolls, setAvoidTolls] = useState(false);
-  const [avoidHighways, setAvoidHighways] = useState(false);
-  const [avoidFerries, setAvoidFerries] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
-  const [showTraffic, setShowTraffic] = useState(true);
-  const [voiceGuidance, setVoiceGuidance] = useState(true);
-  const [unitsMetric, setUnitsMetric] = useState(true);
+  const [avoidTolls, setAvoidTolls] = React.useState(false);
+  const [avoidHighways, setAvoidHighways] = React.useState(false);
+  const [avoidFerries, setAvoidFerries] = React.useState(false);
+  const [showTraffic, setShowTraffic] = React.useState(true);
+  const [voiceGuidance, setVoiceGuidance] = React.useState(true);
+  const [unitsMetric, setUnitsMetric] = React.useState(true);
 
   return (
-    <ScrollView
-      contentContainerStyle={[styles.container, { paddingTop: insets.top }]}
-    >
-      <Text style={styles.sectionTitle}>Paramètres d'itinéraire</Text>
+    <ScrollView contentContainerStyle={[styles.container, { paddingTop: insets.top }, darkMode && styles.containerDark]}>
+      <Text style={[styles.sectionTitle, darkMode && styles.sectionTitleDark]}>Paramètres d'itinéraire</Text>
 
-      <View style={styles.card}>
+      <View style={[styles.card, darkMode && styles.cardDark]}>
         <View style={styles.optionRow}>
-          <Text style={styles.optionLabel}>Éviter les péages</Text>
+          <Text style={[styles.optionLabel, darkMode && styles.optionLabelDark]}>Éviter les péages</Text>
           <Switch value={avoidTolls} onValueChange={setAvoidTolls} />
         </View>
 
         <View style={styles.optionRow}>
-          <Text style={styles.optionLabel}>Éviter les autoroutes</Text>
+          <Text style={[styles.optionLabel, darkMode && styles.optionLabelDark]}>Éviter les autoroutes</Text>
           <Switch value={avoidHighways} onValueChange={setAvoidHighways} />
         </View>
 
         <View style={styles.optionRow}>
-          <Text style={styles.optionLabel}>Éviter les ferries</Text>
+          <Text style={[styles.optionLabel, darkMode && styles.optionLabelDark]}>Éviter les ferries</Text>
           <Switch value={avoidFerries} onValueChange={setAvoidFerries} />
         </View>
       </View>
 
-      <Text style={styles.sectionTitle}>Affichage</Text>
+      <Text style={[styles.sectionTitle, darkMode && styles.sectionTitleDark]}>Affichage</Text>
 
-      <View style={styles.card}>
+      <View style={[styles.card, darkMode && styles.cardDark]}>
         <View style={styles.optionRow}>
-          <Text style={styles.optionLabel}>Mode sombre</Text>
-          <Switch value={darkMode} onValueChange={setDarkMode} />
+          <Text style={[styles.optionLabel, darkMode && styles.optionLabelDark]}>Mode sombre</Text>
+          <Switch value={darkMode} onValueChange={toggleDarkMode} />
         </View>
 
         <View style={styles.optionRow}>
-          <Text style={styles.optionLabel}>Afficher le trafic</Text>
+          <Text style={[styles.optionLabel, darkMode && styles.optionLabelDark]}>Afficher le trafic</Text>
           <Switch value={showTraffic} onValueChange={setShowTraffic} />
         </View>
       </View>
 
-      <Text style={styles.sectionTitle}>Guidage</Text>
+      <Text style={[styles.sectionTitle, darkMode && styles.sectionTitleDark]}>Guidage</Text>
 
-      <View style={styles.card}>
+      <View style={[styles.card, darkMode && styles.cardDark]}>
         <View style={styles.optionRow}>
-          <Text style={styles.optionLabel}>Guidage vocal</Text>
+          <Text style={[styles.optionLabel, darkMode && styles.optionLabelDark]}>Guidage vocal</Text>
           <Switch value={voiceGuidance} onValueChange={setVoiceGuidance} />
         </View>
 
         <View style={styles.optionRow}>
-          <Text style={styles.optionLabel}>Unités métriques</Text>
+          <Text style={[styles.optionLabel, darkMode && styles.optionLabelDark]}>Unités métriques</Text>
           <Switch value={unitsMetric} onValueChange={setUnitsMetric} />
         </View>
       </View>
@@ -72,12 +71,18 @@ const styles = StyleSheet.create({
     padding: 16,
     backgroundColor: "#f9f9f9",
   },
+  containerDark: {
+    backgroundColor: "#1e1e1e",
+  },
   sectionTitle: {
     fontSize: 20,
     fontWeight: "700",
     color: "#1e1e1e",
     marginTop: 20,
     marginBottom: 10,
+  },
+  sectionTitleDark: {
+    color: "#f5f5f5",
   },
   card: {
     backgroundColor: "#fff",
@@ -90,6 +95,9 @@ const styles = StyleSheet.create({
     elevation: 3,
     marginBottom: 16,
   },
+  cardDark: {
+    backgroundColor: "#333",
+  },
   optionRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -101,6 +109,9 @@ const styles = StyleSheet.create({
   optionLabel: {
     fontSize: 16,
     color: "#333",
+  },
+  optionLabelDark: {
+    color: "#f5f5f5",
   },
 });
 

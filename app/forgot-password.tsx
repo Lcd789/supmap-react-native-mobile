@@ -1,34 +1,31 @@
+import { useState } from "react";
 import { useRouter } from "expo-router";
 import {
   ScrollView,
-  Text,
   StyleSheet,
-  Pressable,
-  Alert,
-  TouchableOpacity,
+  Text,
   TextInput,
+  TouchableOpacity,
+  Pressable,
 } from "react-native";
-import { useState } from "react";
-import { register } from "@/hooks/authentication/AuthenticationHooks";
+import { forgotPassword } from "@/hooks/authentication/AuthenticationHooks";
 import { useTheme } from "@/utils/ThemeContext";
 
-export default function Register() {
+export default function ForgotPassword() {
   const router = useRouter();
   const { darkMode, toggleDarkMode } = useTheme();
-
-  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const handleRegister = async () => {
+  const handleForgotPassword = async () => {
     setLoading(true);
     setError(null);
+    setMessage(null);
     try {
-      await register(username, email, password);
-      Alert.alert("Inscription réussie !");
-      router.replace("/login");
+      await forgotPassword(email);
+      setMessage("Un lien de réinitialisation a été envoyé à votre adresse email.");
     } catch (err) {
       if (err instanceof Error) setError(err.message);
       else setError("Une erreur est survenue.");
@@ -38,54 +35,34 @@ export default function Register() {
   };
 
   const containerStyle = [styles.container, darkMode && styles.containerDark];
-  const labelStyle = [styles.label, darkMode && styles.labelDark];
+  const titleStyle = [styles.title, darkMode && styles.titleDark];
+  const instructionStyle = [styles.instruction, darkMode && styles.instructionDark];
   const inputStyle = [styles.input, darkMode && styles.inputDark];
-  const buttonTextStyle = styles.buttonText;
   const linkTextStyle = [styles.link, darkMode && { color: "#66aaff" }];
 
   return (
     <ScrollView contentContainerStyle={containerStyle}>
-      <Text style={labelStyle}>Nom d'utilisateur</Text>
-      <TextInput
-        style={inputStyle}
-        placeholder="Nom d'utilisateur"
-        placeholderTextColor={darkMode ? "#aaa" : "#999"}
-        value={username}
-        onChangeText={setUsername}
-      />
-
-      <Text style={labelStyle}>Email</Text>
+      <Text style={titleStyle}>Mot de passe oublié</Text>
+      <Text style={instructionStyle}>
+        Veuillez entrer votre adresse email pour recevoir un lien de réinitialisation de mot de passe.
+      </Text>
       <TextInput
         style={inputStyle}
         placeholder="Email"
         placeholderTextColor={darkMode ? "#aaa" : "#999"}
         keyboardType="email-address"
+        autoCapitalize="none"
         value={email}
         onChangeText={setEmail}
       />
-
-      <Text style={labelStyle}>Mot de passe</Text>
-      <TextInput
-        style={inputStyle}
-        placeholder="Mot de passe"
-        placeholderTextColor={darkMode ? "#aaa" : "#999"}
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-      />
-
       {error && <Text style={[styles.error, { color: "red" }]}>{error}</Text>}
-
-      <TouchableOpacity style={styles.button} onPress={handleRegister} disabled={loading}>
-        <Text style={buttonTextStyle}>
-          {loading ? "Inscription en cours..." : "S'inscrire"}
-        </Text>
+      {message && <Text style={[styles.message, { color: "green" }]}>{message}</Text>}
+      <TouchableOpacity style={styles.button} onPress={handleForgotPassword} disabled={loading}>
+        <Text style={styles.buttonText}>{loading ? "Envoi en cours..." : "Envoyer"}</Text>
       </TouchableOpacity>
-
       <Pressable onPress={() => router.replace("/login")}>
-        <Text style={linkTextStyle}>Vous avez déjà un compte ?</Text>
+        <Text style={linkTextStyle}>Retour à la connexion</Text>
       </Pressable>
-
       <Pressable onPress={toggleDarkMode} style={styles.darkModeToggle}>
         <Text style={darkMode ? { color: "#f5f5f5" } : { color: "#333" }}>
           {darkMode ? "Désactiver le mode sombre" : "Activer le mode sombre"}
@@ -98,23 +75,31 @@ export default function Register() {
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
+    backgroundColor: "#f9f9f9",
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
-    backgroundColor: "#f9f9f9",
   },
   containerDark: {
     backgroundColor: "#1e1e1e",
   },
-  label: {
-    alignSelf: "flex-start",
-    marginBottom: 5,
-    fontSize: 16,
-    fontWeight: "500",
+  title: {
+    fontSize: 24,
+    fontWeight: "700",
+    marginBottom: 20,
     color: "#333",
   },
-  labelDark: {
+  titleDark: {
     color: "#f5f5f5",
+  },
+  instruction: {
+    fontSize: 16,
+    textAlign: "center",
+    marginBottom: 20,
+    color: "#666",
+  },
+  instructionDark: {
+    color: "#ccc",
   },
   input: {
     width: "100%",
@@ -133,12 +118,19 @@ const styles = StyleSheet.create({
     borderColor: "#555",
     color: "#f5f5f5",
   },
+  error: {
+    marginBottom: 15,
+    textAlign: "center",
+  },
+  message: {
+    marginBottom: 15,
+    textAlign: "center",
+  },
   button: {
     width: "100%",
     backgroundColor: "#007AFF",
     paddingVertical: 15,
     borderRadius: 8,
-    justifyContent: "center",
     alignItems: "center",
     marginBottom: 10,
   },
@@ -152,10 +144,6 @@ const styles = StyleSheet.create({
     color: "#007AFF",
     textAlign: "center",
     marginTop: 10,
-  },
-  error: {
-    marginBottom: 15,
-    textAlign: "center",
   },
   darkModeToggle: {
     marginTop: 20,
