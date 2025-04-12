@@ -34,14 +34,13 @@ export async function forgotPassword(email) {
     const text = await response.text();
     return text ? JSON.parse(text) : {};
 }
-
-export async function login(username, password) {
-    const response = await fetch("https://supmap-api.up.railway.app/auth/login", {
+export async function login(email, password) {
+    const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
         },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ email, password }),
         redirect: "follow",
     });
 
@@ -72,20 +71,23 @@ export async function login(username, password) {
 
 
 export async function register(username, email, password) {
-    const response = await fetch(`https://supmap-api.up.railway.app/auth/register`, {
+    const response = await fetch(`${API_BASE_URL}/auth/register`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
         body: JSON.stringify({ username, email, password }),
     });
-
+    const text = await response.text();
     if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error(text || `HTTP error! status: ${response.status}`);
     }
 
-    const text = await response.text();
-    return text ? JSON.parse(text) : {};
+    try {
+        return text ? JSON.parse(text) : {};
+    }catch ( e ){
+        return {message: text}
+    }
 }
 
 export async function resetPassword(token, newPassword) {

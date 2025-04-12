@@ -18,21 +18,35 @@ export default function Register() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
+    const [error, setError] = useState<string | null>(null);
 
     const handleRegister = async () => {
         setLoading(true);
         setError(null);
         try {
             const result = await register(username, email, password);
-            Alert.alert("Inscription réussie !");
-            router.replace("/login");
+
+            if( result.message && result.message.includes("verification email")) {
+                Alert.alert(
+                    "Inscription réussie !",
+                    "Un email de vérification a été envoyé à votre adresse email. Veuillez vérifier votre boîte de réception et cliquer sur le lien de vérification pour activer votre compte.",
+                    [
+                        {
+                            text: "OK",
+                            onPress: () => {
+                                router.replace("/login");
+                            },
+                        }
+                    ]
+                )
+            }  else {
+                Alert.alert("Inscription réussie !");
+                router.replace("/login");
+            }
         } catch (err) {
             if (err instanceof Error) {
-                // @ts-ignore
                 setError(err.message);
             } else {
-                // @ts-ignore
                 setError("Une erreur est survenue.");
             }
         } finally {

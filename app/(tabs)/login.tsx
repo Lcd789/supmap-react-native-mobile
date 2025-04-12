@@ -18,9 +18,8 @@ import { loginStyles } from "../../styles/styles";
 
 export default function Login() {
     const router = useRouter();
-    const { setAuthenticated } = useAuth(); 
-
-    const [username, setUsername] = useState("");
+    const { setAuthenticated } = useAuth();
+    const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -28,7 +27,7 @@ export default function Login() {
 
     useFocusEffect(
         useCallback(() => {
-            setUsername("");
+            setEmail("");
             setPassword("");
             setError(null);
         }, [])
@@ -38,37 +37,40 @@ export default function Login() {
         setLoading(true);
         setError(null);
         try {
-            const authToken = await login(username, password);
+            const authToken = await login(email, password);
             await SecureStore.setItemAsync("authToken", authToken);
-            
-        
+
             setAuthenticated(true);
 
             Alert.alert("Connexion réussie !");
             router.replace("/(tabs)/profile");
         } catch (err) {
-            setError(err instanceof Error ? err.message : "Une erreur est survenue.");
+            setError(
+                err instanceof Error ? err.message : "Une erreur est survenue."
+            );
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <ScrollView style={ loginStyles.container}>
-            <Text style={ loginStyles.label}>Nom d'utilisateur</Text>
+        <ScrollView style={loginStyles.container}>
+            <Text style={loginStyles.label}>Nom d'utilisateur</Text>
             <TextInput
-                style={ loginStyles.input}
-                placeholder="Nom d'utilisateur"
-                value={username}
-                onChangeText={setUsername}
-                autoCapitalize="none" // Évite la mise en majuscule automatique
-                autoCorrect={false} // Désactive la correction automatique
+                style={loginStyles.input}
+                placeholder="Email"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                textContentType="emailAddress"
+                autoCapitalize="none"
+                autoCorrect={false}
             />
 
-            <Text style={ loginStyles.label}>Mot de passe</Text>
-            <View style={ loginStyles.passwordContainer}>
+            <Text style={loginStyles.label}>Mot de passe</Text>
+            <View style={loginStyles.passwordContainer}>
                 <TextInput
-                    style={ loginStyles.inputPassword}
+                    style={loginStyles.inputPassword}
                     placeholder="Mot de passe"
                     secureTextEntry={secureText}
                     value={password}
@@ -76,16 +78,18 @@ export default function Login() {
                 />
                 <Pressable
                     onPress={() => setSecureText(!secureText)}
-                    style={ loginStyles.toggleButton}
+                    style={loginStyles.toggleButton}
                 >
                     <Text>{secureText ? "👁️" : "🙈"}</Text>
                 </Pressable>
             </View>
 
-            {error && <Text style={ loginStyles.error}>{error}</Text>}
+            {error && <Text style={loginStyles.error}>{error}</Text>}
 
             <Pressable onPress={() => router.push("/")}>
-                <Text style={ loginStyles.forgotpass}>Mot de passe oublié ?</Text>
+                <Text style={loginStyles.forgotpass}>
+                    Mot de passe oublié ?
+                </Text>
             </Pressable>
 
             <View style={{ height: 1, marginVertical: 8 }} />
@@ -106,13 +110,21 @@ export default function Login() {
 
             <Button
                 title="Se connecter avec Google"
-                onPress={() => alert("Connexion Google")}
+                onPress={() => alert("Connexion Google, pas encore implémentée")}
+                disabled={loading}
             />
 
-            <View style={{ height: 1, marginVertical: 8 }} />
+            <View
+                style={{
+                    height: 1,
+                    marginVertical: 8,
+                }}
+            />
 
             <Pressable onPress={() => router.replace("/register")}>
-                <Text style={ loginStyles.linkButton}>Pas encore de compte ?</Text>
+                <Text style={loginStyles.linkButton}>
+                    Pas encore de compte ?
+                </Text>
             </Pressable>
         </ScrollView>
     );

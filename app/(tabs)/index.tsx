@@ -274,7 +274,7 @@ export default function Home() {
         alertMarkers={alertMarkers} // ✅ affichage sur la carte
       />
 
-      {selectedRoute && (
+      {selectedRoute && !isSearchVisible && (
         <NextStepBanner
           nextStep={selectedRoute.steps[0]}
           onToggleSteps={toggleSteps}

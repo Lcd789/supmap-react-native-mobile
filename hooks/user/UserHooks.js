@@ -9,7 +9,7 @@ export async function getUserData() {
     }
 
     try {
-        const response = await fetch(`https://supmap-api.up.railway.app/user`, {
+        const response = await fetch(`${API_BASE_URL}/user`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -137,7 +137,7 @@ export async function deleteProfile() {
         return {};
     }
 
-    const response = await fetch(`https://supmap-api.up.railway.app/user/delete`, {
+    const response = await fetch(`${API_BASE_URL}/user/delete`, {
         method: 'DELETE',
         headers: {
             'Content-Type': 'application/json',
