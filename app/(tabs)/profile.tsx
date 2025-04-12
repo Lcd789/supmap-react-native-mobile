@@ -18,6 +18,7 @@ import { useAuth } from "@/hooks/user/AuthContext";
 import { profileStyles } from "../../styles/styles";
 
 const DefaultProfileImage = require("../../assets/images/default-profile.png");
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
 
 export default function Profile() {
     const router = useRouter();
@@ -73,7 +74,7 @@ export default function Profile() {
             };
             const authToken = await SecureStore.getItemAsync("authToken");
     
-            const response = await fetch("https://supmap-api.up.railway.app/user/update", {
+            const response = await fetch(`${API_BASE_URL}/user/update`, {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",
