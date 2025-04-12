@@ -256,23 +256,29 @@ export default function Home() {
 
   return (
     <SafeAreaView style={homeStyles.container}>
-      <RouteMap
-        region={mapRegion}
-        mapRef={mapRef}
-        alternativeRoutes={alternativeRoutes}
-        selectedRouteId={selectedRoute ? (selectedRoute as RouteWithId).id : undefined}
-        liveCoords={liveCoords}
-        navigationLaunched={navigationLaunched}
-        nextStepCoord={
-          selectedRoute?.steps?.[1]?.end_location
-            ? {
-                latitude: selectedRoute.steps[1].end_location.lat,
-                longitude: selectedRoute.steps[1].end_location.lng,
-              }
-            : null
-        }
-        alertMarkers={alertMarkers} // ✅ affichage sur la carte
-      />
+      {mapRegion ? (
+        <RouteMap
+          region={mapRegion}
+          mapRef={mapRef}
+          alternativeRoutes={alternativeRoutes}
+          selectedRouteId={selectedRoute ? (selectedRoute as RouteWithId).id : undefined}
+          liveCoords={liveCoords}
+          navigationLaunched={navigationLaunched}
+          nextStepCoord={
+            selectedRoute?.steps?.[1]?.end_location
+              ? {
+                  latitude: selectedRoute.steps[1].end_location.lat,
+                  longitude: selectedRoute.steps[1].end_location.lng,
+                }
+              : null
+          }
+          alertMarkers={alertMarkers}
+        />
+      ) : (
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+          <ActivityIndicator size="large" color="#2196F3" />
+        </View>
+      )}
 
       {selectedRoute && !isSearchVisible && (
         <NextStepBanner

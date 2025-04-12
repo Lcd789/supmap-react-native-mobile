@@ -1,88 +1,35 @@
 import { useEffect, useState } from "react";
 import * as Location from "expo-location";
 import { Region } from "react-native-maps";
-import { getAddressFromCoords } from "@/utils/geocoding";
 
-export const useLocation = (onLocationTextUpdate?: (address: string) => void) => {
-  const [mapRegion, setMapRegion] = useState<Region>({
-    latitude: 48.8566,
-    longitude: 2.3522,
-    latitudeDelta: 0.05,
-    longitudeDelta: 0.05,
-  });
+export const useLocation = () => {
+  const [liveCoords, setLiveCoords] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [mapRegion, setMapRegion] = useState<Region | null>(null);
 
-  const [liveCoords, setLiveCoords] = useState<{ latitude: number; longitude: number } | null>(
-    null
-  );
-
-  const getCurrentLocation = async () => {
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
+  useEffect(() => {
+    (async () => {
+      let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
-        console.warn("Permission localisation refusée");
+        console.error("Permission localisation refusée.");
         return;
       }
 
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
-
+      const location = await Location.getCurrentPositionAsync({});
       const { latitude, longitude } = location.coords;
+      const coords = { latitude, longitude };
+      setLiveCoords(coords);
 
       setMapRegion({
-        latitude,
-        longitude,
-        latitudeDelta: 0.05,
-        longitudeDelta: 0.05,
+        ...coords,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
       });
-
-      setLiveCoords({ latitude, longitude });
-
-      const address = await getAddressFromCoords(latitude, longitude);
-      if (onLocationTextUpdate && address) onLocationTextUpdate(address);
-    } catch (err) {
-      console.error("Erreur lors de la récupération de la position :", err);
-    }
-  };
-
-  useEffect(() => {
-    getCurrentLocation();
-
-    let subscription: Location.LocationSubscription;
-
-    const startLiveTracking = async () => {
-      const { status } = await Location.getForegroundPermissionsAsync();
-      if (status !== "granted") return;
-
-      subscription = await Location.watchPositionAsync(
-        {
-          accuracy: Location.Accuracy.Highest,
-          distanceInterval: 1000,
-          timeInterval: 1
-        },
-        (location) => {
-          const coords = {
-            latitude: location.coords.latitude,
-            longitude: location.coords.longitude,
-          };
-          setLiveCoords(coords);
-        }
-      );
-    };
-
-    startLiveTracking();
-
-    return () => {
-      if (subscription) {
-        subscription.remove();
-      }
-    };
+    })();
   }, []);
 
   return {
+    liveCoords,
     mapRegion,
     setMapRegion,
-    getCurrentLocation,
-    liveCoords,
   };
 };
