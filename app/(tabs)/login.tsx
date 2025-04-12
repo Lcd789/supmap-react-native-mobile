@@ -66,7 +66,7 @@ export default function Login() {
 
   return (
     <ScrollView style={containerStyle} contentContainerStyle={styles.innerContainer}>
-      <Text style={labelStyle}>Nom d'utilisateur</Text>
+      <Text style={labelStyle}>Adresse email</Text>
       <TextInput
         style={inputStyle}
         placeholder="Email"
