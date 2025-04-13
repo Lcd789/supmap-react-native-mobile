@@ -314,7 +314,7 @@ export default function Home() {
         <View
           style={{
             position: "absolute",
-            top: 160,
+            top: 500,
             left: 20,
             right: 20,
             backgroundColor: darkMode ? "#333" : "#fff8e1",

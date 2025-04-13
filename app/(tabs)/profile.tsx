@@ -146,7 +146,6 @@ import {
         ]}
       >
         <View style={profileStyles.content}>
-          {/* Section Photo de profil */}
           <View style={profileStyles.imageSection}>
             <View style={profileStyles.imageContainer}>
               <Image
@@ -170,7 +169,6 @@ import {
             </TouchableOpacity>
           </View>
   
-          {/* Section Informations */}
           <View style={profileStyles.infoSection}>
             <View style={profileStyles.inputContainer}>
               <TextInput
@@ -226,7 +224,6 @@ import {
             </View>
           </View>
   
-          {/* Boutons d'action */}
           <View style={profileStyles.actionButtons}>
             {hasChanges && (
               <TouchableOpacity

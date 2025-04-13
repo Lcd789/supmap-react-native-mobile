@@ -25,10 +25,8 @@ export const useHistory = () => {
       };
 
       const updated = [newEntry, ...history].slice(0, 20);
-      console.log("📦 Historique à sauvegarder :", updated);
       await AsyncStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
     } catch (err) {
-      console.error("Erreur d'ajout à l'historique :", err);
     }
   };
 
@@ -37,7 +35,6 @@ export const useHistory = () => {
       const historyString = await AsyncStorage.getItem(HISTORY_KEY);
       const parsed = historyString ? JSON.parse(historyString) : [];
       parsed.slice(-3);
-      console.log("📜 Historique récupéré :", parsed);
       return parsed;
     } catch (err) {
       console.error("Erreur de lecture de l'historique :", err);

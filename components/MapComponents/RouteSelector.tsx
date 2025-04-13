@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react";
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   FlatList,
   StyleSheet,
   Dimensions,
+  Platform,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { Waypoint, TransportMode, RouteCalculationResult } from "@/types";
@@ -67,15 +68,19 @@ const RouteCard = ({
         activeOpacity={0.9}
       >
         <Text style={styles.title}>🚗 Itinéraire {index + 1}</Text>
+        <Text style={styles.details}>{item.distance} • {item.duration}</Text>
         <Text style={styles.summary}>{item.summary || "—"}</Text>
-        <Text style={styles.details}>
-          {item.distance} • {item.duration}
-        </Text>
 
         <View style={styles.badgesRow}>
-          {isFastest && <Text style={[styles.badge, { backgroundColor: "#ffe0b2" }]}>⚡ Rapide</Text>}
-          {isEco && <Text style={[styles.badge, { backgroundColor: "#c8e6c9" }]}>🌱 Écolo</Text>}
-          {isTollFree && <Text style={[styles.badge, { backgroundColor: "#b3e5fc" }]}>🛣️ Sans péage</Text>}
+          {isFastest && (
+            <Text style={[styles.badge, { backgroundColor: "#ffe0b2" }]}>⚡ Rapide</Text>
+          )}
+          {isEco && (
+            <Text style={[styles.badge, { backgroundColor: "#c8e6c9" }]}>🌱 Écolo</Text>
+          )}
+          {isTollFree && (
+            <Text style={[styles.badge, { backgroundColor: "#b3e5fc" }]}>🛣️ Sans péage</Text>
+          )}
         </View>
 
         <View style={styles.launchIcon}>
@@ -96,6 +101,8 @@ const RouteSelector: React.FC<RouteSelectorProps> = ({
   onSelectRoute = () => {},
   onLaunchNavigation = () => {},
 }) => {
+  const flatListRef = useRef<FlatList>(null);
+
   const fastestId = React.useMemo(() => {
     const fastest = routes.reduce((min, route) =>
       (route.durationValue ?? Infinity) < (min.durationValue ?? Infinity) ? route : min
@@ -142,6 +149,7 @@ const RouteSelector: React.FC<RouteSelectorProps> = ({
         />
       ) : (
         <FlatList
+          ref={flatListRef}
           data={routes}
           keyExtractor={(item) => item.id}
           renderItem={({ item, index }) => (
@@ -157,8 +165,15 @@ const RouteSelector: React.FC<RouteSelectorProps> = ({
             />
           )}
           horizontal
-          showsHorizontalScrollIndicator={true} // ✅ Scroll visible
-          contentContainerStyle={{ paddingHorizontal: 12 }}
+          showsHorizontalScrollIndicator={true}
+          scrollIndicatorInsets={{ bottom: 1 }}
+          contentContainerStyle={{
+            paddingHorizontal: 12,
+            paddingBottom: Platform.OS === "ios" ? 10 : 4,
+          }}
+          onContentSizeChange={() => {
+            flatListRef.current?.scrollToOffset({ offset: 1, animated: false });
+          }}
         />
       )}
     </View>
@@ -171,7 +186,7 @@ const styles = StyleSheet.create({
     bottom: 12,
     left: 0,
     right: 0,
-    paddingVertical: 8,
+    paddingVertical: 4,
   },
   heading: {
     textAlign: "center",
@@ -182,44 +197,47 @@ const styles = StyleSheet.create({
   },
   cardContainer: {
     marginRight: 12,
-    alignItems: "center",
   },
   card: {
-    width: screenWidth * 0.72,
-    backgroundColor: "rgba(255,255,255,0.92)",
+    width: screenWidth * 0.65, // ✅ plus étroit pour forcer le scroll
+    height: 160,
+    backgroundColor: "rgba(255,255,255,0.95)",
     borderRadius: 16,
-    padding: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
     elevation: 3,
     borderWidth: 1,
     borderColor: "#ddd",
+    justifyContent: "space-evenly",
   },
   cardSelected: {
     borderColor: "#2196F3",
     backgroundColor: "#e3f2fd",
   },
   title: {
-    fontSize: 15,
+    fontSize: 17,
     fontWeight: "bold",
-    marginBottom: 4,
     color: "#222",
+    marginBottom: 2,
   },
   summary: {
-    fontSize: 14,
-    color: "#555",
-    marginBottom: 4,
+    fontSize: 15,
+    color: "#444",
+    marginBottom: 2,
   },
   details: {
-    fontSize: 14,
+    fontSize: 15,
     color: "#333",
-    marginBottom: 6,
+    marginBottom: 4,
   },
   badgesRow: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 6,
+    marginTop: 4,
   },
   badge: {
-    fontSize: 12,
+    fontSize: 13,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 16,

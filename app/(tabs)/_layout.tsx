@@ -32,6 +32,7 @@ export default function TabsLayout() {
         name="profile"
         options={{
           title: "My profile",
+          headerShown: false,
           href: isAuthenticated ? "/profile" : null,
           tabBarIcon: ({ focused, color }) => (
             <Ionicons name={focused ? "person" : "person-outline"} size={24} color={color} />
@@ -42,6 +43,7 @@ export default function TabsLayout() {
         name="login"
         options={{
           title: "Login",
+          headerShown: false,
           href: !isAuthenticated ? "/login" : null,
           tabBarIcon: ({ focused, color }) => (
             <Ionicons name={focused ? "log-in" : "log-in-outline"} size={24} color={color} />
@@ -52,6 +54,7 @@ export default function TabsLayout() {
         name="register"
         options={{
           title: "Register",
+          headerShown: false,
           href: null,
           tabBarIcon: ({ focused, color }) => (
             <Ionicons name={focused ? "person-add" : "person-add-outline"} size={24} color={color} />
@@ -62,6 +65,7 @@ export default function TabsLayout() {
         name="settings"
         options={{
           title: "Settings",
+          headerShown: false,
           tabBarIcon: ({ focused, color }) => (
             <Ionicons name={focused ? "settings" : "settings-outline"} size={24} color={color} />
           ),
