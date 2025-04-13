@@ -81,8 +81,11 @@ export const RouteMap: React.FC<RouteMapProps> = ({
       }}
       {...mapProps}
     >
-      {!navigationLaunched &&
-        alternativeRoutes.map((route) => {
+      {alternativeRoutes
+        .filter((route) =>
+          navigationLaunched ? route.id === selectedRouteId : true
+        )
+        .map((route) => {
           const isSelected = route.id === selectedRouteId;
           return (
             <Polyline
@@ -95,7 +98,7 @@ export const RouteMap: React.FC<RouteMapProps> = ({
           );
         })}
 
-      {liveCoords && navigationLaunched && (
+      {liveCoords && (
         <Marker
           coordinate={liveCoords}
           anchor={{ x: 0.5, y: 0.5 }}
@@ -113,7 +116,10 @@ export const RouteMap: React.FC<RouteMapProps> = ({
       {alertMarkers.map((marker) => (
         <Marker
           key={marker.id}
-          coordinate={{ latitude: marker.latitude, longitude: marker.longitude }}
+          coordinate={{
+            latitude: marker.latitude,
+            longitude: marker.longitude,
+          }}
           title={marker.type}
         >
           <Image

@@ -46,6 +46,7 @@ export default function Home() {
   const [currentStepIndex, setCurrentStepIndex] = useState<number>(0);
   const [mustJoinStart, setMustJoinStart] = useState<boolean>(false);
   const [isNearStart, setIsNearStart] = useState<boolean>(true);
+  const floatingButtonOffset = useSharedValue(100);
 
   const mapRef = useRef<any>(null);
 
@@ -73,11 +74,17 @@ export default function Home() {
     }
   }, [selectedRoute, navigationLaunched]);
 
-  // ✅ Ajout : reset mustJoinStart quand on quitte la navigation
   useEffect(() => {
     if (!navigationLaunched) {
       setMustJoinStart(false);
     }
+  }, [navigationLaunched]);
+
+  useEffect(() => {
+    floatingButtonOffset.value = withTiming(navigationLaunched ? 160 : 100, {
+      duration: 300,
+      easing: Easing.inOut(Easing.ease),
+    });
   }, [navigationLaunched]);
 
   useEffect(() => {
@@ -242,7 +249,7 @@ export default function Home() {
 
   const floatingButtonStyle = useAnimatedStyle(() => ({
     position: "absolute",
-    top: 100,
+    top: floatingButtonOffset.value,
     right: 20,
     width: 50,
     height: 50,
@@ -274,7 +281,7 @@ export default function Home() {
     <SafeAreaView
       style={[
         homeStyles.container,
-        { backgroundColor: darkMode ? "#121212" : "#fff" }, // fond global
+        { backgroundColor: darkMode ? "#121212" : "#fff" },
       ]}
     >
       {mapRegion ? (
@@ -380,9 +387,11 @@ export default function Home() {
       </Animated.View>
 
       <Animated.View style={floatingButtonStyle} pointerEvents="box-none">
-        <TouchableOpacity onPress={toggleSearchBar}>
+        {selectedRoute && (
+      <TouchableOpacity onPress={toggleSearchBar}>
           <MaterialIcons name="map" size={24} color="#fff" />
         </TouchableOpacity>
+)}
       </Animated.View>
 
       {alternativeRoutes.length > 0 && !navigationLaunched && (
@@ -438,6 +447,7 @@ export default function Home() {
 
       {navigationLaunched && (
         <AlertReporter
+          navigationLaunched={navigationLaunched}
           onAddAlert={(marker) => setAlertMarkers((prev) => [...prev, marker])}
         />
       )}
@@ -455,7 +465,7 @@ export default function Home() {
           <ActivityIndicator size="large" color="#2196F3" />
         </View>
       )}
-    </SafeAreaView>
+</SafeAreaView>
   );
 }
 

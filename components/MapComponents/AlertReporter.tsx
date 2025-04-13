@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -11,6 +11,13 @@ import {
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import * as Location from "expo-location";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  Easing,
+} from "react-native-reanimated";
+import * as Haptics from "expo-haptics";
 
 export type AlertType =
   | "police"
@@ -24,13 +31,15 @@ export interface AlertMarker {
   latitude: number;
   longitude: number;
   type: AlertType;
-  createdByMe?: boolean; // ✅ ajout ici
+  createdByMe?: boolean;
 }
 
 interface AlertReporterProps {
   onAddAlert: (marker: AlertMarker) => void;
+  navigationLaunched: boolean;
 }
 
+// Icônes et catégories
 const categoryIcons: Record<AlertType, string> = {
   police: "https://img.icons8.com/color/96/policeman-male.png",
   embouteillage: "https://img.icons8.com/color/96/traffic-jam.png",
@@ -47,10 +56,39 @@ const categories = [
   { label: "Obstacle", value: "obstacle" },
 ];
 
-export const AlertReporter: React.FC<AlertReporterProps> = ({ onAddAlert }) => {
+// Composant principal
+export const AlertReporter: React.FC<AlertReporterProps> = ({
+  onAddAlert,
+  navigationLaunched,
+}) => {
   const [modalVisible, setModalVisible] = useState(false);
 
+  // animation de la position du bouton
+  const buttonOffset = useSharedValue(100);
+
+  useEffect(() => {
+    buttonOffset.value = withTiming(navigationLaunched ? 160 : 100, {
+      duration: 300,
+      easing: Easing.inOut(Easing.ease),
+    });
+  }, [navigationLaunched]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    position: "absolute",
+    right: 20,
+    bottom: buttonOffset.value,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: "#f44336",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 999,
+    elevation: 6,
+  }));
+
   const handleSelect = async (type: AlertType) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setModalVisible(false);
     let { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== "granted") {
@@ -64,7 +102,7 @@ export const AlertReporter: React.FC<AlertReporterProps> = ({ onAddAlert }) => {
       latitude: location.coords.latitude,
       longitude: location.coords.longitude,
       type,
-      createdByMe: true, // ✅ nouvelle propriété ajoutée
+      createdByMe: true,
     };
 
     onAddAlert(marker);
@@ -73,9 +111,11 @@ export const AlertReporter: React.FC<AlertReporterProps> = ({ onAddAlert }) => {
 
   return (
     <>
-      <TouchableOpacity style={styles.button} onPress={() => setModalVisible(true)}>
-        <MaterialIcons name="warning" size={24} color="#fff" />
-      </TouchableOpacity>
+      <Animated.View style={animatedStyle}>
+        <TouchableOpacity onPress={() => setModalVisible(true)}>
+          <MaterialIcons name="warning" size={24} color="#fff" />
+        </TouchableOpacity>
+      </Animated.View>
 
       <Modal
         animationType="slide"
@@ -104,7 +144,10 @@ export const AlertReporter: React.FC<AlertReporterProps> = ({ onAddAlert }) => {
               )}
               contentContainerStyle={{ justifyContent: "center" }}
             />
-            <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeButton}>
+            <TouchableOpacity
+              onPress={() => setModalVisible(false)}
+              style={styles.closeButton}
+            >
               <Text style={styles.closeText}>Annuler</Text>
             </TouchableOpacity>
           </View>
@@ -115,19 +158,6 @@ export const AlertReporter: React.FC<AlertReporterProps> = ({ onAddAlert }) => {
 };
 
 const styles = StyleSheet.create({
-  button: {
-    position: "absolute",
-    bottom: 180,
-    right: 20,
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#f44336",
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 999,
-    elevation: 6,
-  },
   modalBackdrop: {
     flex: 1,
     justifyContent: "flex-end",
@@ -165,7 +195,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     paddingVertical: 8,
     paddingHorizontal: 20,
-    backgroundColor: "#eee", 
+    backgroundColor: "#eee",
     borderRadius: 8,
   },
   closeText: {
