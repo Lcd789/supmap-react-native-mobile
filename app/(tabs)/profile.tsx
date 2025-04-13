@@ -11,7 +11,7 @@ import {
   import { LogOutIcon, Pencil, Save, Trash2 } from "lucide-react-native";
   import { TouchableOpacity } from "react-native";
   import { Image } from "expo-image";
-  import { getUserData, deleteProfile } from "@/hooks/user/UserHooks";
+  import { getUserData, deleteProfile } from "../../hooks/user/UserHooks";
   import * as SecureStore from "expo-secure-store";
   import { useRouter } from "expo-router";
   import { useAuth } from "@/hooks/user/AuthContext";

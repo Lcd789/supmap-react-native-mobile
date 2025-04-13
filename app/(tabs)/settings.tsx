@@ -9,7 +9,6 @@ const SettingsScreen = () => {
 
   const [avoidTolls, setAvoidTolls] = React.useState(false);
   const [avoidHighways, setAvoidHighways] = React.useState(false);
-  const [avoidFerries, setAvoidFerries] = React.useState(false);
   const [showTraffic, setShowTraffic] = React.useState(true);
   const [voiceGuidance, setVoiceGuidance] = React.useState(true);
   const [unitsMetric, setUnitsMetric] = React.useState(true);
@@ -27,11 +26,6 @@ const SettingsScreen = () => {
         <View style={styles.optionRow}>
           <Text style={[styles.optionLabel, darkMode && styles.optionLabelDark]}>Éviter les autoroutes</Text>
           <Switch value={avoidHighways} onValueChange={setAvoidHighways} />
-        </View>
-
-        <View style={styles.optionRow}>
-          <Text style={[styles.optionLabel, darkMode && styles.optionLabelDark]}>Éviter les ferries</Text>
-          <Switch value={avoidFerries} onValueChange={setAvoidFerries} />
         </View>
       </View>
 
