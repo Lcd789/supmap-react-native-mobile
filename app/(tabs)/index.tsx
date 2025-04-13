@@ -20,15 +20,18 @@ import { RouteMap } from "@/components/MapComponents/RouteMap";
 import { RouteInfo } from "@/components/MapComponents/RouteInfo";
 import RouteSelector from "@/components/MapComponents/RouteSelector";
 import { NextStepBanner } from "@/components/MapComponents/NextStepBanner";
-import { AlertReporter, AlertMarker } from "@/components/MapComponents/AlertReporter"; // ✅ import ajouté
+import { AlertReporter, AlertMarker } from "@/components/MapComponents/AlertReporter";
 import { homeStyles } from "@/styles/styles";
 import { RouteCalculationResult, TransportMode, Waypoint } from "@/types";
 import { AlertVerifier } from "@/components/MapComponents/AlertVerifier";
+import { useTheme } from "@/utils/ThemeContext";
+
 
 type RouteWithId = RouteCalculationResult & { id: string };
 
 export default function Home() {
   const { addToHistory } = useHistory();
+  const { darkMode } = useTheme();
   const [origin, setOrigin] = useState<string>("");
   const [destination, setDestination] = useState<string>("");
   const [waypoints, setWaypoints] = useState<Waypoint[]>([]);
@@ -39,7 +42,10 @@ export default function Home() {
   const [alternativeRoutes, setAlternativeRoutes] = useState<RouteWithId[]>([]);
   const [selectedRoute, setSelectedRoute] = useState<RouteCalculationResult | null>(null);
   const [navigationLaunched, setNavigationLaunched] = useState<boolean>(false);
-  const [alertMarkers, setAlertMarkers] = useState<AlertMarker[]>([]); // ✅ nouvel état
+  const [alertMarkers, setAlertMarkers] = useState<AlertMarker[]>([]);
+  const [currentStepIndex, setCurrentStepIndex] = useState<number>(0);
+  const [mustJoinStart, setMustJoinStart] = useState<boolean>(false);
+  const [isNearStart, setIsNearStart] = useState<boolean>(true);
 
   const mapRef = useRef<any>(null);
 
@@ -67,33 +73,76 @@ export default function Home() {
     }
   }, [selectedRoute, navigationLaunched]);
 
-{navigationLaunched && (
-  <>
-    <AlertReporter
-      onAddAlert={(marker) =>
-        setAlertMarkers((prev) => [...prev, { ...marker, createdByMe: true }])
+  // ✅ Ajout : reset mustJoinStart quand on quitte la navigation
+  useEffect(() => {
+    if (!navigationLaunched) {
+      setMustJoinStart(false);
+    }
+  }, [navigationLaunched]);
+
+  useEffect(() => {
+    if (
+      navigationLaunched &&
+      liveCoords &&
+      selectedRoute &&
+      selectedRoute.steps &&
+      currentStepIndex < selectedRoute.steps.length
+    ) {
+      const step = selectedRoute.steps[currentStepIndex];
+
+      const stepStart = {
+        latitude: step.start_location.lat,
+        longitude: step.start_location.lng,
+      };
+
+      const stepEnd = {
+        latitude: step.end_location.lat,
+        longitude: step.end_location.lng,
+      };
+
+      const distanceToStart = getDistance(liveCoords, stepStart);
+      const distanceToEnd = getDistance(liveCoords, stepEnd);
+
+      if (currentStepIndex === 0 && distanceToStart > 50) {
+        console.log("📍 Trop loin du départ prévu, on saute le 1er step");
+        setCurrentStepIndex(1);
+        setMustJoinStart(true);
+        return;
       }
-    />
-    <AlertVerifier
-      liveCoords={liveCoords}
-      alertMarkers={alertMarkers}
-      onDismiss={(id) =>
-        setAlertMarkers((prev) => prev.filter((m) => m.id !== id))
+
+      if (distanceToEnd < 2) {
+        setCurrentStepIndex((prev) => prev + 1);
+        setMustJoinStart(false);
       }
-    />
-  </>
-)}
+    }
+  }, [liveCoords, navigationLaunched, selectedRoute, currentStepIndex]);
+
+  const getDistance = (
+    coord1: { latitude: number; longitude: number },
+    coord2: { latitude: number; longitude: number }
+  ): number => {
+    const toRad = (x: number) => (x * Math.PI) / 180;
+    const R = 6371000;
+    const dLat = toRad(coord2.latitude - coord1.latitude);
+    const dLon = toRad(coord2.longitude - coord1.longitude);
+    const lat1 = toRad(coord1.latitude);
+    const lat2 = toRad(coord2.latitude);
+
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.sin(dLon / 2) ** 2 * Math.cos(lat1) * Math.cos(lat2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+
 
   const handleSearch = useCallback(async () => {
-    if (!origin.trim() || !destination.trim()) {
-      console.error("Veuillez entrer un point de départ et une destination.");
-      return;
-    }
+    if (!origin.trim() || !destination.trim()) return;
 
     const validWaypoints = waypoints.filter((wp) => wp.address.trim() !== "");
-
     setAlternativeRoutes([]);
     setSelectedRoute(null);
+    setCurrentStepIndex(0); // reset step
 
     try {
       const routeResult = await calculateRoute(
@@ -124,10 +173,8 @@ export default function Home() {
         const newRegion = {
           latitude: (bounds.northeast.lat + bounds.southwest.lat) / 2,
           longitude: (bounds.northeast.lng + bounds.southwest.lng) / 2,
-          latitudeDelta:
-            Math.abs(bounds.northeast.lat - bounds.southwest.lat) * 1.5,
-          longitudeDelta:
-            Math.abs(bounds.northeast.lng - bounds.southwest.lng) * 1.5,
+          latitudeDelta: Math.abs(bounds.northeast.lat - bounds.southwest.lat) * 1.5,
+          longitudeDelta: Math.abs(bounds.northeast.lng - bounds.southwest.lng) * 1.5,
         };
 
         setMapRegion(newRegion);
@@ -142,65 +189,40 @@ export default function Home() {
     } catch (error) {
       console.error("Erreur lors du calcul de l'itinéraire :", error);
     }
-  }, [origin, destination, waypoints, selectedMode, avoidTolls, calculateRoute, setMapRegion]);
+  }, [origin, destination, waypoints, selectedMode, avoidTolls, calculateRoute]);
 
   const handleReverse = useCallback(() => {
     setOrigin(destination);
     setDestination(origin);
   }, [origin, destination]);
 
-  const handleAddWaypoint = () => {
-    setWaypoints((prev) => [
-      ...prev,
-      { address: "", id: Date.now().toString() },
-    ]);
-  };
-
-  const handleRemoveWaypoint = (index: number) => {
-    setWaypoints((prev) => prev.filter((_, i) => i !== index));
-  };
-
+  const handleAddWaypoint = () => setWaypoints((prev) => [...prev, { address: "", id: Date.now().toString() }]);
+  const handleRemoveWaypoint = (index: number) => setWaypoints((prev) => prev.filter((_, i) => i !== index));
   const handleUpdateWaypoint = (index: number, address: string) => {
-    setWaypoints((prev) =>
-      prev.map((wp, i) => (i === index ? { ...wp, address } : wp))
-    );
+    setWaypoints((prev) => prev.map((wp, i) => (i === index ? { ...wp, address } : wp)));
   };
 
   const toggleSteps = () => {
     const newValue = showSteps ? 0 : 1;
     stepsAnimation.value = withTiming(
       newValue,
-      {
-        duration: 500,
-        easing: Easing.inOut(Easing.quad),
-      },
-      () => {
-        runOnJS(setShowSteps)(!showSteps);
-      }
+      { duration: 500, easing: Easing.inOut(Easing.quad) },
+      () => runOnJS(setShowSteps)(!showSteps)
     );
   };
 
   const toggleSearchBar = () => {
     const newValue = isSearchVisible ? 0 : 1;
-
     if (newValue === 1) {
-      searchBarAnimation.value = withSpring(
-        newValue,
-        { damping: 18, stiffness: 120, mass: 1 },
-        () => {
-          runOnJS(setIsSearchVisible)(true);
-          runOnJS(setNavigationLaunched)(false);
-          runOnJS(setAlternativeRoutes)([]);
-        }
-      );
+      searchBarAnimation.value = withSpring(newValue, { damping: 18, stiffness: 120 }, () => {
+        runOnJS(setIsSearchVisible)(true);
+        runOnJS(setNavigationLaunched)(false);
+        runOnJS(setAlternativeRoutes)([]);
+      });
     } else {
-      searchBarAnimation.value = withTiming(
-        newValue,
-        { duration: 250, easing: Easing.bezier(0.25, 0.1, 0.25, 1) },
-        () => {
-          runOnJS(setIsSearchVisible)(false);
-        }
-      );
+      searchBarAnimation.value = withTiming(newValue, { duration: 250, easing: Easing.bezier(0.25, 0.1, 0.25, 1) }, () => {
+        runOnJS(setIsSearchVisible)(false);
+      });
     }
   };
 
@@ -230,11 +252,7 @@ export default function Home() {
     alignItems: "center",
     elevation: 5,
     zIndex: 10,
-    opacity: interpolate(
-      searchBarAnimation.value,
-      [0, 0.3, 1],
-      [1, 0.3, 0]
-    ),
+    opacity: interpolate(searchBarAnimation.value, [0, 0.3, 1], [1, 0.3, 0]),
     transform: [
       { scale: interpolate(searchBarAnimation.value, [0, 0.5, 1], [1, 0.8, 0]) },
       { translateY: interpolate(searchBarAnimation.value, [0, 1], [0, 20]) },
@@ -248,14 +266,17 @@ export default function Home() {
     right: 0,
     height: 300,
     opacity: routeInfoAnimation.value,
-    transform: [
-      { translateY: interpolate(routeInfoAnimation.value, [0, 1], [100, 0]) },
-    ],
+    transform: [{ translateY: interpolate(routeInfoAnimation.value, [0, 1], [100, 0]) }],
     zIndex: 1000,
   }));
 
   return (
-    <SafeAreaView style={homeStyles.container}>
+    <SafeAreaView
+      style={[
+        homeStyles.container,
+        { backgroundColor: darkMode ? "#121212" : "#fff" }, // fond global
+      ]}
+    >
       {mapRegion ? (
         <RouteMap
           region={mapRegion}
@@ -265,13 +286,15 @@ export default function Home() {
           liveCoords={liveCoords}
           navigationLaunched={navigationLaunched}
           nextStepCoord={
-            selectedRoute?.steps?.[1]?.end_location
+            selectedRoute?.steps?.[0]?.end_location
               ? {
-                  latitude: selectedRoute.steps[1].end_location.lat,
-                  longitude: selectedRoute.steps[1].end_location.lng,
+                  latitude: selectedRoute.steps[0].end_location.lat,
+                  longitude: selectedRoute.steps[0].end_location.lng,
                 }
               : null
           }
+          
+          
           alertMarkers={alertMarkers}
         />
       ) : (
@@ -280,12 +303,58 @@ export default function Home() {
         </View>
       )}
 
-      {selectedRoute && !isSearchVisible && (
+      {mustJoinStart && (
+        <View
+          style={{
+            position: "absolute",
+            top: 160,
+            left: 20,
+            right: 20,
+            backgroundColor: darkMode ? "#333" : "#fff8e1",
+            padding: 12,
+            borderRadius: 10,
+            elevation: 4,
+            zIndex: 1000,
+            flexDirection: "row",
+            alignItems: "center",
+            borderWidth: darkMode ? 1 : 0,
+            borderColor: darkMode ? "#555" : "transparent",
+          }}
+        >
+          <MaterialIcons
+            name="directions-walk"
+            size={20}
+            color={darkMode ? "#ffb74d" : "#f57c00"}
+            style={{ marginRight: 8 }}
+          />
+          <Text
+            style={{
+              color: darkMode ? "#ffcc80" : "#f57c00",
+              fontWeight: "600",
+            }}
+          >
+            Rejoignez le point de départ pour commencer la navigation
+          </Text>
+        </View>
+      )}
+
+
+      {selectedRoute && !isSearchVisible && navigationLaunched && (
         <NextStepBanner
-          nextStep={selectedRoute.steps[0]}
+          nextStep={selectedRoute.steps[currentStepIndex]}
           onToggleSteps={toggleSteps}
         />
       )}
+
+
+      {selectedRoute && !isSearchVisible && navigationLaunched && (
+        <NextStepBanner
+          nextStep={selectedRoute.steps[currentStepIndex]}
+          onToggleSteps={toggleSteps}
+        />
+      )}
+
+
 
       <Animated.View style={searchBarContainerStyle} pointerEvents="box-none">
         {isSearchVisible && (
@@ -331,6 +400,16 @@ export default function Home() {
             onLaunchNavigation={(route: RouteCalculationResult) => {
               setSelectedRoute(route);
               setNavigationLaunched(true);
+              setCurrentStepIndex(0);
+              if (liveCoords) {
+                const zoomRegion = {
+                  latitude: liveCoords.latitude,
+                  longitude: liveCoords.longitude,
+                  latitudeDelta: 0.005,
+                  longitudeDelta: 0.005,
+                };
+                mapRef.current?.animateToRegion(zoomRegion, 800);
+              }
               addToHistory({
                 origin,
                 destination,
@@ -357,18 +436,18 @@ export default function Home() {
         </Animated.View>
       )}
 
-      {/* ✅ Bouton d'alerte */}
       {navigationLaunched && (
         <AlertReporter
           onAddAlert={(marker) => setAlertMarkers((prev) => [...prev, marker])}
         />
       )}
 
-
       {error && (
         <View style={homeStyles.errorContainer}>
-          <Text style={homeStyles.errorText}>{error}</Text>
-        </View>
+          <Text style={[homeStyles.errorText, { color: darkMode ? "#f44336" : "#d32f2f" }]}>
+            {error}
+          </Text>
+        </View> 
       )}
 
       {isLoading && (

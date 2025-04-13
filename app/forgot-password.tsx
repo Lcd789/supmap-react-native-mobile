@@ -13,7 +13,7 @@ import { useTheme } from "@/utils/ThemeContext";
 
 export default function ForgotPassword() {
   const router = useRouter();
-  const { darkMode, toggleDarkMode } = useTheme();
+  const { darkMode } = useTheme();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -62,11 +62,6 @@ export default function ForgotPassword() {
       </TouchableOpacity>
       <Pressable onPress={() => router.replace("/login")}>
         <Text style={linkTextStyle}>Retour à la connexion</Text>
-      </Pressable>
-      <Pressable onPress={toggleDarkMode} style={styles.darkModeToggle}>
-        <Text style={darkMode ? { color: "#f5f5f5" } : { color: "#333" }}>
-          {darkMode ? "Désactiver le mode sombre" : "Activer le mode sombre"}
-        </Text>
       </Pressable>
     </ScrollView>
   );
@@ -144,9 +139,5 @@ const styles = StyleSheet.create({
     color: "#007AFF",
     textAlign: "center",
     marginTop: 10,
-  },
-  darkModeToggle: {
-    marginTop: 20,
-    padding: 10,
   },
 });

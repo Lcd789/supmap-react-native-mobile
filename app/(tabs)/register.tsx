@@ -1,3 +1,5 @@
+// Même principe : supprime le useState local et utilise useTheme()
+
 import { useRouter } from "expo-router";
 import {
   ScrollView,
@@ -10,11 +12,11 @@ import {
 } from "react-native";
 import { useState } from "react";
 import { register } from "@/hooks/authentication/AuthenticationHooks";
+import { useTheme } from "@/utils/ThemeContext";
 
 export default function Register() {
   const router = useRouter();
-
-  const [darkMode, setDarkMode] = useState(false);
+  const { darkMode } = useTheme();
 
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -56,7 +58,6 @@ export default function Register() {
     }
   };
 
-  // Styles dynamiques
   const containerStyle = [styles.container, darkMode && { backgroundColor: "#1e1e1e" }];
   const labelStyle = [styles.label, darkMode && { color: "#f5f5f5" }];
   const inputStyle = [
@@ -104,7 +105,6 @@ export default function Register() {
 
       {error && <Text style={errorStyle}>{error}</Text>}
 
-      {/* Bouton S'inscrire */}
       <TouchableOpacity
         style={[styles.button, darkMode && styles.buttonDark]}
         onPress={handleRegister}
@@ -117,13 +117,6 @@ export default function Register() {
 
       <Pressable onPress={() => router.replace("/login")}>
         <Text style={linkStyle}>Already have an account ?</Text>
-      </Pressable>
-
-      {/* Bascule du mode sombre local (si pas de contexte global) */}
-      <Pressable onPress={() => setDarkMode(!darkMode)} style={styles.darkModeToggle}>
-        <Text style={darkMode ? { color: "#f5f5f5" } : { color: "#333" }}>
-          {darkMode ? "Désactiver le mode sombre" : "Activer le mode sombre"}
-        </Text>
       </Pressable>
     </ScrollView>
   );
@@ -183,9 +176,5 @@ const styles = StyleSheet.create({
     color: "#007AFF",
     textAlign: "center",
     marginTop: 10,
-  },
-  darkModeToggle: {
-    marginTop: 20,
-    padding: 10,
   },
 });

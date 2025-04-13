@@ -14,12 +14,12 @@ import { login } from "@/hooks/authentication/AuthenticationHooks";
 import * as SecureStore from "expo-secure-store";
 import { useAuth } from "@/hooks/user/AuthContext";
 import { Ionicons } from "@expo/vector-icons";
+import { useTheme } from "@/utils/ThemeContext";
 
 export default function Login() {
   const router = useRouter();
   const { setAuthenticated } = useAuth();
-
-  const [darkMode, setDarkMode] = useState(false);
+  const { darkMode } = useTheme();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -138,15 +138,6 @@ export default function Login() {
       <Pressable onPress={() => router.replace("/register")}>
         <Text style={linkTextStyle}>Pas encore de compte ?</Text>
       </Pressable>
-
-      <Pressable
-        onPress={() => setDarkMode(!darkMode)}
-        style={styles.darkModeToggle}
-      >
-        <Text style={darkMode ? { color: "#f5f5f5" } : { color: "#333" }}>
-          {darkMode ? "Désactiver le mode sombre" : "Activer le mode sombre"}
-        </Text>
-      </Pressable>
     </ScrollView>
   );
 }
@@ -239,9 +230,5 @@ const styles = StyleSheet.create({
     color: "#007AFF",
     textAlign: "center",
     marginTop: 10,
-  },
-  darkModeToggle: {
-    marginTop: 20,
-    padding: 10,
   },
 });
