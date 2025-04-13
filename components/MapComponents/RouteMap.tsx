@@ -81,18 +81,19 @@ export const RouteMap: React.FC<RouteMapProps> = ({
       }}
       {...mapProps}
     >
-      {alternativeRoutes.map((route) => {
-        const isSelected = route.id === selectedRouteId;
-        return (
-          <Polyline
-            key={route.id}
-            coordinates={route.polyline}
-            strokeColor={isSelected ? "#2196F3" : "rgba(0,0,0,0.3)"}
-            strokeWidth={isSelected ? 6 : 3}
-            zIndex={isSelected ? 2 : 1}
-          />
-        );
-      })}
+      {!navigationLaunched &&
+        alternativeRoutes.map((route) => {
+          const isSelected = route.id === selectedRouteId;
+          return (
+            <Polyline
+              key={route.id}
+              coordinates={route.polyline}
+              strokeColor={isSelected ? "#2196F3" : "rgba(0,0,0,0.3)"}
+              strokeWidth={isSelected ? 6 : 3}
+              zIndex={isSelected ? 2 : 1}
+            />
+          );
+        })}
 
       {liveCoords && navigationLaunched && (
         <Marker

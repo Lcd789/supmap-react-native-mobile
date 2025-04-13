@@ -157,11 +157,13 @@ export const SearchBar: React.FC<SearchBarProps> = ({
       } else alert("Localisation non disponible.");
     } else onOriginChange(item.description);
     setOriginSuggestions([]);
+    setTimeout(onSearch, 100);
   };
 
   const handleDestinationSelect = (item: { description: string }) => {
     onDestinationChange(item.description);
     setDestinationSuggestions([]);
+    setTimeout(onSearch, 100);
   };
 
   const handleWaypointSelect = (
@@ -180,7 +182,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
       onPress={onPress}
       style={searchBarStyles.suggestionItem}
     >
-      <Text>
+      <Text style={{ color: "#000" }}>
         {item.isCurrentLocation ? (
           <>
             <MaterialIcons name="my-location" size={16} /> {item.description}
@@ -192,12 +194,12 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     </TouchableOpacity>
   );
 
-  
   return (
     <View style={searchBarStyles.searchContainer}>
       <TextInput
-        style={searchBarStyles.input}
+        style={[searchBarStyles.input, { color: "#000" }]}
         placeholder="Point de départ"
+        placeholderTextColor="#555"
         value={origin}
         onFocus={() => setIsOriginFocused(true)}
         onBlur={() => setIsOriginFocused(false)}
@@ -207,12 +209,13 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         <FlatList
           data={history}
           keyExtractor={(item) => item.id}
+          keyboardShouldPersistTaps="handled"
           renderItem={({ item }) => (
             <TouchableOpacity
               style={searchBarStyles.suggestionItem}
-              onPress={() => onOriginChange(item.origin)}
+              onPress={() => handleOriginSelect({ description: item.origin })}
             >
-              <Text>
+              <Text style={{ color: "#000" }}>
                 {item.origin} → {item.destination}
               </Text>
             </TouchableOpacity>
@@ -224,6 +227,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         <FlatList
           data={originSuggestions}
           keyExtractor={(item) => item.description}
+          keyboardShouldPersistTaps="handled"
           renderItem={({ item }) =>
             renderSuggestionItem(item, () => handleOriginSelect(item))
           }
@@ -232,8 +236,9 @@ export const SearchBar: React.FC<SearchBarProps> = ({
       )}
 
       <TextInput
-        style={searchBarStyles.input}
+        style={[searchBarStyles.input, { color: "#000" }]}
         placeholder="Destination"
+        placeholderTextColor="#555"
         value={destination}
         onFocus={() => setIsDestinationFocused(true)}
         onBlur={() => setIsDestinationFocused(false)}
@@ -243,12 +248,13 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         <FlatList
           data={history}
           keyExtractor={(item) => item.id + "_dest"}
+          keyboardShouldPersistTaps="handled"
           renderItem={({ item }) => (
             <TouchableOpacity
               style={searchBarStyles.suggestionItem}
-              onPress={() => onDestinationChange(item.destination)}
+              onPress={() => handleDestinationSelect({ description: item.destination })}
             >
-              <Text>
+              <Text style={{ color: "#000" }}>
                 {item.origin} → {item.destination}
               </Text>
             </TouchableOpacity>
@@ -260,6 +266,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         <FlatList
           data={destinationSuggestions}
           keyExtractor={(item) => item.description}
+          keyboardShouldPersistTaps="handled"
           renderItem={({ item }) =>
             renderSuggestionItem(item, () => handleDestinationSelect(item))
           }
@@ -276,8 +283,9 @@ export const SearchBar: React.FC<SearchBarProps> = ({
           ]}
         >
           <TextInput
-            style={searchBarStyles.input}
+            style={[searchBarStyles.input, { color: "#000" }]}
             placeholder={`Étape ${index + 1}`}
+            placeholderTextColor="#555"
             value={wp.address}
             onChangeText={(text) => handleWaypointChange(text, index)}
           />
@@ -294,6 +302,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
               <FlatList
                 data={waypointSuggestions[index]}
                 keyExtractor={(item) => item.description}
+                keyboardShouldPersistTaps="handled"
                 renderItem={({ item }) =>
                   renderSuggestionItem(item, () =>
                     handleWaypointSelect(item, index)
