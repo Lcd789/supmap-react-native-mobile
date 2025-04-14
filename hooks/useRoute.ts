@@ -8,6 +8,17 @@ interface RouteOptions {
   avoidTolls?: boolean;
 }
 
+const isRouteInFrance = (polylinePoints: { latitude: number; longitude: number }[]) => {
+  return polylinePoints.every((point) => {
+    return (
+      point.latitude >= 41.0 &&
+      point.latitude <= 51.5 &&
+      point.longitude >= -5.0 &&
+      point.longitude <= 9.5
+    );
+  });
+};
+
 export function useRoute() {
   const [routeInfo, setRouteInfo] = useState<RouteCalculationResult[] | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -44,19 +55,14 @@ export function useRoute() {
         origin
       )}&destination=${encodeURIComponent(destination)}${wpString}&mode=${mode}&language=${language}&region=${region}&units=${units}&alternatives=true${avoidQuery}&key=${API_KEY}`;
 
-      console.log("Calling Google Maps API:", url);
-
       const response = await fetch(url);
       const data = await response.json();
 
-      console.log("Google Maps API Response:", data);
-
       if (data.status !== "OK") {
-        throw new Error(data.error_message || "Erreur lors du calcul d'itinéraire");
+        throw new Error(data.error_message || "CALCULATION_ERROR");
       }
 
       const parsedRoutes: RouteCalculationResult[] = data.routes.map((route: any) => {
-        // ✅ Polyline précise, segmentée par steps
         const decodedPolyline = route.legs.flatMap((leg: any) =>
           leg.steps.flatMap((step: any) =>
             polyline.decode(step.polyline.points).map(
@@ -67,6 +73,10 @@ export function useRoute() {
             )
           )
         );
+
+        if (!isRouteInFrance(decodedPolyline)) {
+          throw new Error("FRANCE_ONLY");
+        }
 
         const totalDistance = route.legs.reduce(
           (sum: number, leg: any) => sum + leg.distance.value,
@@ -102,9 +112,8 @@ export function useRoute() {
       setRouteInfo(parsedRoutes);
       return parsedRoutes;
     } catch (err: any) {
-      console.error("Route error:", err);
       setError(err.message || "Erreur inconnue");
-      return null;
+      throw err;
     } finally {
       setIsLoading(false);
     }

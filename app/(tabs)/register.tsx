@@ -116,7 +116,7 @@ export default function Register() {
       </TouchableOpacity>
 
       <Pressable onPress={() => router.replace("/login")}>
-        <Text style={linkStyle}>Already have an account ?</Text>
+        <Text style={linkStyle}>Vous avez déjà un compte ?</Text>
       </Pressable>
     </ScrollView>
   );

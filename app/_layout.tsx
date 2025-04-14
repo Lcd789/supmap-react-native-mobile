@@ -36,11 +36,24 @@ export default function RootLayout() {
             <Stack>
               <Stack.Screen
                 name="(tabs)"
-                options={{
-                  headerShown: false,
-                }}
+                options={{ headerShown: false }}
               />
-              <Stack.Screen name="+not-found" options={{}} />
+              <Stack.Screen
+                name="forgot-password"
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="login"
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="register"
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="+not-found"
+                options={{ title: "Page introuvable" }}
+              />
             </Stack>
           </GestureHandlerRootView>
         </AuthProvider>

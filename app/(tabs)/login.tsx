@@ -8,6 +8,7 @@ import {
   Alert,
   TouchableOpacity,
   TextInput,
+  Image,
 } from "react-native";
 import { useState, useCallback } from "react";
 import { login } from "@/hooks/authentication/AuthenticationHooks";
@@ -127,12 +128,20 @@ export default function Login() {
         </Text>
       </TouchableOpacity>
 
+      {/* ✅ Bouton Google avec logo */}
       <TouchableOpacity
         style={[styles.button, darkMode && styles.buttonDark]}
         onPress={() => Alert.alert("Connexion Google, pas encore implémentée")}
         disabled={loading}
       >
-        <Text style={styles.buttonText}>Se connecter avec Google</Text>
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          <Image
+            source={require("@/assets/images/google.png")}
+            style={{ width: 20, height: 20, marginRight: 8 }}
+            resizeMode="contain"
+          />
+          <Text style={styles.buttonText}>Se connecter avec Google</Text>
+        </View>
       </TouchableOpacity>
 
       <Pressable onPress={() => router.replace("/register")}>

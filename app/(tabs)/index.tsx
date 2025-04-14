@@ -38,19 +38,20 @@ export default function Home() {
   const [selectedMode, setSelectedMode] = useState<TransportMode>("driving");
   const [avoidTolls, setAvoidTolls] = useState<boolean>(false);
   const [showSteps, setShowSteps] = useState<boolean>(false);
-  const [isSearchVisible, setIsSearchVisible] = useState<boolean>(true);
+  const [isSearchVisible, setIsSearchVisible] = useState<boolean>(false);
   const [alternativeRoutes, setAlternativeRoutes] = useState<RouteWithId[]>([]);
   const [selectedRoute, setSelectedRoute] = useState<RouteCalculationResult | null>(null);
   const [navigationLaunched, setNavigationLaunched] = useState<boolean>(false);
   const [alertMarkers, setAlertMarkers] = useState<AlertMarker[]>([]);
   const [currentStepIndex, setCurrentStepIndex] = useState<number>(0);
   const [mustJoinStart, setMustJoinStart] = useState<boolean>(false);
+  const [routeError, setRouteError] = useState<string | null>(null);
   const [isNearStart, setIsNearStart] = useState<boolean>(true);
   const floatingButtonOffset = useSharedValue(100);
 
   const mapRef = useRef<any>(null);
 
-  const searchBarAnimation = useSharedValue(1);
+  const searchBarAnimation = useSharedValue(0);
   const routeInfoAnimation = useSharedValue(0);
   const stepsAnimation = useSharedValue(0);
 
@@ -142,15 +143,32 @@ export default function Home() {
     return R * c;
   };
 
+  const getRemainingPolyline = () => {
+    if (!selectedRoute?.polyline || !liveCoords) return [];
+  
+    const index = selectedRoute.polyline.findIndex((point) => {
+      const d = getDistance(liveCoords, {
+        latitude: point.latitude,
+        longitude: point.longitude,
+      });
+      return d < 10;
+    });
+  
+    if (index === -1) return selectedRoute.polyline;
+  
+    return selectedRoute.polyline.slice(index);
+  };
 
   const handleSearch = useCallback(async () => {
     if (!origin.trim() || !destination.trim()) return;
-
+  
     const validWaypoints = waypoints.filter((wp) => wp.address.trim() !== "");
+  
+    toggleSearchBar();
     setAlternativeRoutes([]);
     setSelectedRoute(null);
-    setCurrentStepIndex(0); // reset step
-
+    setCurrentStepIndex(0);
+  
     try {
       const routeResult = await calculateRoute(
         origin,
@@ -159,23 +177,23 @@ export default function Home() {
         selectedMode,
         { avoidTolls }
       );
-
+  
       if (routeResult && routeResult.length > 0) {
         const routesWithIds: RouteWithId[] = routeResult.map((r, index) => ({
           ...r,
           id: `route-${index}`,
         }));
-
+  
         setAlternativeRoutes(routesWithIds);
         setSelectedRoute(routesWithIds[0]);
-
+  
         addToHistory({
           origin,
           destination,
           waypoints: validWaypoints.map((wp) => wp.address),
           mode: selectedMode,
         });
-
+  
         const { bounds } = routesWithIds[0];
         const newRegion = {
           latitude: (bounds.northeast.lat + bounds.southwest.lat) / 2,
@@ -183,20 +201,18 @@ export default function Home() {
           latitudeDelta: Math.abs(bounds.northeast.lat - bounds.southwest.lat) * 1.5,
           longitudeDelta: Math.abs(bounds.northeast.lng - bounds.southwest.lng) * 1.5,
         };
-
+  
         setMapRegion(newRegion);
         if (!navigationLaunched) {
           mapRef.current?.animateToRegion(newRegion, 1000);
         }
-
-        setTimeout(() => {
-          toggleSearchBar();
-        }, 200);
       }
-    } catch (error) {
-      console.error("Erreur lors du calcul de l'itinéraire :", error);
+    } catch (error: any) {
+      setRouteError(error.message || "Erreur lors du calcul de l'itinéraire");
     }
   }, [origin, destination, waypoints, selectedMode, avoidTolls, calculateRoute]);
+  
+  
 
   const handleReverse = useCallback(() => {
     setOrigin(destination);
@@ -233,6 +249,7 @@ export default function Home() {
     }
   };
 
+  
   const searchBarContainerStyle = useAnimatedStyle(() => ({
     position: "absolute",
     top: 70,
@@ -285,25 +302,30 @@ export default function Home() {
       ]}
     >
       {mapRegion ? (
-        <RouteMap
-          region={mapRegion}
-          mapRef={mapRef}
-          alternativeRoutes={alternativeRoutes}
-          selectedRouteId={selectedRoute ? (selectedRoute as RouteWithId).id : undefined}
-          liveCoords={liveCoords}
-          navigationLaunched={navigationLaunched}
-          nextStepCoord={
-            selectedRoute?.steps?.[0]?.end_location
-              ? {
-                  latitude: selectedRoute.steps[0].end_location.lat,
-                  longitude: selectedRoute.steps[0].end_location.lng,
-                }
-              : null
-          }
-          
-          
-          alertMarkers={alertMarkers}
-        />
+
+    <RouteMap
+      region={mapRegion}
+      mapRef={mapRef}
+      alternativeRoutes={[
+        {
+          id: "live",
+          polyline: getRemainingPolyline(),
+        },
+      ]}
+      selectedRouteId="live"
+      liveCoords={liveCoords}
+      navigationLaunched={navigationLaunched}
+      nextStepCoord={
+        selectedRoute?.steps?.[currentStepIndex]?.end_location
+          ? {
+              latitude: selectedRoute.steps[currentStepIndex].end_location.lat,
+              longitude: selectedRoute.steps[currentStepIndex].end_location.lng,
+            }
+          : null
+      }
+      alertMarkers={alertMarkers}
+    />
+
       ) : (
         <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
           <ActivityIndicator size="large" color="#2196F3" />
@@ -387,12 +409,11 @@ export default function Home() {
       </Animated.View>
 
       <Animated.View style={floatingButtonStyle} pointerEvents="box-none">
-        {selectedRoute && (
-      <TouchableOpacity onPress={toggleSearchBar}>
+        <TouchableOpacity onPress={toggleSearchBar}>
           <MaterialIcons name="map" size={24} color="#fff" />
         </TouchableOpacity>
-)}
       </Animated.View>
+
 
       {alternativeRoutes.length > 0 && !navigationLaunched && (
         <View style={styles.selectorContainer}>
@@ -452,19 +473,55 @@ export default function Home() {
         />
       )}
 
-      {error && (
-        <View style={homeStyles.errorContainer}>
-          <Text style={[homeStyles.errorText, { color: darkMode ? "#f44336" : "#d32f2f" }]}>
-            {error}
-          </Text>
-        </View> 
-      )}
-
       {isLoading && (
         <View style={homeStyles.loadingContainer}>
           <ActivityIndicator size="large" color="#2196F3" />
         </View>
       )}
+
+    {routeError && (
+      <View
+        style={{
+          position: "absolute",
+          top: "40%",
+          left: 20,
+          right: 20,
+          backgroundColor: "#fff",
+          padding: 16,
+          borderRadius: 12,
+          elevation: 10,
+          zIndex: 1000,
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.25,
+          shadowRadius: 4,
+          alignItems: "center",
+        }}
+      >
+        <Text style={{ fontWeight: "bold", fontSize: 16, marginBottom: 10 }}>
+          Erreur d’itinéraire
+        </Text>
+        <Text style={{ textAlign: "center", color: "#333" }}>
+          {routeError === "FRANCE_ONLY"
+            ? "Trajet interdit : vous devez rester à l’intérieur de la France métropolitaine."
+            : "Une erreur est survenue lors du calcul du trajet. Veuillez réessayer."}
+        </Text>
+            <TouchableOpacity
+          onPress={() => setRouteError(null)}
+          style={{
+            marginTop: 16,
+            paddingHorizontal: 20,
+            paddingVertical: 10,
+            backgroundColor: "#007AFF",
+            borderRadius: 8,
+          }}
+        >
+          <Text style={{ color: "#fff", fontWeight: "600" }}>Fermer</Text>
+        </TouchableOpacity>
+      </View>
+    )}
+
+
 </SafeAreaView>
   );
 }

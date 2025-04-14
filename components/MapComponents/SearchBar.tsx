@@ -84,27 +84,28 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     });
   }, []);
 
-  const fetchSuggestions = async (
-    text: string
-  ): Promise<{ description: string }[]> => {
-    if (text.length < 3) return [];
-    try {
-      const response = await fetch(
-        `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(
-          text
-        )}&key=${GOOGLE_PLACES_API_KEY}&language=fr`
-      );
-      const data = await response.json();
-      if (data.status === "OK") {
-        return data.predictions.map((p: any) => ({
-          description: p.description,
-        }));
+    const fetchSuggestions = async (
+      text: string
+    ): Promise<{ description: string }[]> => {
+      if (text.length < 3) return [];
+      try {
+        const response = await fetch(
+          `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(
+            text
+          )}&key=${GOOGLE_PLACES_API_KEY}&language=fr&components=country:fr`
+        );
+        const data = await response.json();
+        if (data.status === "OK") {
+          return data.predictions.map((p: any) => ({
+            description: p.description,
+          }));
+        }
+      } catch (err) {
+        console.error("Erreur autocomplétion :", err);
       }
-    } catch (err) {
-      console.error("Erreur autocomplétion :", err);
-    }
-    return [];
-  };
+      return [];
+    };
+
 
   const handleOriginChange = async (text: string) => {
     onOriginChange(text);

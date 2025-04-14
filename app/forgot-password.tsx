@@ -7,9 +7,11 @@ import {
   TextInput,
   TouchableOpacity,
   Pressable,
+  View,
 } from "react-native";
 import { forgotPassword } from "@/hooks/authentication/AuthenticationHooks";
 import { useTheme } from "@/utils/ThemeContext";
+import { Ionicons } from "@expo/vector-icons";
 
 export default function ForgotPassword() {
   const router = useRouter();
@@ -42,10 +44,16 @@ export default function ForgotPassword() {
 
   return (
     <ScrollView contentContainerStyle={containerStyle}>
+      {/* ✅ Flèche retour en haut à gauche */}
+      <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <Ionicons name="chevron-back" size={28} color={darkMode ? "#f5f5f5" : "#333"} />
+      </TouchableOpacity>
+
       <Text style={titleStyle}>Mot de passe oublié</Text>
       <Text style={instructionStyle}>
         Veuillez entrer votre adresse email pour recevoir un lien de réinitialisation de mot de passe.
       </Text>
+
       <TextInput
         style={inputStyle}
         placeholder="Email"
@@ -55,11 +63,14 @@ export default function ForgotPassword() {
         value={email}
         onChangeText={setEmail}
       />
+
       {error && <Text style={[styles.error, { color: "red" }]}>{error}</Text>}
       {message && <Text style={[styles.message, { color: "green" }]}>{message}</Text>}
+
       <TouchableOpacity style={styles.button} onPress={handleForgotPassword} disabled={loading}>
         <Text style={styles.buttonText}>{loading ? "Envoi en cours..." : "Envoyer"}</Text>
       </TouchableOpacity>
+
       <Pressable onPress={() => router.replace("/login")}>
         <Text style={linkTextStyle}>Retour à la connexion</Text>
       </Pressable>
@@ -77,6 +88,12 @@ const styles = StyleSheet.create({
   },
   containerDark: {
     backgroundColor: "#1e1e1e",
+  },
+  backButton: {
+    position: "absolute",
+    top: 40,
+    left: 20,
+    zIndex: 100,
   },
   title: {
     fontSize: 24,

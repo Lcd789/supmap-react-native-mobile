@@ -65,6 +65,25 @@ export const RouteMap: React.FC<RouteMapProps> = ({
   return (
     <MapView
       ref={mapRef}
+      initialRegion={{
+        latitude: 46.603354,
+        longitude: 1.888334,
+        latitudeDelta: 10,
+        longitudeDelta: 10,
+      }}
+      minZoomLevel={5}
+      maxZoomLevel={18}
+      onRegionChangeComplete={(region) => {
+        const lat = Math.min(Math.max(region.latitude, 41.0), 51.5);
+        const lon = Math.min(Math.max(region.longitude, -5.0), 9.5);
+        if (mapRef && typeof mapRef !== "function" && mapRef.current) {
+          mapRef.current.animateToRegion({
+            ...region,
+            latitude: lat,
+            longitude: lon,
+          });
+        }
+      }}
       scrollEnabled
       zoomEnabled
       pitchEnabled

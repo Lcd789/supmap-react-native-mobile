@@ -21,7 +21,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "SUPMAP",
+          title: "Supmap",
           headerShown: false,
           tabBarIcon: ({ focused, color }) => (
             <Ionicons name={focused ? "home" : "home-outline"} size={24} color={color} />
@@ -31,7 +31,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: "My profile",
+          title: "Mon compte",
           headerShown: false,
           href: isAuthenticated ? "/profile" : null,
           tabBarIcon: ({ focused, color }) => (
@@ -42,7 +42,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="login"
         options={{
-          title: "Login",
+          title: "connexion",
           headerShown: false,
           href: !isAuthenticated ? "/login" : null,
           tabBarIcon: ({ focused, color }) => (
@@ -53,7 +53,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="register"
         options={{
-          title: "Register",
+          title: "Inscription",
           headerShown: false,
           href: null,
           tabBarIcon: ({ focused, color }) => (
@@ -64,7 +64,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="settings"
         options={{
-          title: "Settings",
+          title: "Paramètres",
           headerShown: false,
           tabBarIcon: ({ focused, color }) => (
             <Ionicons name={focused ? "settings" : "settings-outline"} size={24} color={color} />

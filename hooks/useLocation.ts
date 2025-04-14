@@ -32,17 +32,21 @@ export const useLocation = () => {
       setMapRegion(region);
       setLiveCoords({ latitude, longitude });
 
-      // ✅ Démarre le suivi continu
       subscription = await Location.watchPositionAsync(
         {
           accuracy: Location.Accuracy.Highest,
-          timeInterval: 1000,
+          timeInterval: 100,
           distanceInterval: 1,
         },
         (loc) => {
           const { latitude, longitude } = loc.coords;
-          console.log("Position :", latitude, longitude); // 👈 LOG ajouté
-          setLiveCoords({ latitude, longitude });
+          const date = new Date(loc.timestamp);
+          const hours = date.getHours().toString().padStart(2, "0");
+          const minutes = date.getMinutes().toString().padStart(2, "0");
+          const seconds = date.getSeconds().toString().padStart(2, "0");
+          
+          console.log("📍 Position :", latitude, longitude, "🕒 heure :", `${hours}:${minutes}:${seconds}`);
+                    setLiveCoords({ latitude, longitude });
         }
       );
     })();
