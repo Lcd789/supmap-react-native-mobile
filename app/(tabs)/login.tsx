@@ -40,6 +40,11 @@ export default function Login() {
     setLoading(true);
     setError(null);
     try {
+      if (!email || !password) {
+        setError("Email et mot de passe requis");
+        setLoading(false);
+        return;
+      }
       const authToken = await login(email, password);
       await SecureStore.setItemAsync("authToken", authToken);
       setAuthenticated(true);
