@@ -521,6 +521,30 @@ export default function Home() {
       </View>
     )}
 
+  {navigationLaunched && liveCoords && (
+    <TouchableOpacity
+      style={{
+        position: "absolute",
+        bottom: 100,
+        right: 20,
+        backgroundColor: "#fff",
+        borderRadius: 25,
+        padding: 10,
+        elevation: 6,
+      }}
+      onPress={() => {
+        const region = {
+          latitude: liveCoords.latitude,
+          longitude: liveCoords.longitude,
+          latitudeDelta: 0.005,
+          longitudeDelta: 0.005,
+        };
+        mapRef.current?.animateToRegion(region, 800);
+      }}
+    >
+      <MaterialIcons name="gps-fixed" size={24} color="#2196F3" />
+    </TouchableOpacity>
+  )}
 
 </SafeAreaView>
   );

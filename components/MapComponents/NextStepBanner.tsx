@@ -1,8 +1,10 @@
-import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Appearance } from "react-native";
+import React, { useEffect, useState } from "react";
+import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { Step } from "../../types";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import * as Speech from 'expo-speech';
+import { useTheme } from "@/utils/ThemeContext";
 
 interface NextStepBannerProps {
     nextStep: Step | null;
@@ -13,7 +15,26 @@ export const NextStepBanner: React.FC<NextStepBannerProps> = ({
     nextStep,
     onToggleSteps,
 }) => {
-    const insets = useSafeAreaInsets(); // 👈 Ajout ici
+    const insets = useSafeAreaInsets();
+    const { darkMode } = useTheme();
+    const [isVoiceEnabled, setIsVoiceEnabled] = useState<boolean>(true);
+
+    useEffect(() => {
+        if (isVoiceEnabled && nextStep && nextStep.html_instructions) {
+            const instruction = nextStep.html_instructions.replace(/<[^>]*>/g, " ");
+            Speech.stop();
+            Speech.speak(instruction, {
+                language: 'fr-FR',
+                pitch: 1.1,
+                rate: 1.1,
+            });
+        }
+    }, [nextStep, isVoiceEnabled]);
+    
+    const toggleVoice = () => {
+        setIsVoiceEnabled(prev => !prev);
+        Speech.stop();
+    };
 
     const getManeuverIcon = (maneuver: string): string => {
         const icons: { [key: string]: string } = {
@@ -58,15 +79,14 @@ export const NextStepBanner: React.FC<NextStepBannerProps> = ({
         distanceText = convertDistance(nextStep.distance);
     }
 
-    const colorScheme = Appearance.getColorScheme();
-    const backgroundColor = colorScheme === "dark" ? "#333" : "#fff";
-    const textColor = colorScheme === "dark" ? "#fff" : "#000";
+    const backgroundColor = darkMode ? "#333" : "#fff";
+    const textColor = darkMode ? "#fff" : "#000";
 
     return (
         <TouchableOpacity
             style={[
                 styles.bannerContainer,
-                { backgroundColor, paddingTop: insets.top + 8 } // 👈 Prend en compte l'encoche
+                { backgroundColor, paddingTop: insets.top + 8 }
             ]}
             onPress={onToggleSteps}
         >
@@ -84,9 +104,20 @@ export const NextStepBanner: React.FC<NextStepBannerProps> = ({
                     />
                 )}
                 <View style={styles.stepTextContainer}>
-                    <Text style={[styles.stepInstruction, { color: textColor }]}>{instruction}</Text>
-                    <Text style={[styles.stepDistance, { color: textColor }]}>{distanceText}</Text>
+                    <Text style={[styles.stepInstruction, { color: textColor }]}>
+                        {instruction}
+                    </Text>
+                    <Text style={[styles.stepDistance, { color: textColor }]}>
+                        {distanceText}
+                    </Text>
                 </View>
+                <TouchableOpacity onPress={toggleVoice} style={styles.voiceButton}>
+                    <MaterialIcons
+                        name={isVoiceEnabled ? "volume-up" : "volume-off"}
+                        size={28}
+                        color={isVoiceEnabled ? "#2196F3" : "#888"}
+                    />
+                </TouchableOpacity>
             </View>
         </TouchableOpacity>
     );
@@ -120,5 +151,8 @@ const styles = StyleSheet.create({
     stepDistance: {
         fontSize: 12,
         marginTop: 4,
+    },
+    voiceButton: {
+        padding: 8,
     },
 });
