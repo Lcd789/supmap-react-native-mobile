@@ -49,14 +49,16 @@ export default function Home() {
   const [isNearStart, setIsNearStart] = useState<boolean>(true);
   const floatingButtonOffset = useSharedValue(100);
   const [userHasMovedMap, setUserHasMovedMap] = useState(false);
+  const lastPolylineIndex = useRef<number>(0);
 
   const mapRef = useRef<any>(null);
 
   const searchBarAnimation = useSharedValue(0);
   const routeInfoAnimation = useSharedValue(0);
   const stepsAnimation = useSharedValue(0);
+  const lastCameraUpdate = useRef<number>(0);
 
-  const { mapRegion, setMapRegion, liveCoords } = useLocation(navigationLaunched);
+  const { mapRegion, setMapRegion, liveCoords, bearing } = useLocation(navigationLaunched);
   const { routeInfo, isLoading, error, calculateRoute } = useRoute();
 
   useEffect(() => {
@@ -96,13 +98,18 @@ export default function Home() {
       mapRef.current &&
       !userHasMovedMap
     ) {
-      const region = {
-        latitude: liveCoords.latitude,
-        longitude: liveCoords.longitude,
-        latitudeDelta: 0.005,
-        longitudeDelta: 0.005,
-      };
-      mapRef.current.animateToRegion(region, 800);
+      const now = Date.now();
+      if (now - lastCameraUpdate.current > 3000) {
+        lastCameraUpdate.current = now;
+  
+        const region = {
+          latitude: liveCoords.latitude,
+          longitude: liveCoords.longitude,
+          latitudeDelta: 0.005,
+          longitudeDelta: 0.005,
+        };
+        mapRef.current.animateToRegion(region, 800);
+      }
     }
   }, [liveCoords, navigationLaunched, userHasMovedMap]);
   
@@ -137,10 +144,10 @@ export default function Home() {
         return;
       }
 
-      if (distanceToEnd < 2) {
+      if (distanceToEnd < 15) {
         setCurrentStepIndex((prev) => prev + 1);
         setMustJoinStart(false);
-      }
+      }      
     }
   }, [liveCoords, navigationLaunched, selectedRoute, currentStepIndex]);
 
@@ -166,16 +173,15 @@ export default function Home() {
     if (!selectedRoute?.polyline || !liveCoords) return [];
   
     const index = selectedRoute.polyline.findIndex((point) => {
-      const d = getDistance(liveCoords, {
-        latitude: point.latitude,
-        longitude: point.longitude,
-      });
-      return d < 10;
+      const d = getDistance(liveCoords, point);
+      return d < 15; 
     });
   
-    if (index === -1) return selectedRoute.polyline;
+    if (index !== -1) {
+      lastPolylineIndex.current = index;
+    }
   
-    return selectedRoute.polyline.slice(index);
+    return selectedRoute.polyline.slice(lastPolylineIndex.current);
   };
 
   const handleSearch = useCallback(async () => {
@@ -333,6 +339,7 @@ export default function Home() {
       ]}
       selectedRouteId="live"
       liveCoords={liveCoords}
+      bearing={bearing} 
        onPanDrag={() => setUserHasMovedMap(true)}
       navigationLaunched={navigationLaunched}
       nextStepCoord={

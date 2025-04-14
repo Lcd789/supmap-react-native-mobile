@@ -16,29 +16,13 @@ interface AlternativeRoute {
 interface RouteMapProps extends MapViewProps {
   alternativeRoutes?: AlternativeRoute[];
   selectedRouteId?: string;
+  bearing?: number;  // ✅ Ajout du bearing ici
   mapRef?: React.Ref<MapView>;
   liveCoords?: { latitude: number; longitude: number } | null;
-  bearing?: number; 
   nextStepCoord?: { latitude: number; longitude: number } | null;
   navigationLaunched?: boolean;
   alertMarkers?: AlertMarker[];
 }
-
-const getBearing = (
-  start: { latitude: number; longitude: number },
-  end: { latitude: number; longitude: number }
-): number => {
-  const lat1 = (start.latitude * Math.PI) / 180;
-  const lon1 = (start.longitude * Math.PI) / 180;
-  const lat2 = (end.latitude * Math.PI) / 180;
-  const lon2 = (end.longitude * Math.PI) / 180;
-  const dLon = lon2 - lon1;
-  const y = Math.sin(dLon) * Math.cos(lat2);
-  const x =
-    Math.cos(lat1) * Math.sin(lat2) -
-    Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
-  return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
-};
 
 const categoryIcons: Record<string, string> = {
   police: "https://img.icons8.com/color/96/policeman-male.png",
@@ -51,16 +35,16 @@ const categoryIcons: Record<string, string> = {
 export const RouteMap: React.FC<RouteMapProps> = ({
   alternativeRoutes = [],
   selectedRouteId,
+  bearing, // ✅ Utilisation du bearing ici
   mapRef,
   liveCoords,
   nextStepCoord,
-  bearing,
   navigationLaunched = false,
   alertMarkers = [],
   ...mapProps
 }) => {
+  // Utilisation de bearing pour la rotation de la flèche
   const heading = navigationLaunched ? bearing ?? 0 : 0;
-
 
   return (
     <MapView
@@ -122,7 +106,7 @@ export const RouteMap: React.FC<RouteMapProps> = ({
           coordinate={liveCoords}
           anchor={{ x: 0.5, y: 0.5 }}
           flat
-          rotation={heading}
+          rotation={heading}  // ✅ Rotation de la flèche en fonction du bearing
         >
           <Image
             source={require("@/assets/images/arrow.png")}
