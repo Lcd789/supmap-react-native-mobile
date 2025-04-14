@@ -48,6 +48,7 @@ export default function Home() {
   const [routeError, setRouteError] = useState<string | null>(null);
   const [isNearStart, setIsNearStart] = useState<boolean>(true);
   const floatingButtonOffset = useSharedValue(100);
+  const [userHasMovedMap, setUserHasMovedMap] = useState(false);
 
   const mapRef = useRef<any>(null);
 
@@ -55,7 +56,7 @@ export default function Home() {
   const routeInfoAnimation = useSharedValue(0);
   const stepsAnimation = useSharedValue(0);
 
-  const { mapRegion, setMapRegion, liveCoords } = useLocation();
+  const { mapRegion, setMapRegion, liveCoords } = useLocation(navigationLaunched);
   const { routeInfo, isLoading, error, calculateRoute } = useRoute();
 
   useEffect(() => {
@@ -87,6 +88,24 @@ export default function Home() {
       easing: Easing.inOut(Easing.ease),
     });
   }, [navigationLaunched]);
+
+  useEffect(() => {
+    if (
+      navigationLaunched &&
+      liveCoords &&
+      mapRef.current &&
+      !userHasMovedMap
+    ) {
+      const region = {
+        latitude: liveCoords.latitude,
+        longitude: liveCoords.longitude,
+        latitudeDelta: 0.005,
+        longitudeDelta: 0.005,
+      };
+      mapRef.current.animateToRegion(region, 800);
+    }
+  }, [liveCoords, navigationLaunched, userHasMovedMap]);
+  
 
   useEffect(() => {
     if (
@@ -314,6 +333,7 @@ export default function Home() {
       ]}
       selectedRouteId="live"
       liveCoords={liveCoords}
+       onPanDrag={() => setUserHasMovedMap(true)}
       navigationLaunched={navigationLaunched}
       nextStepCoord={
         selectedRoute?.steps?.[currentStepIndex]?.end_location
@@ -408,11 +428,14 @@ export default function Home() {
         )}
       </Animated.View>
 
-      <Animated.View style={floatingButtonStyle} pointerEvents="box-none">
-        <TouchableOpacity onPress={toggleSearchBar}>
-          <MaterialIcons name="map" size={24} color="#fff" />
-        </TouchableOpacity>
-      </Animated.View>
+      {mapRegion && (
+        <Animated.View style={floatingButtonStyle} pointerEvents="box-none">
+          <TouchableOpacity onPress={toggleSearchBar}>
+            <MaterialIcons name="map" size={24} color="#fff" />
+          </TouchableOpacity>
+        </Animated.View>
+      )}
+
 
 
       {alternativeRoutes.length > 0 && !navigationLaunched && (

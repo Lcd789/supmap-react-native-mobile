@@ -18,6 +18,7 @@ interface RouteMapProps extends MapViewProps {
   selectedRouteId?: string;
   mapRef?: React.Ref<MapView>;
   liveCoords?: { latitude: number; longitude: number } | null;
+  bearing?: number; 
   nextStepCoord?: { latitude: number; longitude: number } | null;
   navigationLaunched?: boolean;
   alertMarkers?: AlertMarker[];
@@ -53,14 +54,13 @@ export const RouteMap: React.FC<RouteMapProps> = ({
   mapRef,
   liveCoords,
   nextStepCoord,
+  bearing,
   navigationLaunched = false,
   alertMarkers = [],
   ...mapProps
 }) => {
-  const heading =
-    navigationLaunched && liveCoords && nextStepCoord
-      ? getBearing(liveCoords, nextStepCoord)
-      : 0;
+  const heading = navigationLaunched ? bearing ?? 0 : 0;
+
 
   return (
     <MapView
