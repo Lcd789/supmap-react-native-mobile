@@ -25,7 +25,7 @@ import { homeStyles } from "@/styles/styles";
 import { RouteCalculationResult, TransportMode, Waypoint } from "@/types";
 import { AlertVerifier } from "@/components/MapComponents/AlertVerifier";
 import { useTheme } from "@/utils/ThemeContext";
-
+import { Magnetometer } from 'expo-sensors';
 
 type RouteWithId = RouteCalculationResult & { id: string };
 
@@ -50,6 +50,7 @@ export default function Home() {
   const floatingButtonOffset = useSharedValue(100);
   const [userHasMovedMap, setUserHasMovedMap] = useState(false);
   const lastPolylineIndex = useRef<number>(0);
+  const [deviceHeading, setDeviceHeading] = useState(0);
 
   const mapRef = useRef<any>(null);
 
@@ -58,7 +59,7 @@ export default function Home() {
   const stepsAnimation = useSharedValue(0);
   const lastCameraUpdate = useRef<number>(0);
 
-  const { mapRegion, setMapRegion, liveCoords, bearing } = useLocation(navigationLaunched);
+  const { mapRegion, setMapRegion, liveCoords } = useLocation(navigationLaunched);
   const { routeInfo, isLoading, error, calculateRoute } = useRoute();
 
   useEffect(() => {
@@ -79,6 +80,43 @@ export default function Home() {
   }, [selectedRoute, navigationLaunched]);
 
   useEffect(() => {
+    const subscription = Magnetometer.addListener(data => {
+      const { x, y } = data;
+      let angle = Math.atan2(y, x) * (180 / Math.PI);
+      angle = angle >= 0 ? angle : angle + 360;
+      setDeviceHeading(angle);
+    });
+    Magnetometer.setUpdateInterval(200);
+    return () => subscription.remove();
+  }, []);
+
+  useEffect(() => {
+    if (
+      navigationLaunched &&
+      liveCoords &&
+      mapRef.current &&
+      !userHasMovedMap
+    ) {
+      const now = Date.now();
+      if (now - lastCameraUpdate.current > 500) {
+        lastCameraUpdate.current = now;
+        mapRef.current.animateCamera(
+          {
+            center: {
+              latitude: liveCoords.latitude,
+              longitude: liveCoords.longitude,
+            },
+            heading: deviceHeading,
+            pitch: 15,
+            zoom: 15,
+          },
+          { duration: 800 }
+        );
+      }
+    }
+  }, [liveCoords, navigationLaunched, userHasMovedMap, deviceHeading]);
+
+  useEffect(() => {
     if (!navigationLaunched) {
       setMustJoinStart(false);
     }
@@ -90,29 +128,6 @@ export default function Home() {
       easing: Easing.inOut(Easing.ease),
     });
   }, [navigationLaunched]);
-
-  useEffect(() => {
-    if (
-      navigationLaunched &&
-      liveCoords &&
-      mapRef.current &&
-      !userHasMovedMap
-    ) {
-      const now = Date.now();
-      if (now - lastCameraUpdate.current > 3000) {
-        lastCameraUpdate.current = now;
-  
-        const region = {
-          latitude: liveCoords.latitude,
-          longitude: liveCoords.longitude,
-          latitudeDelta: 0.005,
-          longitudeDelta: 0.005,
-        };
-        mapRef.current.animateToRegion(region, 800);
-      }
-    }
-  }, [liveCoords, navigationLaunched, userHasMovedMap]);
-  
 
   useEffect(() => {
     if (
@@ -137,20 +152,32 @@ export default function Home() {
       const distanceToStart = getDistance(liveCoords, stepStart);
       const distanceToEnd = getDistance(liveCoords, stepEnd);
 
-      if (currentStepIndex === 0 && distanceToStart > 50) {
-        console.log("📍 Trop loin du départ prévu, on saute le 1er step");
-        setCurrentStepIndex(1);
-        setMustJoinStart(true);
-        return;
+      if (currentStepIndex === 0) {
+        if (distanceToStart > 200) {
+          console.log("🚫 Trop loin du point de départ :", distanceToStart.toFixed(1), "m");
+          setMustJoinStart(true);
+          return;
+        } else {
+          console.log("✅ Assez proche du départ :", distanceToStart.toFixed(1), "m");
+          setMustJoinStart(false);
+        }
       }
 
       if (distanceToEnd < 15) {
         setCurrentStepIndex((prev) => prev + 1);
-        setMustJoinStart(false);
-      }      
+        console.log(`✅ Étape ${currentStepIndex} terminée, passage à la suivante`);
+        return;
+      }
+
+      if (!isOffRoute() && distanceToStart > 25 && distanceToEnd > 25) {
+        console.log(`↪️ Passage anticipé à l'étape suivante depuis l'étape ${currentStepIndex}`);
+        setCurrentStepIndex((prev) => prev + 1);
+        return;
+      }
     }
   }, [liveCoords, navigationLaunched, selectedRoute, currentStepIndex]);
 
+  
   const getDistance = (
     coord1: { latitude: number; longitude: number },
     coord2: { latitude: number; longitude: number }
@@ -169,18 +196,49 @@ export default function Home() {
     return R * c;
   };
 
+  const isOffRoute = (): boolean => {
+    if (!liveCoords || !selectedRoute?.polyline) return false;
+    const threshold = 30;
+    return !selectedRoute.polyline.some((point) => {
+      const distance = getDistance(liveCoords, point);
+      return distance < threshold;
+    });
+  };
+  useEffect(() => {
+    if (!navigationLaunched || !selectedRoute || !liveCoords) return;
+  
+    const interval = setInterval(() => {
+      const off = isOffRoute();
+      console.log("🧭 OffRoute ?", off);
+      if (off) {
+        console.log("⛔️ Hors de l’itinéraire détecté");
+        updateStepFromCurrentPosition();
+      }
+    }, 3000);
+  
+    return () => clearInterval(interval);
+  }, [navigationLaunched, selectedRoute, liveCoords, currentStepIndex]);
+  
+  
+
   const getRemainingPolyline = () => {
     if (!selectedRoute?.polyline || !liveCoords) return [];
   
     const index = selectedRoute.polyline.findIndex((point) => {
-      const d = getDistance(liveCoords, point);
+      const d = getDistance(liveCoords, {
+        latitude: point.latitude,
+        longitude: point.longitude,
+      });
       return d < 15; 
     });
   
     if (index !== -1) {
       lastPolylineIndex.current = index;
     }
-  
+    console.log("📍 Live position:", liveCoords);
+    console.log("🔎 Recherche du point le plus proche sur la polyline...");
+    
+
     return selectedRoute.polyline.slice(lastPolylineIndex.current);
   };
 
@@ -236,7 +294,66 @@ export default function Home() {
       setRouteError(error.message || "Erreur lors du calcul de l'itinéraire");
     }
   }, [origin, destination, waypoints, selectedMode, avoidTolls, calculateRoute]);
+
+  {userHasMovedMap && navigationLaunched && (
+    <TouchableOpacity
+      style={{
+        position: "absolute",
+        bottom: 160,
+        right: 20,
+        backgroundColor: "#fff",
+        borderRadius: 25,
+        padding: 10,
+        elevation: 6,
+      }}
+      onPress={() => setUserHasMovedMap(false)}
+    >
+      <MaterialIcons name="my-location" size={24} color="#2196F3" />
+    </TouchableOpacity>
+  )}
+
+  const updateStepFromCurrentPosition = () => {
+    console.log("📣 Appel de updateStepFromCurrentPosition()");
+    if (!liveCoords || !selectedRoute?.steps) return;
+    console.log("📍 Étape actuelle:", currentStepIndex);
+
+    let closestStepIndex = currentStepIndex;
+    let minDistance = Infinity;
   
+    selectedRoute.steps.forEach((step, index) => {
+
+      const start = {
+        latitude: step.start_location.lat,
+        longitude: step.start_location.lng,
+      };
+      const end = {
+        latitude: step.end_location.lat,
+        longitude: step.end_location.lng,
+      };
+  
+      const middle = {
+        latitude: (start.latitude + end.latitude) / 2,
+        longitude: (start.longitude + end.longitude) / 2,
+      };
+      const d = getDistance(liveCoords, middle);
+      
+  
+      console.log(`🧩 Étape ${index} : dMid=${d.toFixed(1)}m`);
+
+
+      if (d < minDistance) {
+        minDistance = d;
+        closestStepIndex = index;
+      }
+    });
+    console.log("📍 Étape la plus proche détectée:", closestStepIndex);
+
+    if (closestStepIndex !== currentStepIndex) {
+      setCurrentStepIndex(closestStepIndex);
+      lastPolylineIndex.current = 0;
+      console.log(`📍 Étape mise à jour : ${closestStepIndex}`);
+    }
+  };
   
 
   const handleReverse = useCallback(() => {
@@ -274,7 +391,6 @@ export default function Home() {
     }
   };
 
-  
   const searchBarContainerStyle = useAnimatedStyle(() => ({
     position: "absolute",
     top: 70,
@@ -327,32 +443,30 @@ export default function Home() {
       ]}
     >
       {mapRegion ? (
-
-    <RouteMap
-      region={mapRegion}
-      mapRef={mapRef}
-      alternativeRoutes={[
-        {
-          id: "live",
-          polyline: getRemainingPolyline(),
-        },
-      ]}
-      selectedRouteId="live"
-      liveCoords={liveCoords}
-      bearing={bearing} 
-       onPanDrag={() => setUserHasMovedMap(true)}
-      navigationLaunched={navigationLaunched}
-      nextStepCoord={
-        selectedRoute?.steps?.[currentStepIndex]?.end_location
-          ? {
-              latitude: selectedRoute.steps[currentStepIndex].end_location.lat,
-              longitude: selectedRoute.steps[currentStepIndex].end_location.lng,
-            }
-          : null
-      }
-      alertMarkers={alertMarkers}
-    />
-
+        <RouteMap
+          region={mapRegion}
+          mapRef={mapRef}
+          alternativeRoutes={[
+            {
+              id: "live",
+              polyline: getRemainingPolyline(),
+            },
+          ]}
+          selectedRouteId="live"
+          liveCoords={liveCoords}
+          deviceHeading={deviceHeading}
+          onPanDrag={() => setUserHasMovedMap(true)}
+          navigationLaunched={navigationLaunched}
+          nextStepCoord={
+            selectedRoute?.steps?.[currentStepIndex]?.end_location
+              ? {
+                  latitude: selectedRoute.steps[currentStepIndex].end_location.lat,
+                  longitude: selectedRoute.steps[currentStepIndex].end_location.lng,
+                }
+              : null
+          }
+          alertMarkers={alertMarkers}
+        />
       ) : (
         <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
           <ActivityIndicator size="large" color="#2196F3" />
@@ -394,23 +508,41 @@ export default function Home() {
         </View>
       )}
 
-
-      {selectedRoute && !isSearchVisible && navigationLaunched && (
-        <NextStepBanner
-          nextStep={selectedRoute.steps[currentStepIndex]}
-          onToggleSteps={toggleSteps}
-        />
+      {selectedRoute &&
+        !isSearchVisible &&
+        navigationLaunched &&
+        currentStepIndex < selectedRoute.steps.length && (
+          <NextStepBanner
+            nextStep={selectedRoute.steps[currentStepIndex]}
+            onToggleSteps={toggleSteps}
+          />
       )}
 
-
-      {selectedRoute && !isSearchVisible && navigationLaunched && (
-        <NextStepBanner
-          nextStep={selectedRoute.steps[currentStepIndex]}
-          onToggleSteps={toggleSteps}
-        />
+      {selectedRoute &&
+        !isSearchVisible &&
+        !navigationLaunched &&
+        currentStepIndex >= selectedRoute.steps.length && (
+          <View
+            style={{
+              position: "absolute",
+              bottom: 140,
+              alignSelf: "center",
+              backgroundColor: "white",
+              paddingVertical: 12,
+              paddingHorizontal: 20,
+              borderRadius: 10,
+              elevation: 4,
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.2,
+              shadowRadius: 4,
+            }}
+          >
+            <Text style={{ fontWeight: "bold", fontSize: 16, textAlign: "center" }}>
+              🎉 Trajet terminé !
+            </Text>
+          </View>
       )}
-
-
 
       <Animated.View style={searchBarContainerStyle} pointerEvents="box-none">
         {isSearchVisible && (
@@ -442,8 +574,6 @@ export default function Home() {
           </TouchableOpacity>
         </Animated.View>
       )}
-
-
 
       {alternativeRoutes.length > 0 && !navigationLaunched && (
         <View style={styles.selectorContainer}>
@@ -509,74 +639,73 @@ export default function Home() {
         </View>
       )}
 
-    {routeError && (
-      <View
-        style={{
-          position: "absolute",
-          top: "40%",
-          left: 20,
-          right: 20,
-          backgroundColor: "#fff",
-          padding: 16,
-          borderRadius: 12,
-          elevation: 10,
-          zIndex: 1000,
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.25,
-          shadowRadius: 4,
-          alignItems: "center",
-        }}
-      >
-        <Text style={{ fontWeight: "bold", fontSize: 16, marginBottom: 10 }}>
-          Erreur d’itinéraire
-        </Text>
-        <Text style={{ textAlign: "center", color: "#333" }}>
-          {routeError === "FRANCE_ONLY"
-            ? "Trajet interdit : vous devez rester à l’intérieur de la France métropolitaine."
-            : "Une erreur est survenue lors du calcul du trajet. Veuillez réessayer."}
-        </Text>
-            <TouchableOpacity
-          onPress={() => setRouteError(null)}
+      {routeError && (
+        <View
           style={{
-            marginTop: 16,
-            paddingHorizontal: 20,
-            paddingVertical: 10,
-            backgroundColor: "#007AFF",
-            borderRadius: 8,
+            position: "absolute",
+            top: "40%",
+            left: 20,
+            right: 20,
+            backgroundColor: "#fff",
+            padding: 16,
+            borderRadius: 12,
+            elevation: 10,
+            zIndex: 1000,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.25,
+            shadowRadius: 4,
+            alignItems: "center",
           }}
         >
-          <Text style={{ color: "#fff", fontWeight: "600" }}>Fermer</Text>
+          <Text style={{ fontWeight: "bold", fontSize: 16, marginBottom: 10 }}>
+            Erreur d’itinéraire
+          </Text>
+          <Text style={{ textAlign: "center", color: "#333" }}>
+            {routeError === "FRANCE_ONLY"
+              ? "Trajet interdit : vous devez rester à l’intérieur de la France métropolitaine."
+              : "Une erreur est survenue lors du calcul du trajet. Veuillez réessayer."}
+          </Text>
+          <TouchableOpacity
+            onPress={() => setRouteError(null)}
+            style={{
+              marginTop: 16,
+              paddingHorizontal: 20,
+              paddingVertical: 10,
+              backgroundColor: "#007AFF",
+              borderRadius: 8,
+            }}
+          >
+            <Text style={{ color: "#fff", fontWeight: "600" }}>Fermer</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {navigationLaunched && liveCoords && (
+        <TouchableOpacity
+          style={{
+            position: "absolute",
+            bottom: 100,
+            right: 20,
+            backgroundColor: "#fff",
+            borderRadius: 25,
+            padding: 10,
+            elevation: 6,
+          }}
+          onPress={() => {
+            const region = {
+              latitude: liveCoords.latitude,
+              longitude: liveCoords.longitude,
+              latitudeDelta: 0.005,
+              longitudeDelta: 0.005,
+            };
+            mapRef.current?.animateToRegion(region, 800);
+          }}
+        >
+          <MaterialIcons name="gps-fixed" size={24} color="#2196F3" />
         </TouchableOpacity>
-      </View>
-    )}
-
-  {navigationLaunched && liveCoords && (
-    <TouchableOpacity
-      style={{
-        position: "absolute",
-        bottom: 100,
-        right: 20,
-        backgroundColor: "#fff",
-        borderRadius: 25,
-        padding: 10,
-        elevation: 6,
-      }}
-      onPress={() => {
-        const region = {
-          latitude: liveCoords.latitude,
-          longitude: liveCoords.longitude,
-          latitudeDelta: 0.005,
-          longitudeDelta: 0.005,
-        };
-        mapRef.current?.animateToRegion(region, 800);
-      }}
-    >
-      <MaterialIcons name="gps-fixed" size={24} color="#2196F3" />
-    </TouchableOpacity>
-  )}
-
-</SafeAreaView>
+      )}
+    </SafeAreaView>
   );
 }
 

@@ -16,10 +16,10 @@ interface AlternativeRoute {
 interface RouteMapProps extends MapViewProps {
   alternativeRoutes?: AlternativeRoute[];
   selectedRouteId?: string;
-  bearing?: number;  // ✅ Ajout du bearing ici
   mapRef?: React.Ref<MapView>;
   liveCoords?: { latitude: number; longitude: number } | null;
   nextStepCoord?: { latitude: number; longitude: number } | null;
+  deviceHeading?: number;
   navigationLaunched?: boolean;
   alertMarkers?: AlertMarker[];
 }
@@ -35,16 +35,15 @@ const categoryIcons: Record<string, string> = {
 export const RouteMap: React.FC<RouteMapProps> = ({
   alternativeRoutes = [],
   selectedRouteId,
-  bearing, // ✅ Utilisation du bearing ici
   mapRef,
   liveCoords,
   nextStepCoord,
+  deviceHeading,
   navigationLaunched = false,
   alertMarkers = [],
   ...mapProps
 }) => {
-  // Utilisation de bearing pour la rotation de la flèche
-  const heading = navigationLaunched ? bearing ?? 0 : 0;
+
 
   return (
     <MapView
@@ -58,14 +57,18 @@ export const RouteMap: React.FC<RouteMapProps> = ({
       minZoomLevel={5}
       maxZoomLevel={18}
       onRegionChangeComplete={(region) => {
+
         const lat = Math.min(Math.max(region.latitude, 41.0), 51.5);
         const lon = Math.min(Math.max(region.longitude, -5.0), 9.5);
         if (mapRef && typeof mapRef !== "function" && mapRef.current) {
-          mapRef.current.animateToRegion({
-            ...region,
-            latitude: lat,
-            longitude: lon,
-          });
+          mapRef.current.animateToRegion(
+            {
+              ...region,
+              latitude: lat,
+              longitude: lon,
+            },
+            300 // Durée de l'animation (à ajuster selon le besoin)
+          );
         }
       }}
       scrollEnabled
@@ -106,7 +109,7 @@ export const RouteMap: React.FC<RouteMapProps> = ({
           coordinate={liveCoords}
           anchor={{ x: 0.5, y: 0.5 }}
           flat
-          rotation={heading}  // ✅ Rotation de la flèche en fonction du bearing
+          rotation={deviceHeading || 0} // rotation de la flèche
         >
           <Image
             source={require("@/assets/images/arrow.png")}
