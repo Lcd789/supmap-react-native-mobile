@@ -1,60 +1,62 @@
 import { useEffect, useRef, useState } from "react";
 import * as Location from "expo-location";
-import { Region } from "react-native-maps";
+import { Magnetometer } from "expo-sensors";
+import { RouteCalculationResult } from "@/types";
 
-export function useLocation(navigationLaunched: boolean = false) {
-  const [mapRegion, setMapRegion] = useState<Region | null>(null);
+export const useLocation = (
+  navigationLaunched: boolean,
+  selectedRoute?: RouteCalculationResult
+) => {
+  const [mapRegion, setMapRegion] = useState<any>(null);
   const [liveCoords, setLiveCoords] = useState<{ latitude: number; longitude: number } | null>(null);
-  const previousCoords = useRef<{ latitude: number; longitude: number } | null>(null);
+  const [deviceHeading, setDeviceHeading] = useState<number>(0);
 
+  // Écoute de l'inclinaison du téléphone (magnetometer)
   useEffect(() => {
-    let subscription: Location.LocationSubscription | null = null;
+    const subscription = Magnetometer.addListener((data) => {
+      let { x, y } = data;
+      let angle = Math.atan2(y, x) * (180 / Math.PI);
+      angle = angle - 90; // Ajustement pour correspondre à l'orientation de la flèche
+      if (angle < 0) angle += 360;
+      setDeviceHeading(angle);
+    });
 
-    (async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        console.log("Permission to access location was denied");
-        return;
-      }
-
-      const location = await Location.getCurrentPositionAsync({});
-      const { latitude, longitude } = location.coords;
-
-      const region = {
-        latitude,
-        longitude,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
-      };
-
-      setMapRegion(region);
-      setLiveCoords({ latitude, longitude });
-      previousCoords.current = { latitude, longitude };
-
-      subscription = await Location.watchPositionAsync(
-        {
-          accuracy: Location.Accuracy.Highest,
-          timeInterval: 1000,
-          distanceInterval: 1,
-        },
-        (loc) => {
-          const { latitude, longitude } = loc.coords;
-          const newCoords = { latitude, longitude };
-
-          previousCoords.current = newCoords;
-          setLiveCoords(newCoords);
-        }
-      );
-    })();
+    Magnetometer.setUpdateInterval(500);
 
     return () => {
-      subscription?.remove();
+      subscription.remove();
     };
   }, []);
+
+  useEffect(() => {
+    Location.requestForegroundPermissionsAsync().then(({ status }) => {
+      if (status !== "granted") return;
+
+      Location.watchPositionAsync(
+        {
+          accuracy: Location.Accuracy.High,
+          distanceInterval: 1,
+        },
+        (location) => {
+          const coords = {
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+          };
+          setLiveCoords(coords);
+          setMapRegion({
+            ...coords,
+            latitudeDelta: 0.005,
+            longitudeDelta: 0.005,
+          });
+        }
+      );
+    });
+  }, [navigationLaunched, selectedRoute]);
 
   return {
     mapRegion,
     setMapRegion,
     liveCoords,
+    deviceHeading,
   };
 };

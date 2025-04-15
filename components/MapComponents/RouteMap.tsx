@@ -19,7 +19,7 @@ interface RouteMapProps extends MapViewProps {
   mapRef?: React.Ref<MapView>;
   liveCoords?: { latitude: number; longitude: number } | null;
   nextStepCoord?: { latitude: number; longitude: number } | null;
-  deviceHeading?: number;
+  deviceHeading?: number; // inclinaison du téléphone
   navigationLaunched?: boolean;
   alertMarkers?: AlertMarker[];
 }
@@ -43,8 +43,6 @@ export const RouteMap: React.FC<RouteMapProps> = ({
   alertMarkers = [],
   ...mapProps
 }) => {
-
-
   return (
     <MapView
       ref={mapRef}
@@ -57,7 +55,6 @@ export const RouteMap: React.FC<RouteMapProps> = ({
       minZoomLevel={5}
       maxZoomLevel={18}
       onRegionChangeComplete={(region) => {
-
         const lat = Math.min(Math.max(region.latitude, 41.0), 51.5);
         const lon = Math.min(Math.max(region.longitude, -5.0), 9.5);
         if (mapRef && typeof mapRef !== "function" && mapRef.current) {
@@ -67,7 +64,7 @@ export const RouteMap: React.FC<RouteMapProps> = ({
               latitude: lat,
               longitude: lon,
             },
-            300 // Durée de l'animation (à ajuster selon le besoin)
+            300
           );
         }
       }}
@@ -109,7 +106,7 @@ export const RouteMap: React.FC<RouteMapProps> = ({
           coordinate={liveCoords}
           anchor={{ x: 0.5, y: 0.5 }}
           flat
-          rotation={deviceHeading || 0} // rotation de la flèche
+          rotation={(deviceHeading || 0) - 90} // 🔁 Correction du décalage
         >
           <Image
             source={require("@/assets/images/arrow.png")}

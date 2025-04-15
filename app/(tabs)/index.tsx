@@ -82,9 +82,10 @@ export default function Home() {
   useEffect(() => {
     const subscription = Magnetometer.addListener(data => {
       const { x, y } = data;
-      let angle = Math.atan2(y, x) * (180 / Math.PI);
+      let angle = Math.atan2(-x, y) * (180 / Math.PI)
       angle = angle >= 0 ? angle : angle + 360;
       setDeviceHeading(angle);
+      
     });
     Magnetometer.setUpdateInterval(200);
     return () => subscription.remove();
