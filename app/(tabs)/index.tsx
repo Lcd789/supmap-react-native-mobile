@@ -51,6 +51,9 @@ export default function Home() {
   const [userHasMovedMap, setUserHasMovedMap] = useState(false);
   const lastPolylineIndex = useRef<number>(0);
   const [deviceHeading, setDeviceHeading] = useState(0);
+  const [initialHeading, setInitialHeading] = useState<number | null>(null);
+  const lastStableHeading = useRef<number>(0);
+  const displayedRotationRef = useRef<number>(0);
 
   const mapRef = useRef<any>(null);
 
@@ -82,15 +85,36 @@ export default function Home() {
   useEffect(() => {
     const subscription = Magnetometer.addListener(data => {
       const { x, y } = data;
-      let angle = Math.atan2(-x, y) * (180 / Math.PI)
+      let angle = Math.atan2(-x, y) * (180 / Math.PI);
       angle = angle >= 0 ? angle : angle + 360;
-      setDeviceHeading(angle);
+    
+      const diff = Math.abs(angle - lastStableHeading.current);
+      if (diff > 3) {
+        lastStableHeading.current = angle;
+        setDeviceHeading(angle);
       
+        const delta = Math.abs(angle - displayedRotationRef.current);
+        if (delta < 20 || delta > 340) {
+          displayedRotationRef.current = angle;
+          console.log("📐 Angle:", angle, "📐📐Précédent:", displayedRotationRef.current);
+        }
+      }
+      
+      
+      
+      
+      
+    
+      if (initialHeading === null) {
+        setInitialHeading(angle);
+      }
     });
+    
+  
     Magnetometer.setUpdateInterval(200);
     return () => subscription.remove();
   }, []);
-
+  
   useEffect(() => {
     if (
       navigationLaunched &&
@@ -449,7 +473,11 @@ export default function Home() {
           ]}
           selectedRouteId="live"
           liveCoords={liveCoords}
+          initialHeading={initialHeading}
+          displayedRotation={displayedRotationRef.current}
+
           deviceHeading={deviceHeading}
+
           onPanDrag={() => setUserHasMovedMap(true)}
           navigationLaunched={navigationLaunched}
           nextStepCoord={
@@ -582,10 +610,25 @@ export default function Home() {
             onSelectRoute={(route: RouteCalculationResult) => {
               setSelectedRoute(route);
             }}
-            onLaunchNavigation={(route: RouteCalculationResult) => {
+            onLaunchNavigation={async (route: RouteCalculationResult) => {
+              if (!liveCoords || !route?.steps?.length) return;
+            
+              const start = {
+                latitude: route.steps[0].start_location.lat,
+                longitude: route.steps[0].start_location.lng,
+              };
+              const dist = getDistance(liveCoords, start);
+            
+              if (dist > 100) {
+                setRouteError("Vous êtes trop loin du point de départ pour commencer ce trajet.");
+                return;
+              }
+            
               setSelectedRoute(route);
               setNavigationLaunched(true);
               setCurrentStepIndex(0);
+              setInitialHeading(deviceHeading);
+            
               if (liveCoords) {
                 const zoomRegion = {
                   latitude: liveCoords.latitude,
@@ -595,6 +638,7 @@ export default function Home() {
                 };
                 mapRef.current?.animateToRegion(zoomRegion, 800);
               }
+            
               addToHistory({
                 origin,
                 destination,
@@ -602,6 +646,7 @@ export default function Home() {
                 mode: selectedMode,
               });
             }}
+            
           />
         </View>
       )}
