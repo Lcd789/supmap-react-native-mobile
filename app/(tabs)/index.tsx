@@ -168,12 +168,6 @@ export default function Home() {
         console.log(`✅ Étape ${currentStepIndex} terminée, passage à la suivante`);
         return;
       }
-
-      if (!isOffRoute() && distanceToStart > 25 && distanceToEnd > 25) {
-        console.log(`↪️ Passage anticipé à l'étape suivante depuis l'étape ${currentStepIndex}`);
-        setCurrentStepIndex((prev) => prev + 1);
-        return;
-      }
     }
   }, [liveCoords, navigationLaunched, selectedRoute, currentStepIndex]);
 

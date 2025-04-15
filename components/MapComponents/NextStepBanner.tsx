@@ -30,7 +30,7 @@ export const NextStepBanner: React.FC<NextStepBannerProps> = ({
             });
         }
     }, [nextStep, isVoiceEnabled]);
-    
+
     const toggleVoice = () => {
         setIsVoiceEnabled(prev => !prev);
         Speech.stop();
@@ -59,7 +59,20 @@ export const NextStepBanner: React.FC<NextStepBannerProps> = ({
         return distance;
     };
 
-    if (!nextStep) return null;
+    if (!nextStep) {
+        return (
+            <View
+                style={[
+                    styles.arrivalContainer,
+                    { backgroundColor: darkMode ? '#333' : '#fff', paddingTop: insets.top + 8 }
+                ]}
+            >
+                <Text style={{ color: darkMode ? '#fff' : '#000', fontSize: 16 }}>
+                    🎉 Vous êtes arrivé à destination !
+                </Text>
+            </View>
+        );
+    }
 
     const instruction =
         typeof nextStep.html_instructions === "string"
@@ -155,4 +168,14 @@ const styles = StyleSheet.create({
     voiceButton: {
         padding: 8,
     },
+    arrivalContainer: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        paddingHorizontal: 8,
+        paddingBottom: 8,
+        zIndex: 1000,
+        alignItems: 'center',
+    }
 });
