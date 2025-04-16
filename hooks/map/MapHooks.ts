@@ -243,3 +243,130 @@ export const useGetFavoriteLocations = () => {
     return { locations, fetchFavoriteLocations, loading, error };
 };
 
+
+
+export interface RouteToSave {
+    startAddress: string;
+    endAddress: string;
+    startPoint: {
+        latitude: number;
+        longitude: number;
+    };
+    endPoint: {
+        latitude: number;
+        longitude: number;
+    };
+    kilometersDistance: number;
+    estimatedDurationInSeconds: number;
+}
+
+
+
+
+export const useSaveRoute = () => {
+    const [loading, setLoading] = useState<boolean>(false);
+    const [error, setError] = useState<string | null>(null);
+    const [success, setSuccess] = useState<boolean>(false);
+
+    const saveRoute = async (routeData: RouteToSave) => {
+        setLoading(true);
+        setError(null);
+        setSuccess(false);
+
+        try {
+            const token = await SecureStore.getItemAsync("authToken");
+
+            const response = await fetch(`${API_BASE_URL}/private/map/save-route`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify(routeData),
+            });
+
+            if (response.ok) {
+                setSuccess(true);
+            } else {
+                const errorText = await response.text();
+                setError(errorText || "Erreur lors de l'enregistrement de l'itinéraire.");
+            }
+        } catch (err: unknown) {
+            if (err instanceof Error) {
+                setError(err.message);
+            } else {
+                setError("Erreur réseau ou inconnue.");
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return { saveRoute, loading, error, success };
+};
+
+
+
+
+export interface SavedRoute {
+    id: string;
+    startAddress: string;
+    endAddress: string;
+    startPoint: {
+        latitude: number;
+        longitude: number;
+    };
+    endPoint: {
+        latitude: number;
+        longitude: number;
+    };
+    kilometersDistance: number;
+    estimatedDurationInSeconds: number;
+    createdAt: string;
+    userId: string;
+}
+
+
+
+
+
+export const useGetRouteHistory = () => {
+    const [routes, setRoutes] = useState<SavedRoute[]>([]);
+    const [loading, setLoading] = useState<boolean>(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const fetchRouteHistory = async () => {
+        setLoading(true);
+        setError(null);
+
+        try {
+            const token = await SecureStore.getItemAsync("authToken");
+
+            const response = await fetch(`${API_BASE_URL}/private/map/history/routes`, {
+                method: "GET",
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+
+            const data: { routes: SavedRoute[] | null; error: string | null } = await response.json();
+
+            if (response.ok) {
+                setRoutes(data.routes || []);
+            } else {
+                setError(data.error || "Erreur lors de la récupération de l'historique des itinéraires.");
+            }
+        } catch (err: unknown) {
+            if (err instanceof Error) {
+                setError(err.message);
+            } else {
+                setError("Erreur réseau ou inconnue.");
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return { routes, fetchRouteHistory, loading, error };
+};
+
