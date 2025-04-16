@@ -44,9 +44,7 @@ export default function Home() {
   const [navigationLaunched, setNavigationLaunched] = useState<boolean>(false);
   const [alertMarkers, setAlertMarkers] = useState<AlertMarker[]>([]);
   const [currentStepIndex, setCurrentStepIndex] = useState<number>(0);
-  const [mustJoinStart, setMustJoinStart] = useState<boolean>(false);
   const [routeError, setRouteError] = useState<string | null>(null);
-  const [isNearStart, setIsNearStart] = useState<boolean>(true);
   const floatingButtonOffset = useSharedValue(100);
   const [userHasMovedMap, setUserHasMovedMap] = useState(false);
   const lastPolylineIndex = useRef<number>(0);
@@ -95,6 +93,31 @@ export default function Home() {
     if (
       navigationLaunched &&
       liveCoords &&
+      selectedRoute &&
+      selectedRoute.steps &&
+      currentStepIndex < selectedRoute.steps.length
+    ) {
+      const step = selectedRoute.steps[currentStepIndex];
+      const stepEnd = {
+        latitude: step.end_location.lat,
+        longitude: step.end_location.lng,
+      };
+  
+      const distanceToEnd = getDistance(liveCoords, stepEnd);
+  
+      // ✅ Augmentation de la tolérance ici
+      if (distanceToEnd < 40) {
+        setCurrentStepIndex((prev) => prev + 1);
+        console.log(`✅ Étape ${currentStepIndex} terminée, passage à la suivante`);
+      }
+    }
+  }, [liveCoords, navigationLaunched, selectedRoute, currentStepIndex]);
+  
+
+  useEffect(() => {
+    if (
+      navigationLaunched &&
+      liveCoords &&
       mapRef.current &&
       !userHasMovedMap
     ) {
@@ -118,60 +141,11 @@ export default function Home() {
   }, [liveCoords, navigationLaunched, userHasMovedMap, deviceHeading]);
 
   useEffect(() => {
-    if (!navigationLaunched) {
-      setMustJoinStart(false);
-    }
-  }, [navigationLaunched]);
-
-  useEffect(() => {
     floatingButtonOffset.value = withTiming(navigationLaunched ? 160 : 100, {
       duration: 300,
       easing: Easing.inOut(Easing.ease),
     });
   }, [navigationLaunched]);
-
-  useEffect(() => {
-    if (
-      navigationLaunched &&
-      liveCoords &&
-      selectedRoute &&
-      selectedRoute.steps &&
-      currentStepIndex < selectedRoute.steps.length
-    ) {
-      const step = selectedRoute.steps[currentStepIndex];
-
-      const stepStart = {
-        latitude: step.start_location.lat,
-        longitude: step.start_location.lng,
-      };
-
-      const stepEnd = {
-        latitude: step.end_location.lat,
-        longitude: step.end_location.lng,
-      };
-
-      const distanceToStart = getDistance(liveCoords, stepStart);
-      const distanceToEnd = getDistance(liveCoords, stepEnd);
-
-      if (currentStepIndex === 0) {
-        if (distanceToStart > 200) {
-          console.log("🚫 Trop loin du point de départ :", distanceToStart.toFixed(1), "m");
-          setMustJoinStart(true);
-          return;
-        } else {
-          console.log("✅ Assez proche du départ :", distanceToStart.toFixed(1), "m");
-          setMustJoinStart(false);
-        }
-      }
-
-      if (distanceToEnd < 15) {
-        setCurrentStepIndex((prev) => prev + 1);
-        console.log(`✅ Étape ${currentStepIndex} terminée, passage à la suivante`);
-        return;
-      }
-    }
-  }, [liveCoords, navigationLaunched, selectedRoute, currentStepIndex]);
-
   
   const getDistance = (
     coord1: { latitude: number; longitude: number },
@@ -465,41 +439,6 @@ export default function Home() {
       ) : (
         <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
           <ActivityIndicator size="large" color="#2196F3" />
-        </View>
-      )}
-
-      {mustJoinStart && (
-        <View
-          style={{
-            position: "absolute",
-            top: 500,
-            left: 20,
-            right: 20,
-            backgroundColor: darkMode ? "#333" : "#fff8e1",
-            padding: 12,
-            borderRadius: 10,
-            elevation: 4,
-            zIndex: 1000,
-            flexDirection: "row",
-            alignItems: "center",
-            borderWidth: darkMode ? 1 : 0,
-            borderColor: darkMode ? "#555" : "transparent",
-          }}
-        >
-          <MaterialIcons
-            name="directions-walk"
-            size={20}
-            color={darkMode ? "#ffb74d" : "#f57c00"}
-            style={{ marginRight: 8 }}
-          />
-          <Text
-            style={{
-              color: darkMode ? "#ffcc80" : "#f57c00",
-              fontWeight: "600",
-            }}
-          >
-            Rejoignez le point de départ pour commencer la navigation
-          </Text>
         </View>
       )}
 
