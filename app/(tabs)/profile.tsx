@@ -5,252 +5,548 @@ import {
     StyleSheet,
     TextInput,
     Alert,
-  } from "react-native";
-  import * as ImageSelector from "expo-image-picker";
-  import { useState, useEffect } from "react";
-  import { LogOutIcon, Pencil, Save, Trash2 } from "lucide-react-native";
-  import { TouchableOpacity } from "react-native";
-  import { Image } from "expo-image";
-  import { getUserData, deleteProfile } from "../../hooks/user/UserHooks";
-  import * as SecureStore from "expo-secure-store";
-  import { useRouter } from "expo-router";
-  import { useAuth } from "@/hooks/user/AuthContext";
-  import { profileStyles } from "../../styles/styles";
-  import { useTheme } from "@/utils/ThemeContext";
+    TouchableOpacity,
+    ActivityIndicator,
+} from "react-native";
+import * as ImageSelector from "expo-image-picker";
+import { useState, useEffect, useCallback } from "react";
+import { LogOutIcon, Pencil, Save, Trash2 } from "lucide-react-native";
+import { Image } from "expo-image";
+// Importer les fonctions API pour User
+import {
+    getUserDataApi,
+    deleteProfileApi,
+    updateUserApi,
+    updateProfileImageApi,
+} from "../../hooks/user/userHooks";
+import { useRouter } from "expo-router";
+// Importer le hook du contexte pour logout et isAuthenticated
+import { useAuth } from "../../hooks/user/AuthContext";
+import { profileStyles } from "../../styles/styles";
+import { useTheme } from "../../utils/ThemeContext";
+import { ApiError, UserData } from "../../utils/apiUtils";
 
-  const DefaultProfileImage = require("../../assets/images/default-profile.png");
-  const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
-  
-  export default function Profile() {
+const DefaultProfileImage = require("../../assets/images/default-profile.png");
+
+export default function Profile() {
     const router = useRouter();
     const { darkMode } = useTheme();
-  
-    const [selectedImage, setSelectedImage] = useState<string | undefined>(undefined);
-    const [username, setUsername] = useState("");
-    const [email, setEmail] = useState("");
+    // Utiliser logout et isAuthenticated du contexte
+    const {
+        isAuthenticated,
+        logout: contextLogout,
+        logoutAndRedirect,
+    } = useAuth();
+
+    // États pour les données utilisateur et l'UI
+    const [userData, setUserData] = useState<UserData | null>(null);
+    const [tempUsername, setTempUsername] = useState("");
+    const [tempEmail, setTempEmail] = useState("");
+    const [selectedImageUri, setSelectedImageUri] = useState<string | null>(
+        null
+    ); // URI de l'image sélectionnée localement
+    const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null); // URL de l'image venant de l'API
+
+    // États pour l'UI
     const [isEditingUsername, setIsEditingUsername] = useState(false);
     const [isEditingEmail, setIsEditingEmail] = useState(false);
-    const [hasChanges, setHasChanges] = useState(false);
-    const [profileImage, setProfileImage] = useState<string | undefined>(undefined);
-    const { isAuthenticated, setAuthenticated } = useAuth();
-    const authToken = SecureStore.getItemAsync("authToken");
-  
-    const [tempUsername, setTempUsername] = useState(username);
-    const [tempEmail, setTempEmail] = useState(email);
-  
-    useEffect(() => {
-      async function fetchUserData() {
-        const userData = await getUserData();
-        console.log(userData);
-        if (userData) {
-          setUsername(userData.username || "");
-          setEmail(userData.email || "");
-          setTempUsername(userData.username || "");
-          setTempEmail(userData.email || "");
-          setProfileImage(userData.profileImage || undefined);
-        }
-      }
-  
-      fetchUserData();
-    }, [isAuthenticated]);
-  
-    const pickImageAsync = async () => {
-      let result = await ImageSelector.launchImageLibraryAsync({
-        allowsEditing: true,
-        quality: 1,
-        aspect: [1, 1],
-      });
-  
-      if (!result.canceled) {
-        setSelectedImage(result.assets[0].uri);
-        setHasChanges(true);
-      }
-    };
-  
-    const handleSave = async () => {
-      try {
-        const authToken = await SecureStore.getItemAsync("authToken");
-  
-        const response = await fetch(`${API_BASE_URL}/user/update`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${authToken}`,
-          },
-          body: JSON.stringify({ username: tempUsername, email: tempEmail }),
-        });
-  
-        if (!response.ok) {
-          throw new Error("Erreur lors de la mise à jour");
-        }
-  
-        const data = await response.json();
-  
-        setUsername(data.username);
-        setEmail(data.email);
-        setHasChanges(false);
-        Alert.alert("Succès", "Profil mis à jour avec succès");
-      } catch (error) {
-        if (error instanceof Error) {
-          Alert.alert("Erreur", error.message || "Une erreur est survenue");
-        } else {
-          Alert.alert("Erreur", "Une erreur est survenue");
-        }
-      }
-    };
-  
-    const handleDeleteAccount = async () => {
-      Alert.alert(
-        "Confirmation",
-        "Voulez-vous vraiment supprimer votre profil ?",
-        [
-          { text: "Annuler", style: "cancel" },
-          {
-            text: "Supprimer",
-            onPress: async () => {
-              try {
-                await deleteProfile();
-                Alert.alert("Profil supprimé", "Votre profil a été supprimé avec succès.");
-                setUsername("");
-                setEmail("");
-                setProfileImage(undefined);
-                setSelectedImage(undefined);
-                await SecureStore.deleteItemAsync("authToken");
-                setAuthenticated(false);
+    const [isLoading, setIsLoading] = useState(true); // Chargement initial des données
+    const [isSaving, setIsSaving] = useState(false); // Indicateur pour sauvegarde/suppression/logout
+    const [error, setError] = useState<string | null>(null);
+
+    // Fonction pour charger les données utilisateur
+    const fetchUserData = useCallback(async () => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const data = await getUserDataApi();
+            setUserData(data);
+            setTempUsername(data.username || "");
+            setTempEmail(data.email || "");
+            // Utiliser l'URL de l'image venant des données utilisateur
+            setProfileImageUrl(data.profileImage || null);
+            setSelectedImageUri(null); // Réinitialiser l'image sélectionnée localement
+        } catch (err) {
+            console.error("Failed to fetch user data:", err);
+            setError(
+                err instanceof ApiError || err instanceof Error
+                    ? err.message
+                    : "Failed to load profile."
+            );
+            // Déconnecter si le token est invalide (erreur 401/403)
+            if (
+                err instanceof ApiError &&
+                (err.status === 401 || err.status === 403)
+            ) {
+                await contextLogout();
                 router.replace("/login");
-              } catch (error) {
-                Alert.alert("Erreur", "La suppression du profil a échoué. Veuillez réessayer.");
-              }
-            },
-            style: "destructive",
-          },
-        ]
-      );
+            }
+        } finally {
+            setIsLoading(false);
+        }
+    }, [contextLogout, router]);
+
+    // Charger les données lorsque l'écran est monté ou quand l'état d'authentification change
+    useEffect(() => {
+        if (isAuthenticated) {
+            setIsLoading(true);
+            setIsSaving(false);
+            setError(null);
+            setIsEditingUsername(false);
+            setIsEditingEmail(false);
+            fetchUserData();
+        } else {
+            setIsLoading(false);
+        }
+    }, [isAuthenticated, fetchUserData]);
+
+    // Sélection d'image
+    const pickImageAsync = async () => {
+        // Demander la permission
+        const permissionResult =
+            await ImageSelector.requestMediaLibraryPermissionsAsync();
+        if (permissionResult.granted === false) {
+            Alert.alert(
+                "Permission refusée",
+                "Vous devez autoriser l'accès à la galerie pour changer l'image."
+            );
+            return;
+        }
+
+        let result = await ImageSelector.launchImageLibraryAsync({
+            mediaTypes: ImageSelector.MediaTypeOptions.Images,
+            allowsEditing: true,
+            quality: 0.8,
+            aspect: [1, 1],
+        });
+
+        if (!result.canceled && result.assets && result.assets.length > 0) {
+            // Stocker l'URI local pour l'affichage immédiat
+            setSelectedImageUri(result.assets[0].uri);
+            await handleProfileImageUpload(result.assets[0].uri);
+            fetchUserData(); // Recharger les données utilisateur après upload
+        }
     };
-  
-    const handleLogout = async () => {
-      await SecureStore.deleteItemAsync("authToken");
-      setUsername("");
-      setEmail("");
-      setProfileImage(undefined);
-      setSelectedImage(undefined);
-      setAuthenticated(false);
-      router.replace("/(tabs)");
-    };
-  
-    return (
-      <ScrollView
-        contentContainerStyle={[
-          profileStyles.container,
-          darkMode && { backgroundColor: "#1e1e1e" },
-        ]}
-      >
-        <View style={profileStyles.content}>
-          <View style={profileStyles.imageSection}>
-            <View style={profileStyles.imageContainer}>
-              <Image
-                source={
-                  selectedImage
-                    ? { uri: selectedImage }
-                    : profileImage
-                    ? { uri: profileImage }
-                    : DefaultProfileImage
+
+    // Upload de l'image de profil
+    const handleProfileImageUpload = async (imageUri: string) => {
+        setIsSaving(true);
+        setError(null);
+        try {
+            const filename =
+                imageUri.split("/").pop() || `profile-${Date.now()}.jpg`;
+            const match = /\.(\w+)$/.exec(filename);
+            const type = match ? `image/${match[1]}` : `image/jpeg`;
+
+            const response = await updateProfileImageApi({
+                uri: imageUri,
+                name: filename,
+                type,
+            });
+
+            if (response && response.imageUrl) {
+                setProfileImageUrl(response.imageUrl);
+                // Mettre à jour userData
+                if (userData) {
+                    setUserData({
+                        ...userData,
+                        profileImage: response.imageUrl,
+                    });
                 }
-                style={profileStyles.profileImage}
-              />
-            </View>
-            <TouchableOpacity
-              style={profileStyles.editImageButton}
-              onPress={pickImageAsync}
+            }
+            setSelectedImageUri(null);
+            Alert.alert(
+                "Succès",
+                response.message || "Image de profil mise à jour."
+            );
+        } catch (err) {
+            console.error("Profile image upload failed:", err);
+            setError(
+                err instanceof ApiError || err instanceof Error
+                    ? err.message
+                    : "Failed to upload image."
+            );
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    // Sauvegarde des changements (username/email)
+    const handleSaveChanges = async () => {
+        // Vérifier s'il y a des changements réels
+        if (
+            tempUsername === userData?.username &&
+            tempEmail === userData?.email
+        ) {
+            Alert.alert("Aucun changement", "Aucune modification détectée.");
+            setIsEditingUsername(false);
+            setIsEditingEmail(false);
+            return;
+        }
+
+        setIsSaving(true);
+        setError(null);
+        try {
+            // Préparer les données à envoyer (seulement les champs modifiés)
+            const updateData: { username?: string; email?: string } = {};
+            if (tempUsername !== userData?.username) {
+                updateData.username = tempUsername;
+            }
+            if (tempEmail !== userData?.email) {
+                updateData.email = tempEmail;
+            }
+
+            // Appeler l'API de mise à jour
+            const updatedData = await updateUserApi(updateData);
+
+            // Mettre à jour l'état local avec les données retournées
+            setUserData(updatedData);
+            setTempUsername(updatedData.username || "");
+            setTempEmail(updatedData.email || "");
+
+            // Fermer les modes édition
+            setIsEditingUsername(false);
+            setIsEditingEmail(false);
+
+            Alert.alert("Succès", "Profil mis à jour avec succès.");
+        } catch (err) {
+            console.error("Profile update failed:", err);
+            setError(
+                err instanceof ApiError || err instanceof Error
+                    ? err.message
+                    : "Failed to update profile."
+            );
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    // Suppression du compte
+    const handleDeleteAccount = async () => {
+        Alert.alert(
+            "Confirmation",
+            "Êtes-vous sûr de vouloir supprimer définitivement votre compte ? Cette action est irréversible.",
+            [
+                { text: "Annuler", style: "cancel" },
+                {
+                    text: "Supprimer",
+                    onPress: async () => {
+                        setIsSaving(true);
+                        setError(null);
+                        try {
+                            await deleteProfileApi();
+                            Alert.alert(
+                                "Compte supprimé",
+                                "Votre compte a été supprimé."
+                            );
+                            await contextLogout();
+                            router.replace("/login");
+                        } catch (err) {
+                            console.error("Delete account failed:", err);
+                            setError(
+                                err instanceof ApiError || err instanceof Error
+                                    ? err.message
+                                    : "Failed to delete account."
+                            );
+                            setIsSaving(false);
+                        }
+                    },
+                    style: "destructive",
+                },
+            ]
+        );
+    };
+
+    // Déconnexion
+    const handleLogout = async () => {
+        setIsSaving(true);
+        try {
+            await logoutAndRedirect();
+            setIsLoading(false);
+            setIsSaving(false);
+        } catch (error) {
+            console.error("Logout process failed:", error);
+            Alert.alert("Erreur", "La déconnexion a échoué.");
+            setIsSaving(false);
+        }
+    };
+
+    // --- Rendu ---
+
+    if (isLoading) {
+        return (
+            <View
+                style={[
+                    profileStyles.container,
+                    styles.center,
+                    darkMode && { backgroundColor: "#1e1e1e" },
+                ]}
             >
-              <Text style={profileStyles.editImageText}>
-                Edit profile picture
-              </Text>
-            </TouchableOpacity>
-          </View>
-  
-          <View style={profileStyles.infoSection}>
-            <View style={profileStyles.inputContainer}>
-              <TextInput
-                style={[
-                  profileStyles.input,
-                  darkMode && { backgroundColor: "#333", color: "#f5f5f5", borderColor: "#555" },
-                ]}
-                value={isEditingUsername ? tempUsername : username}
-                onChangeText={(text) => {
-                  setTempUsername(text);
-                  setHasChanges(true);
-                }}
-                editable={isEditingUsername}
-                placeholder="Username"
-                placeholderTextColor={darkMode ? "#aaa" : "#999"}
-              />
-              <TouchableOpacity
-                style={profileStyles.editButton}
-                onPress={() => {
-                  if (isEditingUsername) setUsername(tempUsername);
-                  setIsEditingUsername(!isEditingUsername);
-                }}
-              >
-                <Pencil size={20} color="#007AFF" />
-              </TouchableOpacity>
+                <ActivityIndicator
+                    size="large"
+                    color={darkMode ? "#fff" : "#000"}
+                />
             </View>
-  
-            <View style={profileStyles.inputContainer}>
-              <TextInput
+        );
+    }
+
+    if (error && !userData) {
+        return (
+            <View
                 style={[
-                  profileStyles.input,
-                  darkMode && { backgroundColor: "#333", color: "#f5f5f5", borderColor: "#555" },
+                    profileStyles.container,
+                    styles.center,
+                    darkMode && { backgroundColor: "#1e1e1e" },
                 ]}
-                value={isEditingEmail ? tempEmail : email}
-                onChangeText={(text) => {
-                  setTempEmail(text);
-                  setHasChanges(true);
-                }}
-                editable={isEditingEmail}
-                placeholder="Email"
-                keyboardType="email-address"
-                placeholderTextColor={darkMode ? "#aaa" : "#999"}
-              />
-              <TouchableOpacity
-                style={profileStyles.editButton}
-                onPress={() => {
-                  if (isEditingEmail) setEmail(tempEmail);
-                  setIsEditingEmail(!isEditingEmail);
-                }}
-              >
-                <Pencil size={20} color="#007AFF" />
-              </TouchableOpacity>
+            >
+                <Text
+                    style={[styles.errorText, darkMode && { color: "#ff6666" }]}
+                >
+                    {error}
+                </Text>
+                <TouchableOpacity
+                    onPress={fetchUserData}
+                    style={profileStyles.retryButton}
+                >
+                    <Text style={profileStyles.retryButtonText}>Réessayer</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                    onPress={handleLogout}
+                    style={profileStyles.logOutButton}
+                >
+                    <LogOutIcon size={20} color="white" />
+                    <Text style={profileStyles.logOutButtonText}>Log out</Text>
+                </TouchableOpacity>
             </View>
-          </View>
-  
-          <View style={profileStyles.actionButtons}>
-            {hasChanges && (
-              <TouchableOpacity
-                style={profileStyles.saveButton}
-                onPress={handleSave}
-              >
-                <Save size={20} color="white" />
-                <Text style={profileStyles.saveButtonText}>Save Changes</Text>
-              </TouchableOpacity>
+        );
+    }
+
+    // Déterminer l'URL de l'image à afficher (priorité: image locale sélectionnée, puis URL API, puis défaut)
+    const imageSource = selectedImageUri
+        ? { uri: selectedImageUri }
+        : profileImageUrl
+        ? { uri: profileImageUrl }
+        : DefaultProfileImage;
+
+    // Vérifier s'il y a des changements dans username ou email
+    const hasUsernameChanges = userData && tempUsername !== userData.username;
+    const hasEmailChanges = userData && tempEmail !== userData.email;
+    const hasTextChanges = hasUsernameChanges || hasEmailChanges;
+
+    return (
+        <ScrollView
+            contentContainerStyle={[
+                profileStyles.container,
+                darkMode && { backgroundColor: "#1e1e1e" },
+            ]}
+            keyboardShouldPersistTaps="handled"
+        >
+            {/* Afficher une erreur persistante si elle existe */}
+            {error && (
+                <Text
+                    style={[styles.errorText, darkMode && { color: "#ff6666" }]}
+                >
+                    {error}
+                </Text>
             )}
-            <TouchableOpacity
-              style={profileStyles.deleteButton}
-              onPress={handleDeleteAccount}
-            >
-              <Trash2 size={20} color="white" />
-              <Text style={profileStyles.deleteButtonText}>Delete my account</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={profileStyles.logOutButton}
-              onPress={handleLogout}
-            >
-              <LogOutIcon size={20} color="white" />
-              <Text style={profileStyles.logOutButtonText}>Log out</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </ScrollView>
+
+            <View style={profileStyles.content}>
+                <View style={profileStyles.imageSection}>
+                    <View style={profileStyles.imageContainer}>
+                        <Image
+                            source={imageSource}
+                            style={profileStyles.profileImage}
+                        />
+                    </View>
+                    <TouchableOpacity
+                        style={profileStyles.editImageButton}
+                        onPress={pickImageAsync}
+                        disabled={isSaving}
+                    >
+                        <Text style={profileStyles.editImageText}>
+                            Changer l'image
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+
+                <View style={profileStyles.infoSection}>
+                    {/* Username */}
+                    <View style={profileStyles.inputContainer}>
+                        <Text
+                            style={[
+                                profileStyles.label,
+                                darkMode && { color: "#ccc" },
+                            ]}
+                        >
+                            Username
+                        </Text>
+                        <TextInput
+                            style={[
+                                profileStyles.input,
+                                darkMode && {
+                                    backgroundColor: "#333",
+                                    color: "#f5f5f5",
+                                    borderColor: "#555",
+                                },
+                                !isEditingUsername && styles.inputReadOnly,
+                            ]}
+                            value={tempUsername}
+                            onChangeText={setTempUsername}
+                            editable={isEditingUsername && !isSaving}
+                            placeholder="Username"
+                            placeholderTextColor={darkMode ? "#aaa" : "#999"}
+                            autoCapitalize="none"
+                        />
+                        <TouchableOpacity
+                            style={profileStyles.editButton}
+                            onPress={() => {
+                                setIsEditingUsername(!isEditingUsername);
+                                // Si on désactive l'édition, on réinitialise le champ
+                                if (isEditingUsername) {
+                                    setTempUsername(userData?.username || "");
+                                }
+                            }}
+                            disabled={isSaving}
+                        >
+                            <Pencil
+                                size={20}
+                                color={
+                                    isEditingUsername ? "#ff6347" : "#007AFF"
+                                }
+                            />
+                        </TouchableOpacity>
+                    </View>
+
+                    {/* Email */}
+                    <View style={profileStyles.inputContainer}>
+                        <Text
+                            style={[
+                                profileStyles.label,
+                                darkMode && { color: "#ccc" },
+                            ]}
+                        >
+                            Email
+                        </Text>
+                        <TextInput
+                            style={[
+                                profileStyles.input,
+                                darkMode && {
+                                    backgroundColor: "#333",
+                                    color: "#f5f5f5",
+                                    borderColor: "#555",
+                                },
+                                !isEditingEmail && styles.inputReadOnly,
+                            ]}
+                            value={tempEmail}
+                            onChangeText={setTempEmail}
+                            editable={isEditingEmail && !isSaving}
+                            placeholder="Email"
+                            keyboardType="email-address"
+                            placeholderTextColor={darkMode ? "#aaa" : "#999"}
+                            autoCapitalize="none"
+                        />
+                        <TouchableOpacity
+                            style={profileStyles.editButton}
+                            onPress={() => {
+                                setIsEditingEmail(!isEditingEmail);
+                                // Si on désactive l'édition, on réinitialise le champ
+                                if (isEditingEmail) {
+                                    setTempEmail(userData?.email || "");
+                                }
+                            }}
+                            disabled={isSaving}
+                        >
+                            <Pencil
+                                size={20}
+                                color={isEditingEmail ? "#ff6347" : "#007AFF"}
+                            />
+                        </TouchableOpacity>
+                    </View>
+                </View>
+
+                {/* Boutons d'action */}
+                <View style={profileStyles.actionButtons}>
+                    {/* Afficher le bouton Save si au moins un champ est modifié */}
+                    {(hasTextChanges ||
+                        isEditingUsername ||
+                        isEditingEmail) && (
+                        <TouchableOpacity
+                            style={[
+                                profileStyles.saveButton,
+                                isSaving && styles.buttonDisabled,
+                            ]}
+                            onPress={handleSaveChanges}
+                            disabled={
+                                isSaving ||
+                                (!hasTextChanges &&
+                                    !isEditingUsername &&
+                                    !isEditingEmail)
+                            }
+                        >
+                            {isSaving ? (
+                                <ActivityIndicator color="white" size="small" />
+                            ) : (
+                                <>
+                                    <Save size={20} color="white" />
+                                    <Text style={profileStyles.saveButtonText}>
+                                        Save Changes
+                                    </Text>
+                                </>
+                            )}
+                        </TouchableOpacity>
+                    )}
+
+                    <TouchableOpacity
+                        style={[
+                            profileStyles.deleteButton,
+                            isSaving && styles.buttonDisabled,
+                        ]}
+                        onPress={handleDeleteAccount}
+                        disabled={isSaving}
+                    >
+                        <Trash2 size={20} color="white" />
+                        <Text style={profileStyles.deleteButtonText}>
+                            Delete my account
+                        </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={[
+                            profileStyles.logOutButton,
+                            isSaving && styles.buttonDisabled,
+                        ]}
+                        onPress={handleLogout}
+                        disabled={isSaving}
+                    >
+                        <LogOutIcon size={20} color="white" />
+                        <Text style={profileStyles.logOutButtonText}>
+                            Log out
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+        </ScrollView>
     );
-  }
-  
+}
+
+// Styles locaux
+const styles = StyleSheet.create({
+    center: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        padding: 20,
+    },
+    errorText: {
+        color: "red",
+        textAlign: "center",
+        marginBottom: 10,
+        paddingHorizontal: 20,
+    },
+    inputReadOnly: {
+        backgroundColor: "#eee", // Grisé léger pour indiquer non éditable
+    },
+    buttonDisabled: {
+        opacity: 0.6,
+    },
+});

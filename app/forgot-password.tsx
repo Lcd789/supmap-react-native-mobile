@@ -9,7 +9,7 @@ import {
   Pressable,
   View,
 } from "react-native";
-import { forgotPassword } from "@/hooks/authentication/AuthenticationHooks";
+import { forgotPasswordApi } from "../hooks/authentication/authHooks";
 import { useTheme } from "@/utils/ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -26,7 +26,7 @@ export default function ForgotPassword() {
     setError(null);
     setMessage(null);
     try {
-      await forgotPassword(email);
+      await forgotPasswordApi(email);
       setMessage("Un lien de réinitialisation a été envoyé à votre adresse email.");
     } catch (err) {
       if (err instanceof Error) setError(err.message);
