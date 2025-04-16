@@ -19,12 +19,9 @@ interface RouteMapProps extends MapViewProps {
   mapRef?: React.Ref<MapView>;
   liveCoords?: { latitude: number; longitude: number } | null;
   nextStepCoord?: { latitude: number; longitude: number } | null;
-  deviceHeading?: number;
-  initialHeading?: number | null; // ✅ optional si tu veux éviter le strict
-  navigationLaunched?: boolean;   // ✅ AJOUT ICI
+  deviceHeading?: number; // inclinaison du téléphone
+  navigationLaunched?: boolean;
   alertMarkers?: AlertMarker[];
-  displayedRotation?: number;
-
 }
 
 const categoryIcons: Record<string, string> = {
@@ -42,13 +39,10 @@ export const RouteMap: React.FC<RouteMapProps> = ({
   liveCoords,
   nextStepCoord,
   deviceHeading,
-  initialHeading,
-  displayedRotation,
   navigationLaunched = false,
   alertMarkers = [],
   ...mapProps
 }) => {
-
   return (
     <MapView
       ref={mapRef}
@@ -112,8 +106,8 @@ export const RouteMap: React.FC<RouteMapProps> = ({
           coordinate={liveCoords}
           anchor={{ x: 0.5, y: 0.5 }}
           flat
-          rotation={(displayedRotation ?? 0) - 90}
-          >
+          rotation={(deviceHeading || 0) - 90} // 🔁 Correction du décalage
+        >
           <Image
             source={require("@/assets/images/arrow.png")}
             style={{ width: 40, height: 40 }}
