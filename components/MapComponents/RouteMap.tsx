@@ -1,8 +1,15 @@
 import React from "react";
 import { Image } from "react-native";
-import MapView, { Polyline, MapViewProps, Marker } from "react-native-maps";
+import MapView, {
+  Polyline,
+  MapViewProps,
+  Marker,
+} from "react-native-maps";
+import Animated, { useAnimatedStyle } from "react-native-reanimated";
 import { RouteCoordinate } from "@/types";
 import { AlertMarker } from "@/components/MapComponents/AlertReporter";
+
+const AnimatedMarker = Animated.createAnimatedComponent(Marker);
 
 interface AlternativeRoute {
   id: string;
@@ -17,7 +24,7 @@ interface RouteMapProps extends MapViewProps {
   navigationLaunched?: boolean;
   alertMarkers?: AlertMarker[];
   nextStepCoord?: { latitude: number; longitude: number } | null;
-  markerHeading?: number;
+  animatedHeading?: Animated.SharedValue<string>; // ✅ ajouté
 }
 
 export const RouteMap: React.FC<RouteMapProps> = ({
@@ -28,7 +35,7 @@ export const RouteMap: React.FC<RouteMapProps> = ({
   navigationLaunched = false,
   alertMarkers = [],
   nextStepCoord,
-  markerHeading = 0,
+  animatedHeading,
   ...mapProps
 }) => {
   const categoryIcons: Record<string, string> = {
@@ -38,6 +45,10 @@ export const RouteMap: React.FC<RouteMapProps> = ({
     obstacle: "https://img.icons8.com/color/96/error--v1.png",
     accident: "https://img.icons8.com/color/96/car-crash.png",
   };
+
+  const markerStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: animatedHeading?.value ?? "0deg" }],
+  }));
 
   return (
     <MapView
@@ -68,19 +79,19 @@ export const RouteMap: React.FC<RouteMapProps> = ({
         ))}
 
       {/* Position de l’utilisateur, orientée */}
-      {liveCoords && (
-        <Marker
+      {liveCoords && animatedHeading && (
+        <AnimatedMarker
           coordinate={liveCoords}
           anchor={{ x: 0.5, y: 0.5 }}
           flat
-          rotation={markerHeading}
+          style={markerStyle}
         >
           <Image
             source={require("@/assets/images/arrow.png")}
             style={{ width: 40, height: 40 }}
             resizeMode="contain"
           />
-        </Marker>
+        </AnimatedMarker>
       )}
 
       {/* Prochaine étape (optionnel) */}

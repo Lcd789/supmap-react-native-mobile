@@ -5,6 +5,7 @@ import Animated, {
   useAnimatedStyle,
   withTiming,
   Easing,
+  useDerivedValue,
   interpolate,
   withSpring,
   withDelay,
@@ -26,6 +27,8 @@ import { RouteCalculationResult, TransportMode, Waypoint } from "@/types";
 import { AlertVerifier } from "@/components/MapComponents/AlertVerifier";
 import { useTheme } from "@/utils/ThemeContext";
 import { Magnetometer } from 'expo-sensors';
+import * as Speech from "expo-speech";
+
 
 type RouteWithId = RouteCalculationResult & { id: string };
 
@@ -50,6 +53,8 @@ export default function Home() {
   const lastPolylineIndex = useRef<number>(0);
   const mapRef = useRef<any>(null);
   const [deviceHeading, setDeviceHeading] = useState<number>(0);
+  const heading = useSharedValue(0);
+  const animatedHeading = useDerivedValue(() => `${heading.value}deg`);
 
   const searchBarAnimation = useSharedValue(0);
   const routeInfoAnimation = useSharedValue(0);
@@ -73,11 +78,18 @@ export default function Home() {
     const sub = Magnetometer.addListener(({ x, y }) => {
       let angle = Math.atan2(-x, y) * (180 / Math.PI);
       angle = angle >= 0 ? angle : angle + 360;
-      setDeviceHeading(angle);
+  
+      const delta = angle - heading.value;
+      if (Math.abs(delta) > 180) {
+        angle = heading.value + (delta > 0 ? delta - 360 : delta + 360);
+      }
+  
+      heading.value = withTiming(angle, { duration: 100 });
     });
     Magnetometer.setUpdateInterval(100);
     return () => sub.remove();
   }, []);
+  
 
   useEffect(() => {
     if (
@@ -96,9 +108,21 @@ export default function Home() {
       const distanceToEnd = getDistance(liveCoords, stepEnd);
   
       if (distanceToEnd < 40) {
+        const upcomingStep = selectedRoute.steps[currentStepIndex];
+        const instruction = upcomingStep.html_instructions?.replace(/<[^>]*>/g, " ");
+        if (instruction) {
+          console.log("📢 À l'approche :", instruction);
+          Speech.stop();
+          Speech.speak(`Dans quelques mètres, ${instruction}`, {
+            language: 'fr-FR',
+            pitch: 1.0,
+            rate: 1.0,
+          });
+        }
+      
         setCurrentStepIndex((prev) => prev + 1);
-        console.log(`✅ Étape ${currentStepIndex} terminée, passage à la suivante`);
       }
+      
     }
   }, [liveCoords, navigationLaunched, selectedRoute, currentStepIndex]); 
   
@@ -322,6 +346,8 @@ export default function Home() {
     );
   };
 
+
+  
   const toggleSearchBar = () => {
     const newValue = isSearchVisible ? 0 : 1;
     if (newValue === 1) {
@@ -390,20 +416,21 @@ export default function Home() {
     >
       {mapRegion ? (
         <RouteMap
-        initialRegion={mapRegion}
-        mapRef={mapRef}
-        alternativeRoutes={[{ id: "live", polyline: getRemainingPolyline() }]}
-        selectedRouteId="live"
-        liveCoords={liveCoords}
-        markerHeading={deviceHeading}
-        onPanDrag={() => setUserHasMovedMap(true)}
-        navigationLaunched={navigationLaunched}
-        nextStepCoord={selectedRoute?.steps?.[currentStepIndex]?.end_location && {
-          latitude: selectedRoute.steps[currentStepIndex].end_location.lat,
-          longitude: selectedRoute.steps[currentStepIndex].end_location.lng,
-        }}
-        alertMarkers={alertMarkers}
-      />
+          initialRegion={mapRegion}
+          mapRef={mapRef}
+          alternativeRoutes={[{ id: "live", polyline: getRemainingPolyline() }]}
+          selectedRouteId="live"
+          liveCoords={liveCoords}
+          animatedHeading={animatedHeading} // ✅ ICI
+          onPanDrag={() => setUserHasMovedMap(true)}
+          navigationLaunched={navigationLaunched}
+          nextStepCoord={selectedRoute?.steps?.[currentStepIndex]?.end_location && {
+            latitude: selectedRoute.steps[currentStepIndex].end_location.lat,
+            longitude: selectedRoute.steps[currentStepIndex].end_location.lng,
+          }}
+          alertMarkers={alertMarkers}
+        />
+
     ) : (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
         <ActivityIndicator size="large" color="#2196F3" />
@@ -415,10 +442,12 @@ export default function Home() {
         navigationLaunched &&
         currentStepIndex < selectedRoute.steps.length && (
           <NextStepBanner
-            nextStep={selectedRoute.steps[currentStepIndex]}
-            onToggleSteps={toggleSteps}
-          />
+          key={currentStepIndex}
+          nextStep={selectedRoute.steps[currentStepIndex]}
+          onToggleSteps={toggleSteps}
+        />
       )}
+
 
       {selectedRoute &&
         !isSearchVisible &&

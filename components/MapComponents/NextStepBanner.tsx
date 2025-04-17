@@ -22,6 +22,7 @@ export const NextStepBanner: React.FC<NextStepBannerProps> = ({
     useEffect(() => {
         if (isVoiceEnabled && nextStep && nextStep.html_instructions) {
             const instruction = nextStep.html_instructions.replace(/<[^>]*>/g, " ");
+            console.log("🔊 Nouvelle instruction vocale :", instruction); // ✅ Log pour debug
             Speech.stop();
             Speech.speak(instruction, {
                 language: 'fr-FR',
@@ -30,6 +31,7 @@ export const NextStepBanner: React.FC<NextStepBannerProps> = ({
             });
         }
     }, [nextStep, isVoiceEnabled]);
+    
 
     const toggleVoice = () => {
         setIsVoiceEnabled(prev => !prev);
