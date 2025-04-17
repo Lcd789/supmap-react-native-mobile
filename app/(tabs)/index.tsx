@@ -48,14 +48,12 @@ export default function Home() {
   const floatingButtonOffset = useSharedValue(100);
   const [userHasMovedMap, setUserHasMovedMap] = useState(false);
   const lastPolylineIndex = useRef<number>(0);
-  const [deviceHeading, setDeviceHeading] = useState(0);
-
   const mapRef = useRef<any>(null);
+  const [deviceHeading, setDeviceHeading] = useState<number>(0);
 
   const searchBarAnimation = useSharedValue(0);
   const routeInfoAnimation = useSharedValue(0);
   const stepsAnimation = useSharedValue(0);
-  const lastCameraUpdate = useRef<number>(0);
 
   const { mapRegion, setMapRegion, liveCoords } = useLocation(navigationLaunched);
   const { routeInfo, isLoading, error, calculateRoute } = useRoute();
@@ -64,29 +62,21 @@ export default function Home() {
     if (navigationLaunched && selectedRoute) {
       routeInfoAnimation.value = withDelay(
         200,
-        withSpring(1, {
-          damping: 15,
-          stiffness: 100,
-        })
+        withSpring(1, { damping: 15, stiffness: 100 })
       );
     } else {
-      routeInfoAnimation.value = withTiming(0, {
-        duration: 200,
-        easing: Easing.bezier(0.25, 0.1, 0.25, 1),
-      });
+      routeInfoAnimation.value = withTiming(0, { duration: 200, easing: Easing.bezier(0.25, 0.1, 0.25, 1) });
     }
   }, [selectedRoute, navigationLaunched]);
 
   useEffect(() => {
-    const subscription = Magnetometer.addListener(data => {
-      const { x, y } = data;
-      let angle = Math.atan2(-x, y) * (180 / Math.PI)
+    const sub = Magnetometer.addListener(({ x, y }) => {
+      let angle = Math.atan2(-x, y) * (180 / Math.PI);
       angle = angle >= 0 ? angle : angle + 360;
       setDeviceHeading(angle);
-      
     });
-    Magnetometer.setUpdateInterval(200);
-    return () => subscription.remove();
+    Magnetometer.setUpdateInterval(100);
+    return () => sub.remove();
   }, []);
 
   useEffect(() => {
@@ -105,41 +95,13 @@ export default function Home() {
   
       const distanceToEnd = getDistance(liveCoords, stepEnd);
   
-      // ✅ Augmentation de la tolérance ici
       if (distanceToEnd < 40) {
         setCurrentStepIndex((prev) => prev + 1);
         console.log(`✅ Étape ${currentStepIndex} terminée, passage à la suivante`);
       }
     }
-  }, [liveCoords, navigationLaunched, selectedRoute, currentStepIndex]);
+  }, [liveCoords, navigationLaunched, selectedRoute, currentStepIndex]); 
   
-
-  useEffect(() => {
-    if (
-      navigationLaunched &&
-      liveCoords &&
-      mapRef.current &&
-      !userHasMovedMap
-    ) {
-      const now = Date.now();
-      if (now - lastCameraUpdate.current > 500) {
-        lastCameraUpdate.current = now;
-        mapRef.current.animateCamera(
-          {
-            center: {
-              latitude: liveCoords.latitude,
-              longitude: liveCoords.longitude,
-            },
-            heading: deviceHeading,
-            pitch: 15,
-            zoom: 15,
-          },
-          { duration: 800 }
-        );
-      }
-    }
-  }, [liveCoords, navigationLaunched, userHasMovedMap, deviceHeading]);
-
   useEffect(() => {
     floatingButtonOffset.value = withTiming(navigationLaunched ? 160 : 100, {
       duration: 300,
@@ -210,6 +172,21 @@ export default function Home() {
 
     return selectedRoute.polyline.slice(lastPolylineIndex.current);
   };
+  
+  useEffect(() => {
+    if (navigationLaunched && liveCoords && mapRef.current) {
+      mapRef.current.animateCamera(
+        {
+          center: liveCoords,
+          heading: deviceHeading,
+          pitch: 15,
+          zoom: 15,
+        },
+        { duration: 300 }
+      );
+    }
+  }, [deviceHeading, navigationLaunched, liveCoords]);
+  
 
   const handleSearch = useCallback(async () => {
     if (!origin.trim() || !destination.trim()) return;
@@ -413,34 +390,25 @@ export default function Home() {
     >
       {mapRegion ? (
         <RouteMap
-          region={mapRegion}
-          mapRef={mapRef}
-          alternativeRoutes={[
-            {
-              id: "live",
-              polyline: getRemainingPolyline(),
-            },
-          ]}
-          selectedRouteId="live"
-          liveCoords={liveCoords}
-          deviceHeading={deviceHeading}
-          onPanDrag={() => setUserHasMovedMap(true)}
-          navigationLaunched={navigationLaunched}
-          nextStepCoord={
-            selectedRoute?.steps?.[currentStepIndex]?.end_location
-              ? {
-                  latitude: selectedRoute.steps[currentStepIndex].end_location.lat,
-                  longitude: selectedRoute.steps[currentStepIndex].end_location.lng,
-                }
-              : null
-          }
-          alertMarkers={alertMarkers}
-        />
-      ) : (
-        <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-          <ActivityIndicator size="large" color="#2196F3" />
-        </View>
-      )}
+        initialRegion={mapRegion}
+        mapRef={mapRef}
+        alternativeRoutes={[{ id: "live", polyline: getRemainingPolyline() }]}
+        selectedRouteId="live"
+        liveCoords={liveCoords}
+        markerHeading={deviceHeading}
+        onPanDrag={() => setUserHasMovedMap(true)}
+        navigationLaunched={navigationLaunched}
+        nextStepCoord={selectedRoute?.steps?.[currentStepIndex]?.end_location && {
+          latitude: selectedRoute.steps[currentStepIndex].end_location.lat,
+          longitude: selectedRoute.steps[currentStepIndex].end_location.lng,
+        }}
+        alertMarkers={alertMarkers}
+      />
+    ) : (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" color="#2196F3" />
+      </View>
+    )}
 
       {selectedRoute &&
         !isSearchVisible &&

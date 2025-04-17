@@ -1,10 +1,6 @@
 import React from "react";
 import { Image } from "react-native";
-import MapView, {
-  Polyline,
-  MapViewProps,
-  Marker,
-} from "react-native-maps";
+import MapView, { Polyline, MapViewProps, Marker } from "react-native-maps";
 import { RouteCoordinate } from "@/types";
 import { AlertMarker } from "@/components/MapComponents/AlertReporter";
 
@@ -18,56 +14,36 @@ interface RouteMapProps extends MapViewProps {
   selectedRouteId?: string;
   mapRef?: React.Ref<MapView>;
   liveCoords?: { latitude: number; longitude: number } | null;
-  nextStepCoord?: { latitude: number; longitude: number } | null;
-  deviceHeading?: number; // inclinaison du téléphone
   navigationLaunched?: boolean;
   alertMarkers?: AlertMarker[];
+  nextStepCoord?: { latitude: number; longitude: number } | null;
+  markerHeading?: number;
 }
-
-const categoryIcons: Record<string, string> = {
-  police: "https://img.icons8.com/color/96/policeman-male.png",
-  embouteillage: "https://img.icons8.com/color/96/traffic-jam.png",
-  travaux: "https://img.icons8.com/color/96/under-construction.png",
-  obstacle: "https://img.icons8.com/color/96/error--v1.png",
-  accident: "https://img.icons8.com/color/96/car-crash.png",
-};
 
 export const RouteMap: React.FC<RouteMapProps> = ({
   alternativeRoutes = [],
   selectedRouteId,
   mapRef,
   liveCoords,
-  nextStepCoord,
-  deviceHeading,
   navigationLaunched = false,
   alertMarkers = [],
+  nextStepCoord,
+  markerHeading = 0,
   ...mapProps
 }) => {
+  const categoryIcons: Record<string, string> = {
+    police: "https://img.icons8.com/color/96/policeman-male.png",
+    embouteillage: "https://img.icons8.com/color/96/traffic-jam.png",
+    travaux: "https://img.icons8.com/color/96/under-construction.png",
+    obstacle: "https://img.icons8.com/color/96/error--v1.png",
+    accident: "https://img.icons8.com/color/96/car-crash.png",
+  };
+
   return (
     <MapView
       ref={mapRef}
-      initialRegion={{
-        latitude: 46.603354,
-        longitude: 1.888334,
-        latitudeDelta: 10,
-        longitudeDelta: 10,
-      }}
       minZoomLevel={5}
       maxZoomLevel={18}
-      onRegionChangeComplete={(region) => {
-        const lat = Math.min(Math.max(region.latitude, 41.0), 51.5);
-        const lon = Math.min(Math.max(region.longitude, -5.0), 9.5);
-        if (mapRef && typeof mapRef !== "function" && mapRef.current) {
-          mapRef.current.animateToRegion(
-            {
-              ...region,
-              latitude: lat,
-              longitude: lon,
-            },
-            300
-          );
-        }
-      }}
       scrollEnabled
       zoomEnabled
       pitchEnabled
@@ -75,38 +51,29 @@ export const RouteMap: React.FC<RouteMapProps> = ({
       showsCompass
       showsUserLocation={false}
       showsMyLocationButton={false}
-      style={{
-        position: "absolute",
-        top: 0,
-        bottom: 0,
-        left: 0,
-        right: 0,
-      }}
+      style={{ position: "absolute", top: 0, bottom: 0, left: 0, right: 0 }}
       {...mapProps}
     >
+      {/* Traces de l’itinéraire */}
       {alternativeRoutes
-        .filter((route) =>
-          navigationLaunched ? route.id === selectedRouteId : true
-        )
-        .map((route) => {
-          const isSelected = route.id === selectedRouteId;
-          return (
-            <Polyline
-              key={route.id}
-              coordinates={route.polyline}
-              strokeColor={isSelected ? "#2196F3" : "rgba(0,0,0,0.3)"}
-              strokeWidth={isSelected ? 6 : 3}
-              zIndex={isSelected ? 2 : 1}
-            />
-          );
-        })}
+        .filter(route => (navigationLaunched ? route.id === selectedRouteId : true))
+        .map(route => (
+          <Polyline
+            key={route.id}
+            coordinates={route.polyline}
+            strokeColor={route.id === selectedRouteId ? "#2196F3" : "rgba(0,0,0,0.3)"}
+            strokeWidth={route.id === selectedRouteId ? 6 : 3}
+            zIndex={route.id === selectedRouteId ? 2 : 1}
+          />
+        ))}
 
+      {/* Position de l’utilisateur, orientée */}
       {liveCoords && (
         <Marker
           coordinate={liveCoords}
           anchor={{ x: 0.5, y: 0.5 }}
           flat
-          rotation={(deviceHeading || 0) - 90} // 🔁 Correction du décalage
+          rotation={markerHeading}
         >
           <Image
             source={require("@/assets/images/arrow.png")}
@@ -116,13 +83,20 @@ export const RouteMap: React.FC<RouteMapProps> = ({
         </Marker>
       )}
 
-      {alertMarkers.map((marker) => (
+      {/* Prochaine étape (optionnel) */}
+      {nextStepCoord && (
+        <Marker
+          coordinate={nextStepCoord}
+          title="Étape suivante"
+          pinColor="#2196F3"
+        />
+      )}
+
+      {/* Marqueurs d’alerte */}
+      {alertMarkers.map(marker => (
         <Marker
           key={marker.id}
-          coordinate={{
-            latitude: marker.latitude,
-            longitude: marker.longitude,
-          }}
+          coordinate={{ latitude: marker.latitude, longitude: marker.longitude }}
           title={marker.type}
         >
           <Image
