@@ -579,3 +579,278 @@ export const useCreateMapAlert = () => {
 };
 
 
+
+export interface RoutePoint {
+    latitude: number;
+    longitude: number;
+}
+
+export interface GetAlertsRequest {
+    routePoints: RoutePoint[];
+}
+
+export interface MapAlert {
+    id: string;
+    type: "ACCIDENT" | "CONSTRUCTION" | "ROAD_CLOSURE" | "TRAFFIC_JAM" | "HAZARD" | "POLICE" | "WEATHER";
+    location: {
+        latitude: number;
+        longitude: number;
+    };
+    roadName: string;
+    description: string;
+    createdAt: string;
+    updatedAt: string;
+    expiresAt: string;
+    reportedByUserId: string;
+}
+
+
+
+export const useGetAlertsAlongRoute = () => {
+    const [alerts, setAlerts] = useState<MapAlert[]>([]);
+    const [loading, setLoading] = useState<boolean>(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const getAlerts = async (route: GetAlertsRequest) => {
+        setLoading(true);
+        setError(null);
+        setAlerts([]);
+
+        try {
+            const token = await SecureStore.getItemAsync("authToken");
+
+            const response = await fetch(`${API_BASE_URL}/map/alerts/route`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify(route),
+            });
+
+            const data: { alerts: MapAlert[] | null; error: string | null } = await response.json();
+
+            if (response.ok) {
+                setAlerts(data.alerts || []);
+            } else {
+                setError(data.error || "Erreur lors de la récupération des alertes.");
+            }
+        } catch (err: unknown) {
+            if (err instanceof Error) {
+                setError(err.message);
+            } else {
+                setError("Erreur réseau ou inconnue.");
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return { getAlerts, alerts, loading, error };
+};
+
+
+export const useValidateAlert = () => {
+    const [loading, setLoading] = useState<boolean>(false);
+    const [error, setError] = useState<string | null>(null);
+    const [success, setSuccess] = useState<boolean>(false);
+
+    const validateAlert = async (id: string) => {
+        setLoading(true);
+        setError(null);
+        setSuccess(false);
+
+        try {
+            const token = await SecureStore.getItemAsync("authToken");
+
+            const response = await fetch(`${API_BASE_URL}/private/map/alert/validate/${id}`, {
+                method: "PUT",
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+
+            if (response.ok) {
+                setSuccess(true);
+            } else {
+                const errorText = await response.text();
+                setError(errorText || "Erreur lors de la validation de l'alerte.");
+            }
+        } catch (err: unknown) {
+            if (err instanceof Error) {
+                setError(err.message);
+            } else {
+                setError("Erreur réseau ou inconnue.");
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return { validateAlert, loading, error, success };
+};
+
+
+
+
+
+export const useInvalidateAlert = () => {
+    const [loading, setLoading] = useState<boolean>(false);
+    const [error, setError] = useState<string | null>(null);
+    const [success, setSuccess] = useState<boolean>(false);
+
+    const invalidateAlert = async (id: string) => {
+        setLoading(true);
+        setError(null);
+        setSuccess(false);
+
+        try {
+            const token = await SecureStore.getItemAsync("authToken");
+
+            const response = await fetch(`${API_BASE_URL}/private/map/alert/invalidate/${id}`, {
+                method: "PUT",
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+
+            if (response.ok) {
+                setSuccess(true);
+            } else {
+                const errorText = await response.text();
+                setError(errorText || "Erreur lors de l’invalidation de l’alerte.");
+            }
+        } catch (err: unknown) {
+            if (err instanceof Error) {
+                setError(err.message);
+            } else {
+                setError("Erreur réseau ou inconnue.");
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return { invalidateAlert, loading, error, success };
+};
+
+
+
+
+export interface GeoPosition {
+    latitude: number;
+    longitude: number;
+}
+
+
+
+export const useGetAlertsByPosition = () => {
+    const [alerts, setAlerts] = useState<MapAlert[]>([]);
+    const [loading, setLoading] = useState<boolean>(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const fetchAlertsByPosition = async (position: GeoPosition) => {
+        setLoading(true);
+        setError(null);
+        setAlerts([]);
+
+        try {
+            const token = await SecureStore.getItemAsync("authToken");
+
+            const response = await fetch(`${API_BASE_URL}/map/alerts/position`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify(position),
+            });
+
+            const data: { alerts: MapAlert[] | null; error: string | null } = await response.json();
+
+            if (response.ok) {
+                setAlerts(data.alerts || []);
+            } else {
+                setError(data.error || "Erreur lors de la récupération des alertes.");
+            }
+        } catch (err: unknown) {
+            if (err instanceof Error) {
+                setError(err.message);
+            } else {
+                setError("Erreur réseau ou inconnue.");
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return { alerts, fetchAlertsByPosition, loading, error };
+};
+
+
+
+
+export interface NearbyUser {
+    username: string;
+    profileImage: string;
+    lastKnownLocation: {
+        latitude: number;
+        longitude: number;
+    };
+    userRank: string;
+    rankImage: string;
+}
+
+export interface NearbyUsersResponse {
+    users: NearbyUser[] | null;
+    error: string | null;
+}
+
+
+export const useGetNearbyUsers = () => {
+    const [users, setUsers] = useState<NearbyUser[]>([]);
+    const [loading, setLoading] = useState<boolean>(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const fetchNearbyUsers = async (latitude: number, longitude: number) => {
+        setLoading(true);
+        setError(null);
+        setUsers([]);
+
+        try {
+            const token = await SecureStore.getItemAsync("authToken");
+
+            const response = await fetch(
+                `${API_BASE_URL}/private/map/nearby-users?latitude=${latitude}&longitude=${longitude}`,
+                {
+                    method: "GET",
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                }
+            );
+
+            const data: NearbyUsersResponse = await response.json();
+
+            if (response.ok) {
+                setUsers(data.users || []);
+            } else {
+                setError(data.error || "Erreur lors de la récupération des utilisateurs proches.");
+            }
+        } catch (err: unknown) {
+            if (err instanceof Error) {
+                setError(err.message);
+            } else {
+                setError("Erreur réseau ou inconnue.");
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return { fetchNearbyUsers, users, loading, error };
+};
+
+
+
+
