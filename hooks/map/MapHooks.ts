@@ -370,3 +370,212 @@ export const useGetRouteHistory = () => {
     return { routes, fetchRouteHistory, loading, error };
 };
 
+
+
+export interface RouteShareRequest {
+    startLatitude: number;
+    startLongitude: number;
+    endLatitude: number;
+    endLongitude: number;
+}
+
+export const useShareRoute = () => {
+    const [loading, setLoading] = useState<boolean>(false);
+    const [error, setError] = useState<string | null>(null);
+    const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
+
+    const shareRoute = async (data: RouteShareRequest) => {
+        setLoading(true);
+        setError(null);
+        setQrCodeUrl(null);
+
+        try {
+            const token = await SecureStore.getItemAsync("authToken");
+
+            const response = await fetch(`${API_BASE_URL}/private/map/route/share`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify(data),
+            });
+
+            if (response.ok) {
+                const qrUrl = await response.text(); // Réponse en `text/plain`
+                setQrCodeUrl(qrUrl);
+            } else {
+                const errorText = await response.text();
+                setError(errorText || "Erreur lors du partage de l'itinéraire.");
+            }
+        } catch (err: unknown) {
+            if (err instanceof Error) {
+                setError(err.message);
+            } else {
+                setError("Erreur réseau ou inconnue.");
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return { shareRoute, qrCodeUrl, loading, error };
+};
+
+
+export interface LocationShareRequest {
+    latitude: number;
+    longitude: number;
+}
+
+
+export const useShareCurrentLocation = () => {
+    const [loading, setLoading] = useState<boolean>(false);
+    const [error, setError] = useState<string | null>(null);
+    const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
+
+    const shareLocation = async (data: LocationShareRequest) => {
+        setLoading(true);
+        setError(null);
+        setQrCodeUrl(null);
+
+        try {
+            const token = await SecureStore.getItemAsync("authToken");
+
+            const response = await fetch(`${API_BASE_URL}/private/map/location/share`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify(data),
+            });
+
+            if (response.ok) {
+                const qrUrl = await response.text(); // Réponse en `text/plain`
+                setQrCodeUrl(qrUrl);
+            } else {
+                const errorText = await response.text();
+                setError(errorText || "Erreur lors du partage de la localisation.");
+            }
+        } catch (err: unknown) {
+            if (err instanceof Error) {
+                setError(err.message);
+            } else {
+                setError("Erreur réseau ou inconnue.");
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return { shareLocation, qrCodeUrl, loading, error };
+};
+
+
+
+
+export const useLogRouteRecalculation = () => {
+    const [loading, setLoading] = useState<boolean>(false);
+    const [error, setError] = useState<string | null>(null);
+    const [success, setSuccess] = useState<boolean>(false);
+
+    const logRecalculation = async () => {
+        setLoading(true);
+        setError(null);
+        setSuccess(false);
+
+        try {
+            const token = await SecureStore.getItemAsync("authToken");
+
+            const response = await fetch(`${API_BASE_URL}/private/map/route-recalculation`, {
+                method: "POST",
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+
+            if (response.ok) {
+                setSuccess(true);
+            } else {
+                const errorText = await response.text();
+                setError(errorText || "Erreur lors de l'enregistrement du recalcul d'itinéraire.");
+            }
+        } catch (err: unknown) {
+            if (err instanceof Error) {
+                setError(err.message);
+            } else {
+                setError("Erreur réseau ou inconnue.");
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return { logRecalculation, loading, error, success };
+};
+
+
+
+
+
+export type AlertType =
+    | "ACCIDENT"
+    | "CONSTRUCTION"
+    | "ROAD_CLOSURE"
+    | "TRAFFIC_JAM"
+    | "HAZARD"
+    | "POLICE"
+    | "WEATHER";
+
+export interface MapAlertRequest {
+    alertType: AlertType;
+    latitude: number;
+    longitude: number;
+}
+
+
+
+export const useCreateMapAlert = () => {
+    const [loading, setLoading] = useState<boolean>(false);
+    const [error, setError] = useState<string | null>(null);
+    const [success, setSuccess] = useState<boolean>(false);
+
+    const createAlert = async (data: MapAlertRequest) => {
+        setLoading(true);
+        setError(null);
+        setSuccess(false);
+
+        try {
+            const token = await SecureStore.getItemAsync("authToken");
+
+            const response = await fetch(`${API_BASE_URL}/private/map/alert`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify(data),
+            });
+
+            if (response.ok) {
+                setSuccess(true);
+            } else {
+                const errorText = await response.text();
+                setError(errorText || "Erreur lors de la création de l'alerte.");
+            }
+        } catch (err: unknown) {
+            if (err instanceof Error) {
+                setError(err.message);
+            } else {
+                setError("Erreur réseau ou inconnue.");
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return { createAlert, loading, error, success };
+};
+
+
