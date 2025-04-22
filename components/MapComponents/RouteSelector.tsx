@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   card: {
-    width: screenWidth * 0.65, // ✅ plus étroit pour forcer le scroll
+    width: screenWidth * 0.65,
     height: 160,
     backgroundColor: "rgba(255,255,255,0.95)",
     borderRadius: 16,

@@ -24,7 +24,7 @@ interface RouteMapProps extends MapViewProps {
   navigationLaunched?: boolean;
   alertMarkers?: AlertMarker[];
   nextStepCoord?: { latitude: number; longitude: number } | null;
-  animatedHeading?: Animated.SharedValue<string>; // ✅ ajouté
+  animatedHeading?: Animated.SharedValue<string>;
 }
 
 export const RouteMap: React.FC<RouteMapProps> = ({
@@ -65,7 +65,6 @@ export const RouteMap: React.FC<RouteMapProps> = ({
       style={{ position: "absolute", top: 0, bottom: 0, left: 0, right: 0 }}
       {...mapProps}
     >
-      {/* Traces de l’itinéraire */}
       {alternativeRoutes
         .filter(route => (navigationLaunched ? route.id === selectedRouteId : true))
         .map(route => (
@@ -78,7 +77,6 @@ export const RouteMap: React.FC<RouteMapProps> = ({
           />
         ))}
 
-      {/* Position de l’utilisateur, orientée */}
       {liveCoords && animatedHeading && (
         <AnimatedMarker
           coordinate={liveCoords}
@@ -94,7 +92,6 @@ export const RouteMap: React.FC<RouteMapProps> = ({
         </AnimatedMarker>
       )}
 
-      {/* Prochaine étape (optionnel) */}
       {nextStepCoord && (
         <Marker
           coordinate={nextStepCoord}
@@ -103,7 +100,6 @@ export const RouteMap: React.FC<RouteMapProps> = ({
         />
       )}
 
-      {/* Marqueurs d’alerte */}
       {alertMarkers.map(marker => (
         <Marker
           key={marker.id}

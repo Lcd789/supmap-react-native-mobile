@@ -1,62 +1,90 @@
 import { useEffect, useRef, useState } from "react";
 import * as Location from "expo-location";
-import { Magnetometer } from "expo-sensors";
-import { RouteCalculationResult } from "@/types";
+import { LocationObjectCoords } from "expo-location";
+import { Region } from "react-native-maps";
+import { RouteCoordinate } from "@/types";
+import { useSharedValue, withTiming } from "react-native-reanimated";
 
-export const useLocation = (
-  navigationLaunched: boolean,
-  selectedRoute?: RouteCalculationResult
-) => {
-  const [mapRegion, setMapRegion] = useState<any>(null);
-  const [liveCoords, setLiveCoords] = useState<{ latitude: number; longitude: number } | null>(null);
-  const [deviceHeading, setDeviceHeading] = useState<number>(0);
+export function useLocation(navigationLaunched: boolean) {
+  const [liveCoords, setLiveCoords] = useState<RouteCoordinate | null>(null);
+  const [mapRegion, setMapRegion] = useState<Region | null>(null);
+  const lastPositionRef = useRef<RouteCoordinate | null>(null);
 
-  // Écoute de l'inclinaison du téléphone (magnetometer)
+  const animatedBearing = useSharedValue("0deg");
+
+  const getBearing = (from: RouteCoordinate, to: RouteCoordinate): number => {
+    const toRad = (deg: number) => (deg * Math.PI) / 180;
+    const toDeg = (rad: number) => (rad * 180) / Math.PI;
+
+    const lat1 = toRad(from.latitude);
+    const lon1 = toRad(from.longitude);
+    const lat2 = toRad(to.latitude);
+    const lon2 = toRad(to.longitude);
+
+    const dLon = lon2 - lon1;
+
+    const y = Math.sin(dLon) * Math.cos(lat2);
+    const x =
+      Math.cos(lat1) * Math.sin(lat2) -
+      Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+
+    const bearing = toDeg(Math.atan2(y, x));
+    return (bearing + 360) % 360;
+  };
+
   useEffect(() => {
-    const subscription = Magnetometer.addListener((data) => {
-      let { x, y } = data;
-      let angle = Math.atan2(y, x) * (180 / Math.PI);
-      angle = angle - 90; // Ajustement pour correspondre à l'orientation de la flèche
-      if (angle < 0) angle += 360;
-      setDeviceHeading(angle);
-    });
+    let subscription: Location.LocationSubscription;
 
-    Magnetometer.setUpdateInterval(500);
+    const startTracking = async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        console.warn("Permission de localisation refusée");
+        return;
+      }
 
-    return () => {
-      subscription.remove();
-    };
-  }, []);
-
-  useEffect(() => {
-    Location.requestForegroundPermissionsAsync().then(({ status }) => {
-      if (status !== "granted") return;
-
-      Location.watchPositionAsync(
+      subscription = await Location.watchPositionAsync(
         {
           accuracy: Location.Accuracy.High,
+          timeInterval: 500,
           distanceInterval: 1,
         },
         (location) => {
-          const coords = {
-            latitude: location.coords.latitude,
-            longitude: location.coords.longitude,
-          };
-          setLiveCoords(coords);
-          setMapRegion({
-            ...coords,
-            latitudeDelta: 0.005,
-            longitudeDelta: 0.005,
-          });
+          const { latitude, longitude } = location.coords;
+          const currentPos = { latitude, longitude };
+
+          if (lastPositionRef.current) {
+            const bearing = getBearing(lastPositionRef.current, currentPos);
+            animatedBearing.value = withTiming(`${bearing}deg`, { duration: 300 });
+          }
+
+          lastPositionRef.current = currentPos;
+          setLiveCoords(currentPos);
+
+          if (!navigationLaunched) {
+            setMapRegion({
+              latitude,
+              longitude,
+              latitudeDelta: 0.01,
+              longitudeDelta: 0.01,
+            });
+          }
         }
       );
-    });
-  }, [navigationLaunched, selectedRoute]);
+    };
+
+    startTracking();
+
+    return () => {
+      if (subscription) {
+        subscription.remove();
+      }
+    };
+  }, [navigationLaunched]);
 
   return {
+    liveCoords,
     mapRegion,
     setMapRegion,
-    liveCoords,
-    deviceHeading,
+    animatedBearing,
   };
-};
+}

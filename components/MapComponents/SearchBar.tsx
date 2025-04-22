@@ -141,7 +141,6 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     isCurrentLocation?: boolean;
   }) => {
     if (item.isCurrentLocation) {
-      // 🔁 Juste afficher "📍 Ma position" et gérer la géoloc plus tard
       onOriginChange("📍 Ma position");
     } else {
       onOriginChange(item.description);

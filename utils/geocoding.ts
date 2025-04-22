@@ -18,7 +18,7 @@ export const getCoordsFromAddress = async (address: string) => {
   );
   const data = await res.json();
   if (data.status === "OK") {
-    return data.results[0].geometry.location; // { lat, lng }
+    return data.results[0].geometry.location;
   }
   return null;
 };

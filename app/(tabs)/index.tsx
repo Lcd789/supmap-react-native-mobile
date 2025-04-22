@@ -60,12 +60,13 @@ export default function Home() {
   const animatedHeading = useDerivedValue(() => `${heading.value}deg`);
   const announcedSteps = useRef<Set<number>>(new Set());
   const [remainingPolyline, setRemainingPolyline] = useState<RouteCoordinate[]>([]);
+  const [hasArrived, setHasArrived] = useState(false);
 
   const searchBarAnimation = useSharedValue(0);
   const routeInfoAnimation = useSharedValue(0);
   const stepsAnimation = useSharedValue(0);
 
-  const { mapRegion, setMapRegion, liveCoords } = useLocation(navigationLaunched);
+  const { mapRegion, setMapRegion, liveCoords, animatedBearing } = useLocation(navigationLaunched);
   const { routeInfo, isLoading, error, calculateRoute } = useRoute();
   const originRef = useRef(origin);
   const destinationRef = useRef(destination);
@@ -122,11 +123,8 @@ export default function Home() {
   
       const distanceToEnd = getDistance(liveCoords, stepEnd);
   
-      // ✅ Pré-annonce plus tôt (ex: 150m)
-      const earlyAnnouncementDistance = 150;
-      // ✅ Pré-annonce une seule fois
       if (
-        distanceToEnd < earlyAnnouncementDistance &&
+        distanceToEnd < 100 &&
         !announcedSteps.current.has(currentStepIndex)
       ) {
         const instruction = step.html_instructions?.replace(/<[^>]*>/g, " ");
@@ -138,15 +136,22 @@ export default function Home() {
             pitch: 1.0,
             rate: 1.0,
           });
-          announcedSteps.current.add(currentStepIndex);
         }
+        announcedSteps.current.add(currentStepIndex);
       }
-
-      // ✅ Passage à l'étape suivante (sans re-annoncer la même chose)
-      if (distanceToEnd < 40) {
+  
+      if (distanceToEnd < 30) {
         const nextIndex = currentStepIndex + 1;
+  
+        if (nextIndex >= selectedRoute.steps.length) {
+          setHasArrived(true);
+          setNavigationLaunched(false);
+          console.log("🎉 Arrivé à destination !");
+          return;
+        }
+  
         setCurrentStepIndex(nextIndex);
-
+  
         const nextStep = selectedRoute.steps[nextIndex];
         if (
           nextStep &&
@@ -164,11 +169,12 @@ export default function Home() {
             pitch: 1.0,
             rate: 1.0,
           });
-          announcedSteps.current.add(nextIndex); // 🔐 On marque comme annoncé
+          announcedSteps.current.add(nextIndex);
         }
       }
     }
   }, [liveCoords, navigationLaunched, selectedRoute, currentStepIndex]);
+  
   
   useEffect(() => {
     floatingButtonOffset.value = withTiming(navigationLaunched ? 160 : 100, {
@@ -289,7 +295,6 @@ const handleSearch = useCallback(async () => {
   setCurrentStepIndex(0);
 
   try {
-    // 📍 Ma position (origin)
     if (finalOrigin === "📍 Ma position") {
       if (!liveCoords) {
         setRouteError("Position actuelle non disponible.");
@@ -305,7 +310,6 @@ const handleSearch = useCallback(async () => {
       finalOrigin = address;
     }
 
-    // 📍 Ma position (destination)
     if (finalDestination === "📍 Ma position") {
       if (!liveCoords) {
         setRouteError("Position actuelle non disponible.");
@@ -546,7 +550,7 @@ const handleSearch = useCallback(async () => {
           alternativeRoutes={[{ id: "live", polyline: remainingPolyline }]}
           selectedRouteId="live"
           liveCoords={liveCoords}
-          animatedHeading={animatedHeading} // ✅ ICI
+          animatedHeading={animatedBearing}
           onPanDrag={() => setUserHasMovedMap(true)}
           navigationLaunched={navigationLaunched}
           nextStepCoord={selectedRoute?.steps?.[currentStepIndex]?.end_location && {
@@ -574,12 +578,17 @@ const handleSearch = useCallback(async () => {
       )}
 
 
-      {selectedRoute &&
-        !isSearchVisible &&
-        !navigationLaunched &&
-        currentStepIndex >= selectedRoute.steps.length && (
-          <ArrivalPopup />
-      )}
+        {hasArrived && !isSearchVisible && (
+          <ArrivalPopup
+            onClose={() => {
+              setHasArrived(false);
+              setSelectedRoute(null);
+              setCurrentStepIndex(0);
+              setAlternativeRoutes([]);
+            }}
+          />
+        )}
+
 
       <Animated.View style={searchBarContainerStyle} pointerEvents="box-none">
         {isSearchVisible && (
