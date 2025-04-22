@@ -11,7 +11,6 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { TransportMode, Waypoint } from "../../types";
 import { TransportModeSelector } from "./TransportModeSelector";
 import { searchBarStyles } from "../../styles/styles";
-import { getAddressFromCoords } from "@/utils/geocoding";
 import { useHistory } from "@/hooks/useHistory";
 import { Appearance } from "react-native";
 
@@ -84,28 +83,27 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     });
   }, []);
 
-    const fetchSuggestions = async (
-      text: string
-    ): Promise<{ description: string }[]> => {
-      if (text.length < 3) return [];
-      try {
-        const response = await fetch(
-          `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(
-            text
-          )}&key=${GOOGLE_PLACES_API_KEY}&language=fr&components=country:fr`
-        );
-        const data = await response.json();
-        if (data.status === "OK") {
-          return data.predictions.map((p: any) => ({
-            description: p.description,
-          }));
-        }
-      } catch (err) {
-        console.error("Erreur autocomplétion :", err);
+  const fetchSuggestions = async (
+    text: string
+  ): Promise<{ description: string }[]> => {
+    if (text.length < 3) return [];
+    try {
+      const response = await fetch(
+        `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(
+          text
+        )}&key=${GOOGLE_PLACES_API_KEY}&language=fr&components=country:fr`
+      );
+      const data = await response.json();
+      if (data.status === "OK") {
+        return data.predictions.map((p: any) => ({
+          description: p.description,
+        }));
       }
-      return [];
-    };
-
+    } catch (err) {
+      console.error("Erreur autocomplétion :", err);
+    }
+    return [];
+  };
 
   const handleOriginChange = async (text: string) => {
     onOriginChange(text);
@@ -143,28 +141,21 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     isCurrentLocation?: boolean;
   }) => {
     if (item.isCurrentLocation) {
-      if (liveCoords) {
-        try {
-          const address = await getAddressFromCoords(
-            liveCoords.latitude,
-            liveCoords.longitude
-          );
-          if (address) onOriginChange(address);
-          else alert("Impossible de récupérer l’adresse.");
-        } catch (err) {
-          console.error("Erreur reverse geocoding :", err);
-          alert("Erreur lors de la récupération de l’adresse.");
-        }
-      } else alert("Localisation non disponible.");
-    } else onOriginChange(item.description);
+      onOriginChange("📍 Ma position");
+    } else {
+      onOriginChange(item.description);
+    }
     setOriginSuggestions([]);
-    setTimeout(onSearch, 100);
   };
 
   const handleDestinationSelect = (item: { description: string }) => {
     onDestinationChange(item.description);
     setDestinationSuggestions([]);
-    setTimeout(onSearch, 100);
+    setTimeout(() => {
+      requestAnimationFrame(() => {
+        onSearch();
+      });
+    }, 150);
   };
 
   const handleWaypointSelect = (
@@ -275,6 +266,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         />
       )}
 
+      {/* Étapes */}
       {waypoints.map((wp, index) => (
         <View
           key={wp.id}

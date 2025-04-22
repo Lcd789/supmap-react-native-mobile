@@ -28,6 +28,9 @@ import { AlertVerifier } from "@/components/MapComponents/AlertVerifier";
 import { useTheme } from "@/utils/ThemeContext";
 import { Magnetometer } from 'expo-sensors';
 import * as Speech from "expo-speech";
+import { getAddressFromCoords, getCoordsFromAddress } from "@/utils/geocoding";
+import { RouteCoordinate } from "@/types";
+import ArrivalPopup from "@/components/MapComponents/ArrivalPopup";
 
 
 type RouteWithId = RouteCalculationResult & { id: string };
@@ -55,13 +58,26 @@ export default function Home() {
   const [deviceHeading, setDeviceHeading] = useState<number>(0);
   const heading = useSharedValue(0);
   const animatedHeading = useDerivedValue(() => `${heading.value}deg`);
+  const announcedSteps = useRef<Set<number>>(new Set());
+  const [remainingPolyline, setRemainingPolyline] = useState<RouteCoordinate[]>([]);
+  const [hasArrived, setHasArrived] = useState(false);
 
   const searchBarAnimation = useSharedValue(0);
   const routeInfoAnimation = useSharedValue(0);
   const stepsAnimation = useSharedValue(0);
 
-  const { mapRegion, setMapRegion, liveCoords } = useLocation(navigationLaunched);
+  const { mapRegion, setMapRegion, liveCoords, animatedBearing } = useLocation(navigationLaunched);
   const { routeInfo, isLoading, error, calculateRoute } = useRoute();
+  const originRef = useRef(origin);
+  const destinationRef = useRef(destination);
+  
+  useEffect(() => {
+    originRef.current = origin;
+  }, [origin]);
+  
+  useEffect(() => {
+    destinationRef.current = destination;
+  }, [destination]);
 
   useEffect(() => {
     if (navigationLaunched && selectedRoute) {
@@ -107,24 +123,58 @@ export default function Home() {
   
       const distanceToEnd = getDistance(liveCoords, stepEnd);
   
-      if (distanceToEnd < 40) {
-        const upcomingStep = selectedRoute.steps[currentStepIndex];
-        const instruction = upcomingStep.html_instructions?.replace(/<[^>]*>/g, " ");
+      if (
+        distanceToEnd < 100 &&
+        !announcedSteps.current.has(currentStepIndex)
+      ) {
+        const instruction = step.html_instructions?.replace(/<[^>]*>/g, " ");
         if (instruction) {
-          console.log("📢 À l'approche :", instruction);
+          console.log("📢 Pré-annonce :", instruction);
           Speech.stop();
-          Speech.speak(`Dans quelques mètres, ${instruction}`, {
+          Speech.speak(instruction, {
             language: 'fr-FR',
             pitch: 1.0,
             rate: 1.0,
           });
         }
-      
-        setCurrentStepIndex((prev) => prev + 1);
+        announcedSteps.current.add(currentStepIndex);
       }
-      
+  
+      if (distanceToEnd < 30) {
+        const nextIndex = currentStepIndex + 1;
+  
+        if (nextIndex >= selectedRoute.steps.length) {
+          setHasArrived(true);
+          setNavigationLaunched(false);
+          console.log("🎉 Arrivé à destination !");
+          return;
+        }
+  
+        setCurrentStepIndex(nextIndex);
+  
+        const nextStep = selectedRoute.steps[nextIndex];
+        if (
+          nextStep &&
+          nextStep.html_instructions &&
+          !announcedSteps.current.has(nextIndex)
+        ) {
+          const distanceMeters = nextStep.distance?.value ?? 0;
+          const km = (distanceMeters / 1000).toFixed(1);
+          const cleanInstruction = nextStep.html_instructions.replace(/<[^>]*>/g, " ");
+          const message = `Dans ${km} kilomètres, ${cleanInstruction}`;
+          console.log("🔮 Pré-étape suivante :", message);
+          Speech.stop();
+          Speech.speak(message, {
+            language: 'fr-FR',
+            pitch: 1.0,
+            rate: 1.0,
+          });
+          announcedSteps.current.add(nextIndex);
+        }
+      }
     }
-  }, [liveCoords, navigationLaunched, selectedRoute, currentStepIndex]); 
+  }, [liveCoords, navigationLaunched, selectedRoute, currentStepIndex]);
+  
   
   useEffect(() => {
     floatingButtonOffset.value = withTiming(navigationLaunched ? 160 : 100, {
@@ -211,59 +261,138 @@ export default function Home() {
     }
   }, [deviceHeading, navigationLaunched, liveCoords]);
   
+  useEffect(() => {
+    if (!selectedRoute?.polyline || !liveCoords) return;
+  
+    const index = selectedRoute.polyline.findIndex((point) => {
+      const d = getDistance(liveCoords, {
+        latitude: point.latitude,
+        longitude: point.longitude,
+      });
+      return d < 15;
+    });
+  
+    if (index !== -1) {
+      lastPolylineIndex.current = index;
+    }
+  
+    const newPolyline = selectedRoute.polyline.slice(lastPolylineIndex.current);
+    setRemainingPolyline(newPolyline);
+  }, [liveCoords, selectedRoute]);
+  
 
-  const handleSearch = useCallback(async () => {
-    if (!origin.trim() || !destination.trim()) return;
-  
-    const validWaypoints = waypoints.filter((wp) => wp.address.trim() !== "");
-  
-    toggleSearchBar();
-    setAlternativeRoutes([]);
-    setSelectedRoute(null);
-    setCurrentStepIndex(0);
-  
-    try {
-      const routeResult = await calculateRoute(
-        origin,
-        destination,
-        validWaypoints,
-        selectedMode,
-        { avoidTolls }
-      );
-  
-      if (routeResult && routeResult.length > 0) {
-        const routesWithIds: RouteWithId[] = routeResult.map((r, index) => ({
-          ...r,
-          id: `route-${index}`,
-        }));
-  
-        setAlternativeRoutes(routesWithIds);
-        setSelectedRoute(routesWithIds[0]);
-  
-        addToHistory({
-          origin,
-          destination,
-          waypoints: validWaypoints.map((wp) => wp.address),
-          mode: selectedMode,
-        });
-  
-        const { bounds } = routesWithIds[0];
-        const newRegion = {
-          latitude: (bounds.northeast.lat + bounds.southwest.lat) / 2,
-          longitude: (bounds.northeast.lng + bounds.southwest.lng) / 2,
-          latitudeDelta: Math.abs(bounds.northeast.lat - bounds.southwest.lat) * 1.5,
-          longitudeDelta: Math.abs(bounds.northeast.lng - bounds.southwest.lng) * 1.5,
-        };
-  
-        setMapRegion(newRegion);
-        if (!navigationLaunched) {
-          mapRef.current?.animateToRegion(newRegion, 1000);
+const handleSearch = useCallback(async () => {
+  let finalOrigin = originRef.current;
+  let finalDestination = destinationRef.current;
+
+  if (!finalOrigin.trim() || !finalDestination.trim()) return;
+
+  const validWaypoints = waypoints.filter((wp) => wp.address.trim() !== "");
+
+  toggleSearchBar();
+  setAlternativeRoutes([]);
+  setSelectedRoute(null);
+  setCurrentStepIndex(0);
+
+  try {
+    if (finalOrigin === "📍 Ma position") {
+      if (!liveCoords) {
+        setRouteError("Position actuelle non disponible.");
+        return;
+      }
+
+      const address = await getAddressFromCoords(liveCoords.latitude, liveCoords.longitude);
+      if (!address) {
+        setRouteError("Impossible de récupérer votre position actuelle.");
+        return;
+      }
+
+      finalOrigin = address;
+    }
+
+    if (finalDestination === "📍 Ma position") {
+      if (!liveCoords) {
+        setRouteError("Position actuelle non disponible.");
+        return;
+      }
+
+      const address = await getAddressFromCoords(liveCoords.latitude, liveCoords.longitude);
+      if (!address) {
+        setRouteError("Impossible de récupérer votre position actuelle.");
+        return;
+      }
+
+      finalDestination = address;
+    }
+
+    const needsGeocoding = (text: string) =>
+      !/\d/.test(text) && text.trim().split(" ").length < 5;
+
+    if (needsGeocoding(finalOrigin) && finalOrigin !== "📍 Ma position") {
+      const coords = await getCoordsFromAddress(finalOrigin);
+      if (coords) {
+        const address = await getAddressFromCoords(coords.lat, coords.lng);
+        if (address) {
+          finalOrigin = address;
         }
       }
-    } catch (error: any) {
-      setRouteError(error.message || "Erreur lors du calcul de l'itinéraire");
     }
-  }, [origin, destination, waypoints, selectedMode, avoidTolls, calculateRoute]);
+
+    if (needsGeocoding(finalDestination) && finalDestination !== "📍 Ma position") {
+      const coords = await getCoordsFromAddress(finalDestination);
+      if (coords) {
+        const address = await getAddressFromCoords(coords.lat, coords.lng);
+        if (address) {
+          finalDestination = address;
+        }
+      }
+    }
+
+    const routeResult = await calculateRoute(
+      finalOrigin,
+      finalDestination,
+      validWaypoints,
+      selectedMode,
+      { avoidTolls }
+    );
+
+    if (routeResult && routeResult.length > 0) {
+      const routesWithIds: RouteWithId[] = routeResult.map((r, index) => ({
+        ...r,
+        id: `route-${index}`,
+      }));
+
+      setAlternativeRoutes(routesWithIds);
+      setSelectedRoute(routesWithIds[0]);
+
+      addToHistory({
+        origin: finalOrigin,
+        destination: finalDestination,
+        waypoints: validWaypoints.map((wp) => wp.address),
+        mode: selectedMode,
+      });
+
+      const { bounds } = routesWithIds[0];
+      const newRegion = {
+        latitude: (bounds.northeast.lat + bounds.southwest.lat) / 2,
+        longitude: (bounds.northeast.lng + bounds.southwest.lng) / 2,
+        latitudeDelta: Math.abs(bounds.northeast.lat - bounds.southwest.lat) * 1.5,
+        longitudeDelta: Math.abs(bounds.northeast.lng - bounds.southwest.lng) * 1.5,
+      };
+
+      setMapRegion(newRegion);
+      if (!navigationLaunched) {
+        mapRef.current?.animateToRegion(newRegion, 1000);
+      }
+    }
+  } catch (error: any) {
+    setRouteError(error.message || "Erreur lors du calcul de l'itinéraire");
+  }
+}, [waypoints, selectedMode, avoidTolls, calculateRoute, liveCoords]);
+
+  
+  
+  
 
   {userHasMovedMap && navigationLaunched && (
     <TouchableOpacity
@@ -418,10 +547,10 @@ export default function Home() {
         <RouteMap
           initialRegion={mapRegion}
           mapRef={mapRef}
-          alternativeRoutes={[{ id: "live", polyline: getRemainingPolyline() }]}
+          alternativeRoutes={[{ id: "live", polyline: remainingPolyline }]}
           selectedRouteId="live"
           liveCoords={liveCoords}
-          animatedHeading={animatedHeading} // ✅ ICI
+          animatedHeading={animatedBearing}
           onPanDrag={() => setUserHasMovedMap(true)}
           navigationLaunched={navigationLaunched}
           nextStepCoord={selectedRoute?.steps?.[currentStepIndex]?.end_location && {
@@ -449,31 +578,17 @@ export default function Home() {
       )}
 
 
-      {selectedRoute &&
-        !isSearchVisible &&
-        !navigationLaunched &&
-        currentStepIndex >= selectedRoute.steps.length && (
-          <View
-            style={{
-              position: "absolute",
-              bottom: 140,
-              alignSelf: "center",
-              backgroundColor: "white",
-              paddingVertical: 12,
-              paddingHorizontal: 20,
-              borderRadius: 10,
-              elevation: 4,
-              shadowColor: "#000",
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.2,
-              shadowRadius: 4,
+        {hasArrived && !isSearchVisible && (
+          <ArrivalPopup
+            onClose={() => {
+              setHasArrived(false);
+              setSelectedRoute(null);
+              setCurrentStepIndex(0);
+              setAlternativeRoutes([]);
             }}
-          >
-            <Text style={{ fontWeight: "bold", fontSize: 16, textAlign: "center" }}>
-              🎉 Trajet terminé !
-            </Text>
-          </View>
-      )}
+          />
+        )}
+
 
       <Animated.View style={searchBarContainerStyle} pointerEvents="box-none">
         {isSearchVisible && (

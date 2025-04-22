@@ -22,7 +22,7 @@ export const NextStepBanner: React.FC<NextStepBannerProps> = ({
     useEffect(() => {
         if (isVoiceEnabled && nextStep && nextStep.html_instructions) {
             const instruction = nextStep.html_instructions.replace(/<[^>]*>/g, " ");
-            console.log("🔊 Nouvelle instruction vocale :", instruction); // ✅ Log pour debug
+            console.log("🔊 Nouvelle instruction vocale :", instruction);
             Speech.stop();
             Speech.speak(instruction, {
                 language: 'fr-FR',
@@ -31,7 +31,6 @@ export const NextStepBanner: React.FC<NextStepBannerProps> = ({
             });
         }
     }, [nextStep, isVoiceEnabled]);
-    
 
     const toggleVoice = () => {
         setIsVoiceEnabled(prev => !prev);
@@ -81,16 +80,16 @@ export const NextStepBanner: React.FC<NextStepBannerProps> = ({
             ? nextStep.html_instructions.replace(/<[^>]*>/g, " ")
             : "Étape suivante";
 
-    let distanceText = "";
+    const durationSeconds = nextStep.duration?.value ?? 0;
+    const minutes = Math.floor(durationSeconds / 60);
+    const seconds = durationSeconds % 60;
+    const timeText = minutes > 0 ? `${minutes} min${seconds > 0 ? ` ${seconds}s` : ""}` : `${seconds}s`;
 
-    if (typeof nextStep.distance === "object" && nextStep.distance?.text) {
-        distanceText = nextStep.duration?.text
-            ? `${nextStep.distance.text} - ${nextStep.duration.text}`
-            : nextStep.distance.text;
-    } else if (
-        typeof nextStep.distance === "string" ||
-        typeof nextStep.distance === "number"
-    ) {
+    let distanceText = "";
+    if (typeof nextStep.distance === "object" && nextStep.distance?.value !== undefined) {
+        const meters = nextStep.distance.value;
+        distanceText = meters < 1000 ? `${meters} m` : `${(meters / 1000).toFixed(1)} km`;
+    } else if (typeof nextStep.distance === "string" || typeof nextStep.distance === "number") {
         distanceText = convertDistance(nextStep.distance);
     }
 
@@ -119,12 +118,8 @@ export const NextStepBanner: React.FC<NextStepBannerProps> = ({
                     />
                 )}
                 <View style={styles.stepTextContainer}>
-                    <Text style={[styles.stepInstruction, { color: textColor }]}>
-                        {instruction}
-                    </Text>
-                    <Text style={[styles.stepDistance, { color: textColor }]}>
-                        {distanceText}
-                    </Text>
+                    <Text style={[styles.stepInstruction, { color: textColor }]}> {instruction} </Text>
+                    <Text style={[styles.stepDistance, { color: textColor }]}> {distanceText} • {timeText} </Text>
                 </View>
                 <TouchableOpacity onPress={toggleVoice} style={styles.voiceButton}>
                     <MaterialIcons
