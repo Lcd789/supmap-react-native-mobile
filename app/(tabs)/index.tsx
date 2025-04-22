@@ -28,6 +28,8 @@ import { AlertVerifier } from "@/components/MapComponents/AlertVerifier";
 import { useTheme } from "@/utils/ThemeContext";
 import { Magnetometer } from 'expo-sensors';
 import * as Speech from "expo-speech";
+import { getAddressFromCoords, getCoordsFromAddress } from "@/utils/geocoding";
+import { RouteCoordinate } from "@/types";
 
 
 type RouteWithId = RouteCalculationResult & { id: string };
@@ -56,6 +58,7 @@ export default function Home() {
   const heading = useSharedValue(0);
   const animatedHeading = useDerivedValue(() => `${heading.value}deg`);
   const announcedSteps = useRef<Set<number>>(new Set());
+  const [remainingPolyline, setRemainingPolyline] = useState<RouteCoordinate[]>([]);
 
   const searchBarAnimation = useSharedValue(0);
   const routeInfoAnimation = useSharedValue(0);
@@ -236,8 +239,30 @@ export default function Home() {
     }
   }, [deviceHeading, navigationLaunched, liveCoords]);
   
+  useEffect(() => {
+    if (!selectedRoute?.polyline || !liveCoords) return;
+  
+    const index = selectedRoute.polyline.findIndex((point) => {
+      const d = getDistance(liveCoords, {
+        latitude: point.latitude,
+        longitude: point.longitude,
+      });
+      return d < 15;
+    });
+  
+    if (index !== -1) {
+      lastPolylineIndex.current = index;
+    }
+  
+    const newPolyline = selectedRoute.polyline.slice(lastPolylineIndex.current);
+    setRemainingPolyline(newPolyline);
+  }, [liveCoords, selectedRoute]);
+  
 
   const handleSearch = useCallback(async () => {
+    let finalOrigin = origin;
+    let finalDestination = destination;
+  
     if (!origin.trim() || !destination.trim()) return;
   
     const validWaypoints = waypoints.filter((wp) => wp.address.trim() !== "");
@@ -248,9 +273,71 @@ export default function Home() {
     setCurrentStepIndex(0);
   
     try {
+      // 📍 Ma position
+      if (origin === "📍 Ma position") {
+        if (liveCoords) {
+          const address = await getAddressFromCoords(liveCoords.latitude, liveCoords.longitude);
+          if (address) {
+            setOrigin(address);
+            finalOrigin = address;
+          } else {
+            setRouteError("Impossible de récupérer votre position actuelle.");
+            return;
+          }
+        } else {
+          setRouteError("Position actuelle non disponible.");
+          return;
+        }
+      }
+  
+      // 📌 Geocode POI si texte court ou pas de numéro
+      const looksLikePOI = (text: string) => {
+        return !/\d/.test(text) && text.trim().split(" ").length < 5;
+      };
+  
+      if (looksLikePOI(origin)) {
+        const resolved = await getCoordsFromAddress(origin);
+        if (resolved) {
+          const { lat, lng } = resolved;
+          const address = await getAddressFromCoords(lat, lng);
+          if (address) {
+            setOrigin(address);
+            finalOrigin = address;
+          }
+        }
+      }
+  
+      if (destination === "📍 Ma position") {
+        if (liveCoords) {
+          const address = await getAddressFromCoords(liveCoords.latitude, liveCoords.longitude);
+          if (address) {
+            setDestination(address);
+            finalDestination = address;
+          } else {
+            setRouteError("Impossible de récupérer votre position actuelle.");
+            return;
+          }
+        } else {
+          setRouteError("Position actuelle non disponible.");
+          return;
+        }
+      }
+  
+      if (looksLikePOI(destination)) {
+        const resolved = await getCoordsFromAddress(destination);
+        if (resolved) {
+          const { lat, lng } = resolved;
+          const address = await getAddressFromCoords(lat, lng);
+          if (address) {
+            setDestination(address);
+            finalDestination = address;
+          }
+        }
+      }
+  
       const routeResult = await calculateRoute(
-        origin,
-        destination,
+        finalOrigin,
+        finalDestination,
         validWaypoints,
         selectedMode,
         { avoidTolls }
@@ -266,8 +353,8 @@ export default function Home() {
         setSelectedRoute(routesWithIds[0]);
   
         addToHistory({
-          origin,
-          destination,
+          origin: finalOrigin,
+          destination: finalDestination,
           waypoints: validWaypoints.map((wp) => wp.address),
           mode: selectedMode,
         });
@@ -289,6 +376,8 @@ export default function Home() {
       setRouteError(error.message || "Erreur lors du calcul de l'itinéraire");
     }
   }, [origin, destination, waypoints, selectedMode, avoidTolls, calculateRoute]);
+  
+  
 
   {userHasMovedMap && navigationLaunched && (
     <TouchableOpacity
@@ -443,7 +532,7 @@ export default function Home() {
         <RouteMap
           initialRegion={mapRegion}
           mapRef={mapRef}
-          alternativeRoutes={[{ id: "live", polyline: getRemainingPolyline() }]}
+          alternativeRoutes={[{ id: "live", polyline: remainingPolyline }]}
           selectedRouteId="live"
           liveCoords={liveCoords}
           animatedHeading={animatedHeading} // ✅ ICI
