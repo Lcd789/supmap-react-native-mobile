@@ -6,50 +6,53 @@ import { AuthProvider } from "@/hooks/user/AuthContext";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ThemeProvider } from "@/utils/ThemeContext";
 import SplashScreen from "../components/SplashScreen";
+import { SettingsProvider } from "@/hooks/user/SettingsContext";
 
 export default function RootLayout() {
-  const [splashDone, setSplashDone] = useState(false);
+    const [splashDone, setSplashDone] = useState(false);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setSplashDone(true);
-    }, 2500);
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setSplashDone(true);
+        }, 2500);
 
-    return () => clearTimeout(timer);
-  }, []);
+        return () => clearTimeout(timer);
+    }, []);
 
-  if (!splashDone) {
+    if (!splashDone) {
+        return (
+            <SafeAreaProvider>
+                <ThemeProvider>
+                    <SplashScreen onFinish={() => {}} />
+                </ThemeProvider>
+            </SafeAreaProvider>
+        );
+    }
+
     return (
-      <SafeAreaProvider>
-        <ThemeProvider>
-          <SplashScreen onFinish={() => {}} />
-        </ThemeProvider>
-      </SafeAreaProvider>
+        <SafeAreaProvider>
+            <ThemeProvider>
+                <AuthProvider>
+                    <SettingsProvider>
+                        <GestureHandlerRootView style={{ flex: 1 }}>
+                            <Stack>
+                                <Stack.Screen
+                                    name="(tabs)"
+                                    options={{ headerShown: false }}
+                                />
+                                <Stack.Screen
+                                    name="forgot-password"
+                                    options={{ headerShown: false }}
+                                />
+                                <Stack.Screen
+                                    name="+not-found"
+                                    options={{ title: "Page introuvable" }}
+                                />
+                            </Stack>
+                        </GestureHandlerRootView>
+                    </SettingsProvider>
+                </AuthProvider>
+            </ThemeProvider>
+        </SafeAreaProvider>
     );
-  }
-
-  return (
-    <SafeAreaProvider>
-      <ThemeProvider>
-        <AuthProvider>
-          <GestureHandlerRootView style={{ flex: 1 }}>
-            <Stack>
-              <Stack.Screen
-                name="(tabs)"
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="forgot-password"
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="+not-found"
-                options={{ title: "Page introuvable" }}
-              />
-            </Stack>
-          </GestureHandlerRootView>
-        </AuthProvider>
-      </ThemeProvider>
-    </SafeAreaProvider>
-  );
 }
