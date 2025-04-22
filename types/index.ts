@@ -12,8 +12,8 @@ export interface Step {
     maneuver?: string;
     start_location: { lat: number; lng: number };
     end_location: { lat: number; lng: number };
-  }
-  
+    instruction?: string;
+}
 
 export interface GoogleMapsResponse {
     routes: Array<{
@@ -66,8 +66,7 @@ export interface SavedTrip {
     timestamp: number;
     distance?: string;
     duration?: string;
-  }
-  
+}
 
 export interface RouteInfo {
     duration: string;

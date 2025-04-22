@@ -3,8 +3,9 @@ import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { Step } from "../../types";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import * as Speech from 'expo-speech';
+import * as Speech from "expo-speech";
 import { useTheme } from "@/utils/ThemeContext";
+import { useSettings } from "@/hooks/user/SettingsContext";
 
 interface NextStepBannerProps {
     nextStep: Step | null;
@@ -17,23 +18,30 @@ export const NextStepBanner: React.FC<NextStepBannerProps> = ({
 }) => {
     const insets = useSafeAreaInsets();
     const { darkMode } = useTheme();
-    const [isVoiceEnabled, setIsVoiceEnabled] = useState<boolean>(true);
+    const { voiceGuidance, setVoiceGuidance, unitsMetric } = useSettings();
 
     useEffect(() => {
-        if (isVoiceEnabled && nextStep && nextStep.html_instructions) {
-            const instruction = nextStep.html_instructions.replace(/<[^>]*>/g, " ");
+        setVoiceGuidance(voiceGuidance);
+    }, [voiceGuidance]);
+
+    useEffect(() => {
+        if (voiceGuidance && nextStep && nextStep.html_instructions) {
+            const instruction = nextStep.html_instructions.replace(
+                /<[^>]*>/g,
+                " "
+            );
             console.log("🔊 Nouvelle instruction vocale :", instruction);
             Speech.stop();
             Speech.speak(instruction, {
-                language: 'fr-FR',
+                language: "fr-FR",
                 pitch: 1.1,
                 rate: 1.1,
             });
         }
-    }, [nextStep, isVoiceEnabled]);
+    }, [nextStep, voiceGuidance]);
 
     const toggleVoice = () => {
-        setIsVoiceEnabled(prev => !prev);
+        setVoiceGuidance(!voiceGuidance);
         Speech.stop();
     };
 
@@ -52,10 +60,20 @@ export const NextStepBanner: React.FC<NextStepBannerProps> = ({
 
     const convertDistance = (distance: string | number): string => {
         if (typeof distance === "number") {
-            if (distance < 1) {
-                return `${Math.round(distance * 1000)} m`;
+            if (unitsMetric) {
+                // Format métrique
+                if (distance < 1) {
+                    return `${Math.round(distance * 1000)} m`;
+                }
+                return `${distance} km`;
+            } else {
+                // Format impérial
+                const miles = distance * 0.621371;
+                if (miles < 0.1) {
+                    return `${Math.round(miles * 5280)} pieds`;
+                }
+                return `${miles.toFixed(1)} miles`;
             }
-            return `${distance} km`;
         }
         return distance;
     };
@@ -65,10 +83,15 @@ export const NextStepBanner: React.FC<NextStepBannerProps> = ({
             <View
                 style={[
                     styles.arrivalContainer,
-                    { backgroundColor: darkMode ? '#333' : '#fff', paddingTop: insets.top + 8 }
+                    {
+                        backgroundColor: darkMode ? "#333" : "#fff",
+                        paddingTop: insets.top + 8,
+                    },
                 ]}
             >
-                <Text style={{ color: darkMode ? '#fff' : '#000', fontSize: 16 }}>
+                <Text
+                    style={{ color: darkMode ? "#fff" : "#000", fontSize: 16 }}
+                >
                     🎉 Vous êtes arrivé à destination !
                 </Text>
             </View>
@@ -83,13 +106,23 @@ export const NextStepBanner: React.FC<NextStepBannerProps> = ({
     const durationSeconds = nextStep.duration?.value ?? 0;
     const minutes = Math.floor(durationSeconds / 60);
     const seconds = durationSeconds % 60;
-    const timeText = minutes > 0 ? `${minutes} min${seconds > 0 ? ` ${seconds}s` : ""}` : `${seconds}s`;
+    const timeText =
+        minutes > 0
+            ? `${minutes} min${seconds > 0 ? ` ${seconds}s` : ""}`
+            : `${seconds}s`;
 
     let distanceText = "";
-    if (typeof nextStep.distance === "object" && nextStep.distance?.value !== undefined) {
+    if (
+        typeof nextStep.distance === "object" &&
+        nextStep.distance?.value !== undefined
+    ) {
         const meters = nextStep.distance.value;
-        distanceText = meters < 1000 ? `${meters} m` : `${(meters / 1000).toFixed(1)} km`;
-    } else if (typeof nextStep.distance === "string" || typeof nextStep.distance === "number") {
+        distanceText =
+            meters < 1000 ? `${meters} m` : `${(meters / 1000).toFixed(1)} km`;
+    } else if (
+        typeof nextStep.distance === "string" ||
+        typeof nextStep.distance === "number"
+    ) {
         distanceText = convertDistance(nextStep.distance);
     }
 
@@ -100,7 +133,7 @@ export const NextStepBanner: React.FC<NextStepBannerProps> = ({
         <TouchableOpacity
             style={[
                 styles.bannerContainer,
-                { backgroundColor, paddingTop: insets.top + 8 }
+                { backgroundColor, paddingTop: insets.top + 8 },
             ]}
             onPress={onToggleSteps}
         >
@@ -118,14 +151,25 @@ export const NextStepBanner: React.FC<NextStepBannerProps> = ({
                     />
                 )}
                 <View style={styles.stepTextContainer}>
-                    <Text style={[styles.stepInstruction, { color: textColor }]}> {instruction} </Text>
-                    <Text style={[styles.stepDistance, { color: textColor }]}> {distanceText} • {timeText} </Text>
+                    <Text
+                        style={[styles.stepInstruction, { color: textColor }]}
+                    >
+                        {" "}
+                        {instruction}{" "}
+                    </Text>
+                    <Text style={[styles.stepDistance, { color: textColor }]}>
+                        {" "}
+                        {distanceText} • {timeText}{" "}
+                    </Text>
                 </View>
-                <TouchableOpacity onPress={toggleVoice} style={styles.voiceButton}>
+                <TouchableOpacity
+                    onPress={toggleVoice}
+                    style={styles.voiceButton}
+                >
                     <MaterialIcons
-                        name={isVoiceEnabled ? "volume-up" : "volume-off"}
+                        name={voiceGuidance ? "volume-up" : "volume-off"}
                         size={28}
-                        color={isVoiceEnabled ? "#2196F3" : "#888"}
+                        color={voiceGuidance ? "#2196F3" : "#888"}
                     />
                 </TouchableOpacity>
             </View>
@@ -166,13 +210,13 @@ const styles = StyleSheet.create({
         padding: 8,
     },
     arrivalContainer: {
-        position: 'absolute',
+        position: "absolute",
         top: 0,
         left: 0,
         right: 0,
         paddingHorizontal: 8,
         paddingBottom: 8,
         zIndex: 1000,
-        alignItems: 'center',
-    }
+        alignItems: "center",
+    },
 });
