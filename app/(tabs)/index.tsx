@@ -61,6 +61,10 @@ export default function Home() {
   const announcedSteps = useRef<Set<number>>(new Set());
   const [remainingPolyline, setRemainingPolyline] = useState<RouteCoordinate[]>([]);
   const [hasArrived, setHasArrived] = useState(false);
+  const [isRecalculating, setIsRecalculating] = useState(false);
+  const [showOffRouteModal, setShowOffRouteModal] = useState(false);
+  const offRouteSince = useRef<number | null>(null);
+  const recalculationLock = useRef(false);
 
   const searchBarAnimation = useSharedValue(0);
   const routeInfoAnimation = useSharedValue(0);
@@ -71,6 +75,85 @@ export default function Home() {
   const originRef = useRef(origin);
   const destinationRef = useRef(destination);
   
+/**
+ * Recalcule un itinéraire complet depuis la position actuelle (liveCoords),
+ * en géocodant d’abord la position pour passer une adresse à calculateRoute.
+ */
+
+const recalculateRouteFromCurrentPosition = useCallback(async () => {
+  if (recalculationLock.current) return;
+  if (!liveCoords) {
+    console.warn("Recalcul interrompu : liveCoords est null");
+    return;
+  }
+  recalculationLock.current = true;
+  setIsRecalculating(true);
+
+  try {
+    // géocode la position actuelle
+    const address = await getAddressFromCoords(
+      liveCoords.latitude,
+      liveCoords.longitude
+    );
+    const originText =
+      address ?? `${liveCoords.latitude},${liveCoords.longitude}`;
+
+    // filtre les waypoints valides
+    const validWaypoints = waypoints.filter(
+      (wp) => wp.address.trim() !== ""
+    );
+
+    // appel calculateRoute avec une adresse valide
+    const newRoutes = await calculateRoute(
+      originText,
+      destinationRef.current,
+      validWaypoints,
+      selectedMode,
+      { avoidTolls }
+    );
+
+    if (newRoutes?.length) {
+      const withIds = newRoutes.map((r, i) => ({
+        ...r,
+        id: `recalc-${i}`,
+      }));
+      setAlternativeRoutes(withIds);
+      setSelectedRoute(withIds[0]);
+      setCurrentStepIndex(0);
+      announcedSteps.current.clear();
+
+      // recentre la carte
+      const b = withIds[0].bounds;
+      const region = {
+        latitude: (b.northeast.lat + b.southwest.lat) / 2,
+        longitude: (b.northeast.lng + b.southwest.lng) / 2,
+        latitudeDelta:
+          Math.abs(b.northeast.lat - b.southwest.lat) * 1.5,
+        longitudeDelta:
+          Math.abs(b.northeast.lng - b.southwest.lng) * 1.5,
+      };
+      setMapRegion(region);
+      mapRef.current?.animateToRegion(region, 800);
+    }
+  } catch (err: any) {
+    console.error("Erreur recalcul :", err);
+    setRouteError(
+      err.message ?? "Erreur lors du recalcul de l’itinéraire"
+    );
+  } finally {
+    setTimeout(() => {
+      setIsRecalculating(false);
+      recalculationLock.current = false;
+    }, 5000);
+  }
+}, [
+  liveCoords,
+  waypoints,
+  selectedMode,
+  avoidTolls,
+  calculateRoute,
+]);
+
   useEffect(() => {
     originRef.current = origin;
   }, [origin]);
@@ -203,26 +286,43 @@ export default function Home() {
 
   const isOffRoute = (): boolean => {
     if (!liveCoords || !selectedRoute?.polyline) return false;
-    const threshold = 30;
-    return !selectedRoute.polyline.some((point) => {
+  
+    let closePoints = 0;
+    selectedRoute.polyline.forEach((point) => {
       const distance = getDistance(liveCoords, point);
-      return distance < threshold;
-    });
-  };
-  useEffect(() => {
-    if (!navigationLaunched || !selectedRoute || !liveCoords) return;
-  
-    const interval = setInterval(() => {
-      const off = isOffRoute();
-      console.log("🧭 OffRoute ?", off);
-      if (off) {
-        console.log("⛔️ Hors de l’itinéraire détecté");
-        updateStepFromCurrentPosition();
+      if (distance < 75) {
+        closePoints++;
       }
-    }, 3000);
+    });
   
-    return () => clearInterval(interval);
-  }, [navigationLaunched, selectedRoute, liveCoords, currentStepIndex]);
+    return closePoints < 2;
+  };
+  
+// 2️⃣ Le useEffect qui déclenche le recalcul quand on est off‑route
+useEffect(() => {
+  if (!navigationLaunched || !selectedRoute || !liveCoords) return;
+
+  const interval = setInterval(() => {
+    // On ne relance que si aucun recalcul en cours et qu'on est hors‑route
+    if (!recalculationLock.current && isOffRoute()) {
+      console.log(
+        "⛔️ Off-route détecté – déclenchement recalculateRouteFromCurrentPosition"
+      );
+      recalculateRouteFromCurrentPosition();
+    }
+  }, 3000);
+
+  return () => clearInterval(interval);
+}, [
+  navigationLaunched,
+  selectedRoute,
+  liveCoords,
+  recalculateRouteFromCurrentPosition,
+]);
+
+  
+  
+  
   
   
 
@@ -415,44 +515,41 @@ const handleSearch = useCallback(async () => {
     console.log("📣 Appel de updateStepFromCurrentPosition()");
     if (!liveCoords || !selectedRoute?.steps) return;
     console.log("📍 Étape actuelle:", currentStepIndex);
-
+  
     let closestStepIndex = currentStepIndex;
     let minDistance = Infinity;
   
-    selectedRoute.steps.forEach((step, index) => {
-
-      const start = {
-        latitude: step.start_location.lat,
-        longitude: step.start_location.lng,
-      };
+    // 🔁 On ne teste que les étapes à venir (ou en cours)
+    for (let index = currentStepIndex; index < selectedRoute.steps.length; index++) {
+      const step = selectedRoute.steps[index];
+  
       const end = {
         latitude: step.end_location.lat,
         longitude: step.end_location.lng,
       };
   
-      const middle = {
-        latitude: (start.latitude + end.latitude) / 2,
-        longitude: (start.longitude + end.longitude) / 2,
-      };
-      const d = getDistance(liveCoords, middle);
-      
+      const distanceToEnd = getDistance(liveCoords, end);
+      console.log(`🧩 Étape ${index} : dEnd=${distanceToEnd.toFixed(1)}m`);
   
-      console.log(`🧩 Étape ${index} : dMid=${d.toFixed(1)}m`);
-
-
-      if (d < minDistance) {
-        minDistance = d;
+      if (distanceToEnd < minDistance) {
+        minDistance = distanceToEnd;
         closestStepIndex = index;
       }
-    });
+    }
+  
     console.log("📍 Étape la plus proche détectée:", closestStepIndex);
-
+  
+    // ✅ Mise à jour uniquement si changement
     if (closestStepIndex !== currentStepIndex) {
       setCurrentStepIndex(closestStepIndex);
-      lastPolylineIndex.current = 0;
+      announcedSteps.current.add(closestStepIndex); // ❌ ne jamais re-parler
       console.log(`📍 Étape mise à jour : ${closestStepIndex}`);
+    } else {
+      console.log("♻️ Étape inchangée, pas de recalage");
     }
   };
+  
+  
   
 
   const handleReverse = useCallback(() => {
@@ -560,9 +657,45 @@ const handleSearch = useCallback(async () => {
           alertMarkers={alertMarkers}
         />
 
+
+
     ) : (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
         <ActivityIndicator size="large" color="#2196F3" />
+      </View>
+    )}
+
+    {isRecalculating && (
+      <View
+        style={{
+          position: "absolute",
+          top: "45%",
+          left: 0,
+          right: 0,
+          alignItems: "center",
+          zIndex: 999,
+        }}
+      >
+        <View
+          style={{
+            backgroundColor: "white",
+            paddingVertical: 14,
+            paddingHorizontal: 20,
+            borderRadius: 12,
+            elevation: 6,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.2,
+            shadowRadius: 4,
+            flexDirection: "row",
+            alignItems: "center",
+          }}
+        >
+          <ActivityIndicator size="small" color="#2196F3" style={{ marginRight: 10 }} />
+          <Text style={{ fontSize: 16, fontWeight: "500" }}>
+            Recalcul de l’itinéraire...
+          </Text>
+        </View>
       </View>
     )}
 
