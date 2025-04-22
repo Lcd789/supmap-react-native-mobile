@@ -30,6 +30,7 @@ import { Magnetometer } from 'expo-sensors';
 import * as Speech from "expo-speech";
 import { getAddressFromCoords, getCoordsFromAddress } from "@/utils/geocoding";
 import { RouteCoordinate } from "@/types";
+import ArrivalPopup from "@/components/MapComponents/ArrivalPopup";
 
 
 type RouteWithId = RouteCalculationResult & { id: string };
@@ -66,6 +67,16 @@ export default function Home() {
 
   const { mapRegion, setMapRegion, liveCoords } = useLocation(navigationLaunched);
   const { routeInfo, isLoading, error, calculateRoute } = useRoute();
+  const originRef = useRef(origin);
+  const destinationRef = useRef(destination);
+  
+  useEffect(() => {
+    originRef.current = origin;
+  }, [origin]);
+  
+  useEffect(() => {
+    destinationRef.current = destination;
+  }, [destination]);
 
   useEffect(() => {
     if (navigationLaunched && selectedRoute) {
@@ -113,6 +124,7 @@ export default function Home() {
   
       // ✅ Pré-annonce plus tôt (ex: 150m)
       const earlyAnnouncementDistance = 150;
+      // ✅ Pré-annonce une seule fois
       if (
         distanceToEnd < earlyAnnouncementDistance &&
         !announcedSteps.current.has(currentStepIndex)
@@ -126,19 +138,22 @@ export default function Home() {
             pitch: 1.0,
             rate: 1.0,
           });
+          announcedSteps.current.add(currentStepIndex);
         }
-        announcedSteps.current.add(currentStepIndex);
       }
-  
-      // ✅ Passage à l'étape suivante
+
+      // ✅ Passage à l'étape suivante (sans re-annoncer la même chose)
       if (distanceToEnd < 40) {
         const nextIndex = currentStepIndex + 1;
         setCurrentStepIndex(nextIndex);
-  
-        // 📣 Annonce de la prochaine étape (si elle existe)
+
         const nextStep = selectedRoute.steps[nextIndex];
-        if (nextStep && nextStep.html_instructions && nextStep.distance?.value) {
-          const distanceMeters = nextStep.distance.value;
+        if (
+          nextStep &&
+          nextStep.html_instructions &&
+          !announcedSteps.current.has(nextIndex)
+        ) {
+          const distanceMeters = nextStep.distance?.value ?? 0;
           const km = (distanceMeters / 1000).toFixed(1);
           const cleanInstruction = nextStep.html_instructions.replace(/<[^>]*>/g, " ");
           const message = `Dans ${km} kilomètres, ${cleanInstruction}`;
@@ -149,6 +164,7 @@ export default function Home() {
             pitch: 1.0,
             rate: 1.0,
           });
+          announcedSteps.current.add(nextIndex); // 🔐 On marque comme annoncé
         }
       }
     }
@@ -259,123 +275,118 @@ export default function Home() {
   }, [liveCoords, selectedRoute]);
   
 
-  const handleSearch = useCallback(async () => {
-    let finalOrigin = origin;
-    let finalDestination = destination;
-  
-    if (!origin.trim() || !destination.trim()) return;
-  
-    const validWaypoints = waypoints.filter((wp) => wp.address.trim() !== "");
-  
-    toggleSearchBar();
-    setAlternativeRoutes([]);
-    setSelectedRoute(null);
-    setCurrentStepIndex(0);
-  
-    try {
-      // 📍 Ma position
-      if (origin === "📍 Ma position") {
-        if (liveCoords) {
-          const address = await getAddressFromCoords(liveCoords.latitude, liveCoords.longitude);
-          if (address) {
-            setOrigin(address);
-            finalOrigin = address;
-          } else {
-            setRouteError("Impossible de récupérer votre position actuelle.");
-            return;
-          }
-        } else {
-          setRouteError("Position actuelle non disponible.");
-          return;
-        }
+const handleSearch = useCallback(async () => {
+  let finalOrigin = originRef.current;
+  let finalDestination = destinationRef.current;
+
+  if (!finalOrigin.trim() || !finalDestination.trim()) return;
+
+  const validWaypoints = waypoints.filter((wp) => wp.address.trim() !== "");
+
+  toggleSearchBar();
+  setAlternativeRoutes([]);
+  setSelectedRoute(null);
+  setCurrentStepIndex(0);
+
+  try {
+    // 📍 Ma position (origin)
+    if (finalOrigin === "📍 Ma position") {
+      if (!liveCoords) {
+        setRouteError("Position actuelle non disponible.");
+        return;
       }
-  
-      // 📌 Geocode POI si texte court ou pas de numéro
-      const looksLikePOI = (text: string) => {
-        return !/\d/.test(text) && text.trim().split(" ").length < 5;
-      };
-  
-      if (looksLikePOI(origin)) {
-        const resolved = await getCoordsFromAddress(origin);
-        if (resolved) {
-          const { lat, lng } = resolved;
-          const address = await getAddressFromCoords(lat, lng);
-          if (address) {
-            setOrigin(address);
-            finalOrigin = address;
-          }
-        }
+
+      const address = await getAddressFromCoords(liveCoords.latitude, liveCoords.longitude);
+      if (!address) {
+        setRouteError("Impossible de récupérer votre position actuelle.");
+        return;
       }
-  
-      if (destination === "📍 Ma position") {
-        if (liveCoords) {
-          const address = await getAddressFromCoords(liveCoords.latitude, liveCoords.longitude);
-          if (address) {
-            setDestination(address);
-            finalDestination = address;
-          } else {
-            setRouteError("Impossible de récupérer votre position actuelle.");
-            return;
-          }
-        } else {
-          setRouteError("Position actuelle non disponible.");
-          return;
-        }
-      }
-  
-      if (looksLikePOI(destination)) {
-        const resolved = await getCoordsFromAddress(destination);
-        if (resolved) {
-          const { lat, lng } = resolved;
-          const address = await getAddressFromCoords(lat, lng);
-          if (address) {
-            setDestination(address);
-            finalDestination = address;
-          }
-        }
-      }
-  
-      const routeResult = await calculateRoute(
-        finalOrigin,
-        finalDestination,
-        validWaypoints,
-        selectedMode,
-        { avoidTolls }
-      );
-  
-      if (routeResult && routeResult.length > 0) {
-        const routesWithIds: RouteWithId[] = routeResult.map((r, index) => ({
-          ...r,
-          id: `route-${index}`,
-        }));
-  
-        setAlternativeRoutes(routesWithIds);
-        setSelectedRoute(routesWithIds[0]);
-  
-        addToHistory({
-          origin: finalOrigin,
-          destination: finalDestination,
-          waypoints: validWaypoints.map((wp) => wp.address),
-          mode: selectedMode,
-        });
-  
-        const { bounds } = routesWithIds[0];
-        const newRegion = {
-          latitude: (bounds.northeast.lat + bounds.southwest.lat) / 2,
-          longitude: (bounds.northeast.lng + bounds.southwest.lng) / 2,
-          latitudeDelta: Math.abs(bounds.northeast.lat - bounds.southwest.lat) * 1.5,
-          longitudeDelta: Math.abs(bounds.northeast.lng - bounds.southwest.lng) * 1.5,
-        };
-  
-        setMapRegion(newRegion);
-        if (!navigationLaunched) {
-          mapRef.current?.animateToRegion(newRegion, 1000);
-        }
-      }
-    } catch (error: any) {
-      setRouteError(error.message || "Erreur lors du calcul de l'itinéraire");
+
+      finalOrigin = address;
     }
-  }, [origin, destination, waypoints, selectedMode, avoidTolls, calculateRoute]);
+
+    // 📍 Ma position (destination)
+    if (finalDestination === "📍 Ma position") {
+      if (!liveCoords) {
+        setRouteError("Position actuelle non disponible.");
+        return;
+      }
+
+      const address = await getAddressFromCoords(liveCoords.latitude, liveCoords.longitude);
+      if (!address) {
+        setRouteError("Impossible de récupérer votre position actuelle.");
+        return;
+      }
+
+      finalDestination = address;
+    }
+
+    const needsGeocoding = (text: string) =>
+      !/\d/.test(text) && text.trim().split(" ").length < 5;
+
+    if (needsGeocoding(finalOrigin) && finalOrigin !== "📍 Ma position") {
+      const coords = await getCoordsFromAddress(finalOrigin);
+      if (coords) {
+        const address = await getAddressFromCoords(coords.lat, coords.lng);
+        if (address) {
+          finalOrigin = address;
+        }
+      }
+    }
+
+    if (needsGeocoding(finalDestination) && finalDestination !== "📍 Ma position") {
+      const coords = await getCoordsFromAddress(finalDestination);
+      if (coords) {
+        const address = await getAddressFromCoords(coords.lat, coords.lng);
+        if (address) {
+          finalDestination = address;
+        }
+      }
+    }
+
+    const routeResult = await calculateRoute(
+      finalOrigin,
+      finalDestination,
+      validWaypoints,
+      selectedMode,
+      { avoidTolls }
+    );
+
+    if (routeResult && routeResult.length > 0) {
+      const routesWithIds: RouteWithId[] = routeResult.map((r, index) => ({
+        ...r,
+        id: `route-${index}`,
+      }));
+
+      setAlternativeRoutes(routesWithIds);
+      setSelectedRoute(routesWithIds[0]);
+
+      addToHistory({
+        origin: finalOrigin,
+        destination: finalDestination,
+        waypoints: validWaypoints.map((wp) => wp.address),
+        mode: selectedMode,
+      });
+
+      const { bounds } = routesWithIds[0];
+      const newRegion = {
+        latitude: (bounds.northeast.lat + bounds.southwest.lat) / 2,
+        longitude: (bounds.northeast.lng + bounds.southwest.lng) / 2,
+        latitudeDelta: Math.abs(bounds.northeast.lat - bounds.southwest.lat) * 1.5,
+        longitudeDelta: Math.abs(bounds.northeast.lng - bounds.southwest.lng) * 1.5,
+      };
+
+      setMapRegion(newRegion);
+      if (!navigationLaunched) {
+        mapRef.current?.animateToRegion(newRegion, 1000);
+      }
+    }
+  } catch (error: any) {
+    setRouteError(error.message || "Erreur lors du calcul de l'itinéraire");
+  }
+}, [waypoints, selectedMode, avoidTolls, calculateRoute, liveCoords]);
+
+  
   
   
 
@@ -567,26 +578,7 @@ export default function Home() {
         !isSearchVisible &&
         !navigationLaunched &&
         currentStepIndex >= selectedRoute.steps.length && (
-          <View
-            style={{
-              position: "absolute",
-              bottom: 140,
-              alignSelf: "center",
-              backgroundColor: "white",
-              paddingVertical: 12,
-              paddingHorizontal: 20,
-              borderRadius: 10,
-              elevation: 4,
-              shadowColor: "#000",
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.2,
-              shadowRadius: 4,
-            }}
-          >
-            <Text style={{ fontWeight: "bold", fontSize: 16, textAlign: "center" }}>
-              🎉 Trajet terminé !
-            </Text>
-          </View>
+          <ArrivalPopup />
       )}
 
       <Animated.View style={searchBarContainerStyle} pointerEvents="box-none">

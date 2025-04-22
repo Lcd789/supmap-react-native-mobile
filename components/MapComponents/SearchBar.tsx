@@ -152,7 +152,11 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   const handleDestinationSelect = (item: { description: string }) => {
     onDestinationChange(item.description);
     setDestinationSuggestions([]);
-    setTimeout(onSearch, 100);
+    setTimeout(() => {
+      requestAnimationFrame(() => {
+        onSearch();
+      });
+    }, 150);
   };
 
   const handleWaypointSelect = (
