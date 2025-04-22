@@ -55,6 +55,7 @@ export default function Home() {
   const [deviceHeading, setDeviceHeading] = useState<number>(0);
   const heading = useSharedValue(0);
   const animatedHeading = useDerivedValue(() => `${heading.value}deg`);
+  const announcedSteps = useRef<Set<number>>(new Set());
 
   const searchBarAnimation = useSharedValue(0);
   const routeInfoAnimation = useSharedValue(0);
@@ -107,24 +108,48 @@ export default function Home() {
   
       const distanceToEnd = getDistance(liveCoords, stepEnd);
   
-      if (distanceToEnd < 40) {
-        const upcomingStep = selectedRoute.steps[currentStepIndex];
-        const instruction = upcomingStep.html_instructions?.replace(/<[^>]*>/g, " ");
+      // ✅ Pré-annonce plus tôt (ex: 150m)
+      const earlyAnnouncementDistance = 150;
+      if (
+        distanceToEnd < earlyAnnouncementDistance &&
+        !announcedSteps.current.has(currentStepIndex)
+      ) {
+        const instruction = step.html_instructions?.replace(/<[^>]*>/g, " ");
         if (instruction) {
-          console.log("📢 À l'approche :", instruction);
+          console.log("📢 Pré-annonce :", instruction);
           Speech.stop();
-          Speech.speak(`Dans quelques mètres, ${instruction}`, {
+          Speech.speak(instruction, {
             language: 'fr-FR',
             pitch: 1.0,
             rate: 1.0,
           });
         }
-      
-        setCurrentStepIndex((prev) => prev + 1);
+        announcedSteps.current.add(currentStepIndex);
       }
-      
+  
+      // ✅ Passage à l'étape suivante
+      if (distanceToEnd < 40) {
+        const nextIndex = currentStepIndex + 1;
+        setCurrentStepIndex(nextIndex);
+  
+        // 📣 Annonce de la prochaine étape (si elle existe)
+        const nextStep = selectedRoute.steps[nextIndex];
+        if (nextStep && nextStep.html_instructions && nextStep.distance?.value) {
+          const distanceMeters = nextStep.distance.value;
+          const km = (distanceMeters / 1000).toFixed(1);
+          const cleanInstruction = nextStep.html_instructions.replace(/<[^>]*>/g, " ");
+          const message = `Dans ${km} kilomètres, ${cleanInstruction}`;
+          console.log("🔮 Pré-étape suivante :", message);
+          Speech.stop();
+          Speech.speak(message, {
+            language: 'fr-FR',
+            pitch: 1.0,
+            rate: 1.0,
+          });
+        }
+      }
     }
-  }, [liveCoords, navigationLaunched, selectedRoute, currentStepIndex]); 
+  }, [liveCoords, navigationLaunched, selectedRoute, currentStepIndex]);
   
   useEffect(() => {
     floatingButtonOffset.value = withTiming(navigationLaunched ? 160 : 100, {
