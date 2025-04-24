@@ -18,50 +18,59 @@ import Animated, {
   Easing,
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
+import { useCreateMapAlert } from "@/hooks/map/MapHooks";
 
+// Mise à jour du type AlertType pour correspondre à votre modèle
 export type AlertType =
-  | "police"
-  | "embouteillage"
-  | "travaux"
-  | "obstacle"
-  | "accident";
+    | "ACCIDENT"
+    | "CONSTRUCTION"
+    | "ROAD_CLOSURE"
+    | "TRAFFIC_JAM"
+    | "HAZARD"
+    | "POLICE"
+    | "WEATHER";
 
 export interface AlertMarker {
-  id: number;
+  id: string;
   latitude: number;
   longitude: number;
   type: AlertType;
   createdByMe?: boolean;
 }
 
+// Icônes et catégories - mise à jour pour correspondre à vos types
+export const categoryIcons: Record<string, string> = {
+  POLICE: "https://img.icons8.com/color/96/policeman-male.png",
+  TRAFFIC_JAM: "https://img.icons8.com/color/96/traffic-jam.png",
+  CONSTRUCTION: "https://img.icons8.com/color/96/under-construction.png",
+  HAZARD: "https://img.icons8.com/color/96/error--v1.png",
+  ACCIDENT: "https://img.icons8.com/color/96/car-crash.png",
+  ROAD_CLOSURE: "https://img.icons8.com/color/96/road-closure.png",
+  WEATHER: "https://img.icons8.com/color/96/storm.png",
+};
+
+const categories = [
+  { label: "Embouteillage", value: "TRAFFIC_JAM" },
+  { label: "Police", value: "POLICE" },
+  { label: "Accident", value: "ACCIDENT" },
+  { label: "Travaux", value: "CONSTRUCTION" },
+  { label: "Route fermée", value: "ROAD_CLOSURE" },
+  { label: "Danger", value: "HAZARD" },
+  { label: "Météo", value: "WEATHER" },
+];
+
 interface AlertReporterProps {
   onAddAlert: (marker: AlertMarker) => void;
   navigationLaunched: boolean;
 }
 
-// Icônes et catégories
-const categoryIcons: Record<AlertType, string> = {
-  police: "https://img.icons8.com/color/96/policeman-male.png",
-  embouteillage: "https://img.icons8.com/color/96/traffic-jam.png",
-  travaux: "https://img.icons8.com/color/96/under-construction.png",
-  obstacle: "https://img.icons8.com/color/96/error--v1.png",
-  accident: "https://img.icons8.com/color/96/car-crash.png",
-};
-
-const categories = [
-  { label: "Embouteillage", value: "embouteillage" },
-  { label: "Police", value: "police" },
-  { label: "Accident", value: "accident" },
-  { label: "Travaux", value: "travaux" },
-  { label: "Obstacle", value: "obstacle" },
-];
-
 // Composant principal
 export const AlertReporter: React.FC<AlertReporterProps> = ({
-  onAddAlert,
-  navigationLaunched,
-}) => {
+                                                              onAddAlert,
+                                                              navigationLaunched,
+                                                            }) => {
   const [modalVisible, setModalVisible] = useState(false);
+  const { createAlert, loading, error, success } = useCreateMapAlert();
 
   // animation de la position du bouton
   const buttonOffset = useSharedValue(100);
@@ -72,6 +81,20 @@ export const AlertReporter: React.FC<AlertReporterProps> = ({
       easing: Easing.inOut(Easing.ease),
     });
   }, [navigationLaunched]);
+
+  // Surveiller le succès de création d'alerte
+  useEffect(() => {
+    if (success) {
+      Alert.alert("Merci !", "Alerte ajoutée avec succès.");
+    }
+  }, [success]);
+
+  // Surveiller les erreurs de création d'alerte
+  useEffect(() => {
+    if (error) {
+      Alert.alert("Erreur", error);
+    }
+  }, [error]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     position: "absolute",
@@ -90,6 +113,7 @@ export const AlertReporter: React.FC<AlertReporterProps> = ({
   const handleSelect = async (type: AlertType) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setModalVisible(false);
+
     let { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== "granted") {
       Alert.alert("Permission refusée", "La localisation est nécessaire.");
@@ -97,63 +121,86 @@ export const AlertReporter: React.FC<AlertReporterProps> = ({
     }
 
     const location = await Location.getCurrentPositionAsync({});
-    const marker: AlertMarker = {
-      id: Date.now(),
-      latitude: location.coords.latitude,
-      longitude: location.coords.longitude,
-      type,
-      createdByMe: true,
-    };
 
-    onAddAlert(marker);
-    Alert.alert("Merci !", `Alerte "${type}" ajoutée.`);
+    // Créer l'alerte en utilisant votre hook
+    await createAlert({
+      alertType: type,
+      latitude: location.coords.latitude,
+      longitude: location.coords.longitude
+    });
+
+    // Si succès, mettre également à jour l'interface utilisateur locale
+    console.log("Alert created successfully2:", success);
+    if (true) {
+      const newMarker: AlertMarker = {
+        id: Date.now().toString(),
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+        type,
+        createdByMe: true,
+      };
+
+      onAddAlert(newMarker);
+    }
   };
 
   return (
-    <>
-      <Animated.View style={animatedStyle}>
-        <TouchableOpacity onPress={() => setModalVisible(true)}>
-          <MaterialIcons name="warning" size={24} color="#fff" />
-        </TouchableOpacity>
-      </Animated.View>
+      <>
+        <Animated.View style={animatedStyle}>
+          <TouchableOpacity
+              onPress={() => setModalVisible(true)}
+              disabled={loading} // Désactiver le bouton pendant le chargement
+          >
+            <MaterialIcons name="warning" size={24} color="#fff" />
+          </TouchableOpacity>
+        </Animated.View>
 
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>Signaler un événement</Text>
-            <FlatList
-              data={categories}
-              keyExtractor={(item) => item.value}
-              numColumns={3}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.categoryItem}
-                  onPress={() => handleSelect(item.value as AlertType)}
-                >
-                  <Image
-                    source={{ uri: categoryIcons[item.value as AlertType] }}
-                    style={styles.categoryIcon}
-                  />
-                  <Text style={styles.categoryText}>{item.label}</Text>
-                </TouchableOpacity>
+        <Modal
+            animationType="slide"
+            transparent={true}
+            visible={modalVisible}
+            onRequestClose={() => setModalVisible(false)}
+        >
+          <View style={styles.modalBackdrop}>
+            <View style={styles.modalContainer}>
+              <Text style={styles.modalTitle}>Signaler un événement</Text>
+              <FlatList
+                  data={categories}
+                  keyExtractor={(item) => item.value}
+                  numColumns={3}
+                  renderItem={({ item }) => (
+                      <TouchableOpacity
+                          style={styles.categoryItem}
+                          onPress={() => handleSelect(item.value as AlertType)}
+                          disabled={loading} // Désactiver pendant le chargement
+                      >
+                        <Image
+                            source={{ uri: categoryIcons[item.value] }}
+                            style={styles.categoryIcon}
+                        />
+                        <Text style={styles.categoryText}>{item.label}</Text>
+                      </TouchableOpacity>
+                  )}
+                  contentContainerStyle={{ justifyContent: "center" }}
+              />
+              <TouchableOpacity
+                  onPress={() => setModalVisible(false)}
+                  style={styles.closeButton}
+                  disabled={loading} // Désactiver pendant le chargement
+              >
+                <Text style={styles.closeText}>Annuler</Text>
+              </TouchableOpacity>
+
+              {/* Indicateur de chargement si nécessaire */}
+              {loading && (
+                  <View style={styles.loadingIndicator}>
+                    <Text>Création de l'alerte...</Text>
+                  </View>
               )}
-              contentContainerStyle={{ justifyContent: "center" }}
-            />
-            <TouchableOpacity
-              onPress={() => setModalVisible(false)}
-              style={styles.closeButton}
-            >
-              <Text style={styles.closeText}>Annuler</Text>
-            </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      </Modal>
-    </>
+        </Modal>
+      </>
   );
 };
 
@@ -202,4 +249,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#333",
   },
+  loadingIndicator: {
+    marginTop: 10,
+    padding: 10,
+  }
 });

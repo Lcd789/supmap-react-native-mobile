@@ -558,19 +558,25 @@ export const useCreateMapAlert = () => {
                 body: JSON.stringify(data),
             });
 
+            console.log("Response status:", response.status);
+
             if (response.ok) {
                 setSuccess(true);
             } else {
                 const errorText = await response.text();
+                console.error("Error response text:", errorText);
                 setError(errorText || "Erreur lors de la création de l'alerte.");
             }
         } catch (err: unknown) {
             if (err instanceof Error) {
+                console.error("Caught error:", err.message);
                 setError(err.message);
             } else {
+                console.error("Unknown error occurred");
                 setError("Erreur réseau ou inconnue.");
             }
         } finally {
+            console.log("createAlert finished");
             setLoading(false);
         }
     };
@@ -704,6 +710,7 @@ export const useInvalidateAlert = () => {
         setError(null);
         setSuccess(false);
 
+
         try {
             const token = await SecureStore.getItemAsync("authToken");
 
@@ -750,36 +757,41 @@ export const useGetAlertsByPosition = () => {
     const [error, setError] = useState<string | null>(null);
 
     const fetchAlertsByPosition = async (position: GeoPosition) => {
+        console.log("fetchAlertsByPosition called with position:", position);
         setLoading(true);
         setError(null);
         setAlerts([]);
 
         try {
-            const token = await SecureStore.getItemAsync("authToken");
-
             const response = await fetch(`${API_BASE_URL}/map/alerts/position`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
                 },
                 body: JSON.stringify(position),
             });
 
+            console.log("Response status:", response.status);
             const data: { alerts: MapAlert[] | null; error: string | null } = await response.json();
+            console.log("Response data:", data);
 
             if (response.ok) {
+                console.log("Alerts fetched successfully:", data.alerts);
                 setAlerts(data.alerts || []);
             } else {
+                console.error("Error fetching alerts:", data.error);
                 setError(data.error || "Erreur lors de la récupération des alertes.");
             }
         } catch (err: unknown) {
             if (err instanceof Error) {
+                console.error("Caught error:", err.message);
                 setError(err.message);
             } else {
+                console.error("Unknown error occurred");
                 setError("Erreur réseau ou inconnue.");
             }
         } finally {
+            console.log("fetchAlertsByPosition finished");
             setLoading(false);
         }
     };

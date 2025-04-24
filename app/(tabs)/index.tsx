@@ -1013,6 +1013,15 @@ export default function Home() {
                     <MaterialIcons name="gps-fixed" size={24} color="#2196F3" />
                 </TouchableOpacity>
             )}
+            <AlertVerifier
+                liveCoords={liveCoords}
+                onDismiss={(id) => {}}
+                onAlertsUpdate={(newAlerts) => {
+                    setAlertMarkers(newAlerts);
+
+                    console.log("Nouvelles alertes reçues:", newAlerts.length);
+                }}
+            />
         </SafeAreaView>
     );
 }

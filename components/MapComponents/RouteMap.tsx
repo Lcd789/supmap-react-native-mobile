@@ -38,11 +38,13 @@ export const RouteMap: React.FC<RouteMapProps> = ({
     const { showTraffic, avoidTolls, avoidHighways } = useSettings();
 
     const categoryIcons: Record<string, string> = {
-        police: "https://img.icons8.com/color/96/policeman-male.png",
-        embouteillage: "https://img.icons8.com/color/96/traffic-jam.png",
-        travaux: "https://img.icons8.com/color/96/under-construction.png",
-        obstacle: "https://img.icons8.com/color/96/error--v1.png",
-        accident: "https://img.icons8.com/color/96/car-crash.png",
+        POLICE: "https://img.icons8.com/color/96/policeman-male.png",
+        TRAFFIC_JAM: "https://img.icons8.com/color/96/traffic-jam.png",
+        CONSTRUCTION: "https://img.icons8.com/color/96/under-construction.png",
+        HAZARD: "https://img.icons8.com/color/96/error--v1.png",
+        ACCIDENT: "https://img.icons8.com/color/96/car-crash.png",
+        ROAD_CLOSURE: "https://img.icons8.com/color/96/road-closure.png",
+        WEATHER: "https://img.icons8.com/color/96/storm.png",
     };
 
     const markerStyle = useAnimatedStyle(() => ({
