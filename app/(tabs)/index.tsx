@@ -164,7 +164,7 @@ export default function Home() {
             setTimeout(() => {
                 setIsRecalculating(false);
                 recalculationLock.current = false;
-            }, 5000);
+            }, 1000);
         }
     }, [liveCoords, waypoints, selectedMode, avoidTolls, calculateRoute]);
 
