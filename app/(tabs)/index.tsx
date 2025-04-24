@@ -113,7 +113,6 @@ export default function Home() {
         setIsRecalculating(true);
 
         try {
-            // géocode la position actuelle
             const address = await getAddressFromCoords(
                 liveCoords.latitude,
                 liveCoords.longitude
@@ -121,12 +120,10 @@ export default function Home() {
             const originText =
                 address ?? `${liveCoords.latitude},${liveCoords.longitude}`;
 
-            // filtre les waypoints valides
             const validWaypoints = waypoints.filter(
                 (wp) => wp.address.trim() !== ""
             );
 
-            // appel calculateRoute avec une adresse valide
             const newRoutes = await calculateRoute(
                 originText,
                 destinationRef.current,
@@ -317,7 +314,7 @@ export default function Home() {
         let closePoints = 0;
         selectedRoute.polyline.forEach((point) => {
             const distance = getDistance(liveCoords, point);
-            if (distance < 75) {
+            if (distance < 40) {
                 closePoints++;
             }
         });
@@ -325,12 +322,10 @@ export default function Home() {
         return closePoints < 2;
     };
 
-    // 2️⃣ Le useEffect qui déclenche le recalcul quand on est off‑route
     useEffect(() => {
         if (!navigationLaunched || !selectedRoute || !liveCoords) return;
 
         const interval = setInterval(() => {
-            // On ne relance que si aucun recalcul en cours et qu'on est hors‑route
             if (!recalculationLock.current && isOffRoute()) {
                 console.log(
                     "⛔️ Off-route détecté – déclenchement recalculateRouteFromCurrentPosition"
