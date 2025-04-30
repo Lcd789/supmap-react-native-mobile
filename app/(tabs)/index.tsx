@@ -79,7 +79,9 @@ export default function Home() {
     const [showOffRouteModal, setShowOffRouteModal] = useState(false);
     const offRouteSince = useRef<number | null>(null);
     const recalculationLock = useRef(false);
-
+    const [remainingDistance, setRemainingDistance] = useState(0);
+    const [remainingDuration, setRemainingDuration] = useState(0);
+    
     const searchBarAnimation = useSharedValue(0);
     const routeInfoAnimation = useSharedValue(0);
     const stepsAnimation = useSharedValue(0);
@@ -396,6 +398,23 @@ export default function Home() {
         );
         setRemainingPolyline(newPolyline);
     }, [liveCoords, selectedRoute]);
+
+    useEffect(() => {
+        if (!selectedRoute || !selectedRoute.steps || !liveCoords) return;
+    
+        let distance = 0;
+        let duration = 0;
+    
+        for (let i = currentStepIndex; i < selectedRoute.steps.length; i++) {
+            const step = selectedRoute.steps[i];
+            distance += step.distance?.value ?? 0;
+            duration += step.duration?.value ?? 0;
+        }
+    
+        setRemainingDistance(Math.round(distance));
+        setRemainingDuration(Math.round(duration));
+    }, [liveCoords, selectedRoute, currentStepIndex]);
+
 
     const handleSearch = useCallback(async () => {
         let finalOrigin = originRef.current;
@@ -816,16 +835,8 @@ export default function Home() {
                     key={currentStepIndex}
                     nextStep={selectedRoute.steps[currentStepIndex]}
                     onToggleSteps={toggleSteps}
-                    remainingDistance={
-                        selectedRoute.steps
-                            .slice(currentStepIndex)
-                            .reduce((acc, step) => acc + (step.distance?.value ?? 0), 0)
-                    }
-                    remainingDuration={
-                        selectedRoute.steps
-                            .slice(currentStepIndex)
-                            .reduce((acc, step) => acc + (step.duration?.value ?? 0), 0)
-                    }
+                    remainingDistance={remainingDistance}
+                    remainingDuration={remainingDuration}
                 />
 
                 )}
