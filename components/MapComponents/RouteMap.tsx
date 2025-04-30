@@ -1,5 +1,5 @@
 import React from "react";
-import { Image } from "react-native";
+import { Image, View } from "react-native";
 import MapView, { Polyline, MapViewProps, Marker } from "react-native-maps";
 import Animated, { useAnimatedStyle } from "react-native-reanimated";
 import { RouteCoordinate } from "@/types";
@@ -35,7 +35,7 @@ export const RouteMap: React.FC<RouteMapProps> = ({
     animatedHeading,
     ...mapProps
 }) => {
-    const { showTraffic, avoidTolls, avoidHighways } = useSettings();
+    const { showTraffic } = useSettings();
 
     const categoryIcons: Record<string, string> = {
         POLICE: "https://img.icons8.com/color/96/policeman-male.png",
@@ -91,7 +91,7 @@ export const RouteMap: React.FC<RouteMapProps> = ({
                     />
                 ))}
 
-            {liveCoords && animatedHeading && (
+            {liveCoords && navigationLaunched && animatedHeading && (
                 <AnimatedMarker
                     coordinate={liveCoords}
                     anchor={{ x: 0.5, y: 0.5 }}
@@ -104,6 +104,21 @@ export const RouteMap: React.FC<RouteMapProps> = ({
                         resizeMode="contain"
                     />
                 </AnimatedMarker>
+            )}
+
+            {liveCoords && !navigationLaunched && (
+                <Marker coordinate={liveCoords}>
+                    <View
+                        style={{
+                            width: 16,
+                            height: 16,
+                            borderRadius: 8,
+                            backgroundColor: "#2196F3",
+                            borderWidth: 2,
+                            borderColor: "#fff",
+                        }}
+                    />
+                </Marker>
             )}
 
             {nextStepCoord && (

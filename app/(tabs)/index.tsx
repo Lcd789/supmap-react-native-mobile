@@ -812,11 +812,22 @@ export default function Home() {
                 !isSearchVisible &&
                 navigationLaunched &&
                 currentStepIndex < selectedRoute.steps.length && (
-                    <NextStepBanner
-                        key={currentStepIndex}
-                        nextStep={selectedRoute.steps[currentStepIndex]}
-                        onToggleSteps={toggleSteps}
-                    />
+                <NextStepBanner
+                    key={currentStepIndex}
+                    nextStep={selectedRoute.steps[currentStepIndex]}
+                    onToggleSteps={toggleSteps}
+                    remainingDistance={
+                        selectedRoute.steps
+                            .slice(currentStepIndex)
+                            .reduce((acc, step) => acc + (step.distance?.value ?? 0), 0)
+                    }
+                    remainingDuration={
+                        selectedRoute.steps
+                            .slice(currentStepIndex)
+                            .reduce((acc, step) => acc + (step.duration?.value ?? 0), 0)
+                    }
+                />
+
                 )}
 
             {hasArrived && !isSearchVisible && (
@@ -902,21 +913,6 @@ export default function Home() {
                         }}
                     />
                 </View>
-            )}
-
-            {selectedRoute && navigationLaunched && (
-                <Animated.View style={routeInfoStyle} pointerEvents="box-none">
-                    <RouteInfo
-                        routeSummary={{
-                            duration: selectedRoute.duration,
-                            distance: selectedRoute.distance,
-                        }}
-                        routeInfo={selectedRoute}
-                        showSteps={showSteps}
-                        stepsAnimation={stepsAnimation}
-                        onToggleSteps={toggleSteps}
-                    />
-                </Animated.View>
             )}
 
             {navigationLaunched && (

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { Step } from "../../types";
@@ -10,11 +10,15 @@ import { useSettings } from "@/hooks/user/SettingsContext";
 interface NextStepBannerProps {
     nextStep: Step | null;
     onToggleSteps: () => void;
+    remainingDistance: number;
+    remainingDuration: number;
 }
 
 export const NextStepBanner: React.FC<NextStepBannerProps> = ({
     nextStep,
     onToggleSteps,
+    remainingDistance,
+    remainingDuration,
 }) => {
     const insets = useSafeAreaInsets();
     const { darkMode } = useTheme();
@@ -58,25 +62,17 @@ export const NextStepBanner: React.FC<NextStepBannerProps> = ({
         return icons[maneuver] || "arrow-forward";
     };
 
-    const convertDistance = (distance: string | number): string => {
-        if (typeof distance === "number") {
-            if (unitsMetric) {
-                // Format métrique
-                if (distance < 1) {
-                    return `${Math.round(distance * 1000)} m`;
-                }
-                return `${distance} km`;
-            } else {
-                // Format impérial
-                const miles = distance * 0.621371;
-                if (miles < 0.1) {
-                    return `${Math.round(miles * 5280)} pieds`;
-                }
-                return `${miles.toFixed(1)} miles`;
-            }
-        }
-        return distance;
-    };
+    const distanceText =
+        remainingDistance < 1000
+            ? `${remainingDistance} m`
+            : `${(remainingDistance / 1000).toFixed(1)} km`;
+
+    const minutes = Math.floor(remainingDuration / 60);
+    const seconds = remainingDuration % 60;
+    const timeText =
+        minutes > 0
+            ? `${minutes} min${seconds > 0 ? ` ${seconds}s` : ""}`
+            : `${seconds}s`;
 
     if (!nextStep) {
         return (
@@ -102,29 +98,6 @@ export const NextStepBanner: React.FC<NextStepBannerProps> = ({
         typeof nextStep.html_instructions === "string"
             ? nextStep.html_instructions.replace(/<[^>]*>/g, " ")
             : "Étape suivante";
-
-    const durationSeconds = nextStep.duration?.value ?? 0;
-    const minutes = Math.floor(durationSeconds / 60);
-    const seconds = durationSeconds % 60;
-    const timeText =
-        minutes > 0
-            ? `${minutes} min${seconds > 0 ? ` ${seconds}s` : ""}`
-            : `${seconds}s`;
-
-    let distanceText = "";
-    if (
-        typeof nextStep.distance === "object" &&
-        nextStep.distance?.value !== undefined
-    ) {
-        const meters = nextStep.distance.value;
-        distanceText =
-            meters < 1000 ? `${meters} m` : `${(meters / 1000).toFixed(1)} km`;
-    } else if (
-        typeof nextStep.distance === "string" ||
-        typeof nextStep.distance === "number"
-    ) {
-        distanceText = convertDistance(nextStep.distance);
-    }
 
     const backgroundColor = darkMode ? "#333" : "#fff";
     const textColor = darkMode ? "#fff" : "#000";
