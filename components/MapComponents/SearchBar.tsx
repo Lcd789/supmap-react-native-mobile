@@ -20,6 +20,7 @@ const GOOGLE_PLACES_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_API_KEY;
 interface SearchBarProps {
     origin: string;
     destination: string;
+    onClose?: () => void;
     waypoints: Waypoint[];
     selectedMode: TransportMode;
     isLoading: boolean;
@@ -49,6 +50,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     onModeSelect,
     onSearch,
     onReverse,
+    onClose,
 }) => {
     const { avoidTolls, setAvoidTolls, avoidHighways, setAvoidHighways } =
         useSettings();
@@ -199,6 +201,16 @@ export const SearchBar: React.FC<SearchBarProps> = ({
 
     return (
         <View style={searchBarStyles.searchContainer}>
+        <View style={{ flexDirection: "row", justifyContent: "flex-end" }}>
+            <TouchableOpacity
+                onPress={() => {
+                    onClose && onClose();
+                }}
+                style={{ padding: 10 }}
+            >
+                <MaterialIcons name="close" size={24} color="#000" />
+            </TouchableOpacity>
+        </View>
             <TextInput
                 style={[searchBarStyles.input, { color: "#000" }]}
                 placeholder="Point de départ"

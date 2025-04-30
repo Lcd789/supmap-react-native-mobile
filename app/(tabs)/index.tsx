@@ -872,11 +872,24 @@ export default function Home() {
                         onSearch={handleSearch}
                         onReverse={handleReverse}
                         liveCoords={liveCoords}
+                        onClose={() => {
+                            searchBarAnimation.value = withTiming(0, { duration: 200 });
+                            setTimeout(() => {
+                                setIsSearchVisible(false);
+                                setOrigin("");
+                                setDestination("");
+                                setWaypoints([]);
+                                setSelectedRoute(null);
+                                setAlternativeRoutes([]);
+                                setRouteError(null);
+                            }, 200);
+                        }}
+                        
                     />
                 )}
             </Animated.View>
 
-            {mapRegion && (
+            {mapRegion && !isSearchVisible && (
                 <Animated.View
                     style={floatingButtonStyle}
                     pointerEvents="box-none"
@@ -886,6 +899,7 @@ export default function Home() {
                     </TouchableOpacity>
                 </Animated.View>
             )}
+
 
             {alternativeRoutes.length > 0 && !navigationLaunched && (
                 <View style={styles.selectorContainer}>
