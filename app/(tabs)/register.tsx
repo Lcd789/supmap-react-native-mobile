@@ -1,4 +1,3 @@
-// register.tsx
 import { useRouter, useFocusEffect } from "expo-router";
 import {
     ScrollView,
@@ -9,17 +8,15 @@ import {
     TouchableOpacity,
     TextInput,
     View,
-    ActivityIndicator
+    ActivityIndicator,
 } from "react-native";
 import { useState, useCallback } from "react";
 import { registerApi } from "../../hooks/authentication/authHooks";
-import { useTheme } from "@/utils/ThemeContext";
 import { ApiError } from "../../utils/apiUtils";
 import { Ionicons } from "@expo/vector-icons";
 
 export default function Register() {
     const router = useRouter();
-    const { darkMode } = useTheme();
 
     const [username, setUsername] = useState("");
     const [email, setEmail] = useState("");
@@ -30,7 +27,6 @@ export default function Register() {
 
     useFocusEffect(
         useCallback(() => {
-            // Réinitialiser les champs quand l'écran revient au focus
             setUsername("");
             setEmail("");
             setPassword("");
@@ -40,45 +36,27 @@ export default function Register() {
     );
 
     const handleRegister = async () => {
-        // Valider les entrées avant l'appel API
         if (!username || !email || !password) {
             setError("Le nom d'utilisateur, l'adresse e-mail et le mot de passe sont requis.");
             return;
         }
-        
+
         setLoading(true);
         setError(null);
-        
-        try {
-            // Appeler la fonction registerApi du fichier authApi.ts
-            const result = await registerApi({
-                username,
-                email,
-                password
-            });
 
-            // Vérifier si l'inscription est réussie
+        try {
+            const result = await registerApi({ username, email, password });
+
             if (result) {
                 Alert.alert(
                     "Inscription réussie !",
-                    result.message || "Un email de vérification a été envoyé à votre adresse email. Veuillez vérifier votre boîte de réception et cliquer sur le lien pour activer votre compte.",
-                    [
-                        {
-                            text: "OK",
-                            onPress: () => {
-                                router.replace("/login");
-                            },
-                        },
-                    ]
+                    result.message || "Vérifiez votre boîte mail pour activer votre compte.",
+                    [{ text: "OK", onPress: () => router.replace("/login") }]
                 );
             } else {
-                // Si result.success est false mais on est ici, c'est un cas inattendu
-                throw new Error(result || "Une erreur est survenue lors de l'inscription.");
+                throw new Error("Erreur inconnue.");
             }
         } catch (err) {
-            console.error("Registration failed:", err);
-            
-            // Afficher le message d'erreur de ApiError ou un message générique
             if (err instanceof ApiError) {
                 setError(err.responseBody || "Une erreur d'inscription est survenue.");
             } else if (err instanceof Error) {
@@ -91,36 +69,17 @@ export default function Register() {
         }
     };
 
-    // Styles avec prise en compte du mode sombre
-    const containerStyle = [styles.container, darkMode && { backgroundColor: "#1e1e1e" }];
-    const labelStyle = [styles.label, darkMode && { color: "#f5f5f5" }];
-    const inputStyle = [
-        styles.input,
-        darkMode && { backgroundColor: "#333", borderColor: "#555", color: "#f5f5f5" },
-    ];
-    const inputPasswordStyle = [
-        styles.inputPassword,
-        darkMode && { backgroundColor: "#333", borderColor: "#555", color: "#f5f5f5" },
-    ];
-    const toggleButtonStyle = [
-        styles.toggleButton,
-        darkMode && { backgroundColor: "#333", borderColor: "#555" },
-    ];
-    const errorStyle = [styles.error, darkMode && { color: "#ff6666" }];
-    const linkStyle = [styles.link, darkMode && { color: "#66aaff" }];
-    const buttonStyle = [styles.button, darkMode && styles.buttonDark];
-
     return (
-        <ScrollView 
-            style={containerStyle} 
+        <ScrollView
+            style={styles.container}
             contentContainerStyle={styles.innerContainer}
             keyboardShouldPersistTaps="handled"
         >
-            <Text style={labelStyle}>Nom d'utilisateur</Text>
+            <Text style={styles.label}>Nom d'utilisateur</Text>
             <TextInput
-                style={inputStyle}
+                style={styles.input}
                 placeholder="Nom d'utilisateur"
-                placeholderTextColor={darkMode ? "#aaa" : "#999"}
+                placeholderTextColor="#999"
                 value={username}
                 onChangeText={setUsername}
                 autoCapitalize="none"
@@ -128,11 +87,11 @@ export default function Register() {
                 editable={!loading}
             />
 
-            <Text style={labelStyle}>Email</Text>
+            <Text style={styles.label}>Email</Text>
             <TextInput
-                style={inputStyle}
+                style={styles.input}
                 placeholder="Email"
-                placeholderTextColor={darkMode ? "#aaa" : "#999"}
+                placeholderTextColor="#999"
                 keyboardType="email-address"
                 textContentType="emailAddress"
                 value={email}
@@ -142,12 +101,12 @@ export default function Register() {
                 editable={!loading}
             />
 
-            <Text style={labelStyle}>Mot de passe</Text>
+            <Text style={styles.label}>Mot de passe</Text>
             <View style={styles.passwordContainer}>
                 <TextInput
-                    style={inputPasswordStyle}
+                    style={styles.inputPassword}
                     placeholder="Mot de passe"
-                    placeholderTextColor={darkMode ? "#aaa" : "#999"}
+                    placeholderTextColor="#999"
                     secureTextEntry={secureText}
                     value={password}
                     onChangeText={setPassword}
@@ -155,21 +114,21 @@ export default function Register() {
                 />
                 <Pressable
                     onPress={() => setSecureText(!secureText)}
-                    style={toggleButtonStyle}
+                    style={styles.toggleButton}
                     disabled={loading}
                 >
                     <Ionicons
                         name={secureText ? "eye" : "eye-off"}
                         size={24}
-                        color={darkMode ? "#f5f5f5" : "#007AFF"}
+                        color="#007AFF"
                     />
                 </Pressable>
             </View>
 
-            {error && <Text style={errorStyle}>{error}</Text>}
+            {error && <Text style={styles.error}>{error}</Text>}
 
             <TouchableOpacity
-                style={buttonStyle}
+                style={styles.button}
                 onPress={handleRegister}
                 disabled={loading}
             >
@@ -181,7 +140,7 @@ export default function Register() {
             </TouchableOpacity>
 
             <Pressable onPress={() => router.replace("/login")} disabled={loading}>
-                <Text style={linkStyle}>Vous avez déjà un compte ?</Text>
+                <Text style={styles.link}>Vous avez déjà un compte ?</Text>
             </Pressable>
         </ScrollView>
     );
@@ -245,14 +204,14 @@ const styles = StyleSheet.create({
         borderTopRightRadius: 8,
         borderBottomRightRadius: 8,
         backgroundColor: "#fff",
-        justifyContent: 'center',
+        justifyContent: "center",
         height: 48,
     },
     error: {
         marginBottom: 15,
         textAlign: "center",
         color: "red",
-        width: '100%',
+        width: "100%",
     },
     button: {
         width: "100%",
@@ -263,9 +222,6 @@ const styles = StyleSheet.create({
         alignItems: "center",
         marginBottom: 10,
         minHeight: 50,
-    },
-    buttonDark: {
-        backgroundColor: "#0A84FF",
     },
     buttonText: {
         color: "#fff",

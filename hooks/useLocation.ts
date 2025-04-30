@@ -71,12 +71,11 @@ export function useLocation(navigationLaunched: boolean) {
           const { latitude, longitude } = location.coords;
           const currentPos = { latitude, longitude };
 
-          // Filtrage anti-jitter (si on a déjà une position)
           if (
             lastAcceptedPosition.current &&
             getDistance(lastAcceptedPosition.current, currentPos) < 5
           ) {
-            return; // Ne rien faire si la position est trop proche
+            return;
           }
 
           lastAcceptedPosition.current = currentPos;

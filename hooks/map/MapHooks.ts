@@ -402,7 +402,7 @@ export const useShareRoute = () => {
             });
 
             if (response.ok) {
-                const qrUrl = await response.text(); // Réponse en `text/plain`
+                const qrUrl = await response.text();
                 setQrCodeUrl(qrUrl);
             } else {
                 const errorText = await response.text();
@@ -452,7 +452,7 @@ export const useShareCurrentLocation = () => {
             });
 
             if (response.ok) {
-                const qrUrl = await response.text(); // Réponse en `text/plain`
+                const qrUrl = await response.text();
                 setQrCodeUrl(qrUrl);
             } else {
                 const errorText = await response.text();

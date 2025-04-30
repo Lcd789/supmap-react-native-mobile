@@ -10,7 +10,6 @@ import {
     ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useTheme } from "@/utils/ThemeContext";
 import { useSettings } from "@/hooks/user/SettingsContext";
 import { useAuth } from "@/hooks/user/AuthContext";
 import { useHistory } from "@/hooks/useHistory";
@@ -18,28 +17,20 @@ import Slider from "@react-native-community/slider";
 
 const SettingsScreen = () => {
     const insets = useSafeAreaInsets();
-    const { darkMode, toggleDarkMode } = useTheme();
     const { isAuthenticated } = useAuth();
     const { clearHistory } = useHistory();
     const [isClearing, setIsClearing] = useState(false);
     const {
-        // Paramètres de route
         avoidTolls,
         setAvoidTolls,
         avoidHighways,
         setAvoidHighways,
-
-        // Paramètres d'affichage
         showTraffic,
         setShowTraffic,
-
-        // Paramètres de guidage
         voiceGuidance,
         setVoiceGuidance,
         unitsMetric,
         setUnitsMetric,
-
-        // Paramètres de recherche
         enableEventSearch,
         setEnableEventSearch,
         eventSearchDistance,
@@ -48,12 +39,9 @@ const SettingsScreen = () => {
         setEnableUserSearch,
         userSearchDistance,
         setUserSearchDistance,
-
-        // Utilitaires
         isSettingsLoading,
     } = useSettings();
 
-    // Fonction pour formatter la distance (mètres à km si > 1000)
     const formatDistance = (distance: number) => {
         if (distance >= 1000) {
             return `${(distance / 1000).toFixed(1)} km`;
@@ -61,7 +49,6 @@ const SettingsScreen = () => {
         return `${distance} m`;
     };
 
-    // Fonction pour confirmer la suppression de l'historique
     const handleClearHistory = () => {
         Alert.alert(
             "Effacer l'historique",
@@ -79,7 +66,7 @@ const SettingsScreen = () => {
                                 "Succès",
                                 "L'historique de navigation a été effacé avec succès."
                             );
-                        } catch (error) {
+                        } catch {
                             Alert.alert(
                                 "Erreur",
                                 "Une erreur s'est produite lors de la suppression de l'historique."
@@ -95,172 +82,57 @@ const SettingsScreen = () => {
 
     if (isSettingsLoading) {
         return (
-            <View
-                style={[
-                    styles.loadingContainer,
-                    { paddingTop: insets.top },
-                    darkMode && styles.containerDark,
-                ]}
-            >
-                <ActivityIndicator
-                    size="large"
-                    color={darkMode ? "#fff" : "#333"}
-                />
-                <Text
-                    style={[
-                        styles.loadingText,
-                        darkMode && styles.loadingTextDark,
-                    ]}
-                >
-                    Chargement des paramètres...
-                </Text>
+            <View style={[styles.loadingContainer, { paddingTop: insets.top }]}>
+                <ActivityIndicator size="large" color="#333" />
+                <Text style={styles.loadingText}>Chargement des paramètres...</Text>
             </View>
         );
     }
 
     return (
-        <ScrollView
-            contentContainerStyle={[
-                styles.container,
-                { paddingTop: insets.top },
-                darkMode && styles.containerDark,
-            ]}
-        >
-            <Text
-                style={[
-                    styles.sectionTitle,
-                    darkMode && styles.sectionTitleDark,
-                ]}
-            >
-                Paramètres d'itinéraire
-            </Text>
+        <ScrollView contentContainerStyle={[styles.container, { paddingTop: insets.top }]}>
+            <Text style={styles.sectionTitle}>Paramètres d'itinéraire</Text>
 
-            <View style={[styles.card, darkMode && styles.cardDark]}>
+            <View style={styles.card}>
                 <View style={styles.optionRow}>
-                    <Text
-                        style={[
-                            styles.optionLabel,
-                            darkMode && styles.optionLabelDark,
-                        ]}
-                    >
-                        Éviter les péages
-                    </Text>
+                    <Text style={styles.optionLabel}>Éviter les péages</Text>
                     <Switch value={avoidTolls} onValueChange={setAvoidTolls} />
                 </View>
 
                 <View style={styles.optionRow}>
-                    <Text
-                        style={[
-                            styles.optionLabel,
-                            darkMode && styles.optionLabelDark,
-                        ]}
-                    >
-                        Éviter les autoroutes
-                    </Text>
-                    <Switch
-                        value={avoidHighways}
-                        onValueChange={setAvoidHighways}
-                    />
+                    <Text style={styles.optionLabel}>Éviter les autoroutes</Text>
+                    <Switch value={avoidHighways} onValueChange={setAvoidHighways} />
                 </View>
             </View>
 
-            <Text
-                style={[
-                    styles.sectionTitle,
-                    darkMode && styles.sectionTitleDark,
-                ]}
-            >
-                Affichage
-            </Text>
+            <Text style={styles.sectionTitle}>Affichage</Text>
 
-            <View style={[styles.card, darkMode && styles.cardDark]}>
+            <View style={styles.card}>
                 <View style={styles.optionRow}>
-                    <Text
-                        style={[
-                            styles.optionLabel,
-                            darkMode && styles.optionLabelDark,
-                        ]}
-                    >
-                        Mode sombre
-                    </Text>
-                    <Switch value={darkMode} onValueChange={toggleDarkMode} />
-                </View>
-
-                <View style={styles.optionRow}>
-                    <Text
-                        style={[
-                            styles.optionLabel,
-                            darkMode && styles.optionLabelDark,
-                        ]}
-                    >
-                        Afficher le trafic
-                    </Text>
-                    <Switch
-                        value={showTraffic}
-                        onValueChange={setShowTraffic}
-                    />
+                    <Text style={styles.optionLabel}>Afficher le trafic</Text>
+                    <Switch value={showTraffic} onValueChange={setShowTraffic} />
                 </View>
             </View>
 
-            <Text
-                style={[
-                    styles.sectionTitle,
-                    darkMode && styles.sectionTitleDark,
-                ]}
-            >
-                Guidage
-            </Text>
+            <Text style={styles.sectionTitle}>Guidage</Text>
 
-            <View style={[styles.card, darkMode && styles.cardDark]}>
+            <View style={styles.card}>
                 <View style={styles.optionRow}>
-                    <Text
-                        style={[
-                            styles.optionLabel,
-                            darkMode && styles.optionLabelDark,
-                        ]}
-                    >
-                        Guidage vocal
-                    </Text>
-                    <Switch
-                        value={voiceGuidance}
-                        onValueChange={setVoiceGuidance}
-                    />
+                    <Text style={styles.optionLabel}>Guidage vocal</Text>
+                    <Switch value={voiceGuidance} onValueChange={setVoiceGuidance} />
                 </View>
 
                 <View style={styles.optionRow}>
-                    <Text
-                        style={[
-                            styles.optionLabel,
-                            darkMode && styles.optionLabelDark,
-                        ]}
-                    >
-                        Unités métriques
-                    </Text>
-                    <Switch
-                        value={unitsMetric}
-                        onValueChange={setUnitsMetric}
-                    />
+                    <Text style={styles.optionLabel}>Unités métriques</Text>
+                    <Switch value={unitsMetric} onValueChange={setUnitsMetric} />
                 </View>
             </View>
 
-            <Text
-                style={[
-                    styles.sectionTitle,
-                    darkMode && styles.sectionTitleDark,
-                ]}
-            >
-                Recherche
-            </Text>
+            <Text style={styles.sectionTitle}>Recherche</Text>
 
-            <View style={[styles.card, darkMode && styles.cardDark]}>
+            <View style={styles.card}>
                 <View style={styles.optionRow}>
-                    <Text
-                        style={[
-                            styles.optionLabel,
-                            darkMode && styles.optionLabelDark,
-                            !isAuthenticated && styles.disabledText,
-                        ]}
-                    >
+                    <Text style={[styles.optionLabel, !isAuthenticated && styles.disabledText]}>
                         Rechercher des événements
                     </Text>
                     <Switch
@@ -272,19 +144,9 @@ const SettingsScreen = () => {
 
                 {isAuthenticated && enableEventSearch && (
                     <View style={styles.sliderContainer}>
-                        <View style={styles.sliderRow}>
-                            <Text
-                                style={[
-                                    styles.sliderLabel,
-                                    darkMode && styles.sliderLabelDark,
-                                ]}
-                            >
-                                Distance de recherche:{" "}
-                                <Text style={styles.distanceValue}>
-                                    {formatDistance(eventSearchDistance)}
-                                </Text>
-                            </Text>
-                        </View>
+                        <Text style={styles.sliderLabel}>
+                            Distance de recherche : {formatDistance(eventSearchDistance)}
+                        </Text>
                         <Slider
                             style={styles.slider}
                             minimumValue={100}
@@ -292,28 +154,12 @@ const SettingsScreen = () => {
                             step={100}
                             value={eventSearchDistance}
                             onValueChange={setEventSearchDistance}
-                            minimumTrackTintColor={
-                                darkMode ? "#3498db" : "#2980b9"
-                            }
-                            maximumTrackTintColor={darkMode ? "#555" : "#ccc"}
-                            thumbTintColor={darkMode ? "#3498db" : "#2980b9"}
                         />
                     </View>
                 )}
 
-                <View
-                    style={[
-                        styles.optionRow,
-                        !isAuthenticated && { opacity: 0.5 },
-                    ]}
-                >
-                    <Text
-                        style={[
-                            styles.optionLabel,
-                            darkMode && styles.optionLabelDark,
-                            !isAuthenticated && styles.disabledText,
-                        ]}
-                    >
+                <View style={styles.optionRow}>
+                    <Text style={[styles.optionLabel, !isAuthenticated && styles.disabledText]}>
                         Rechercher des utilisateurs
                     </Text>
                     <Switch
@@ -325,19 +171,9 @@ const SettingsScreen = () => {
 
                 {isAuthenticated && enableUserSearch && (
                     <View style={styles.sliderContainer}>
-                        <View style={styles.sliderRow}>
-                            <Text
-                                style={[
-                                    styles.sliderLabel,
-                                    darkMode && styles.sliderLabelDark,
-                                ]}
-                            >
-                                Distance de recherche:{" "}
-                                <Text style={styles.distanceValue}>
-                                    {formatDistance(userSearchDistance)}
-                                </Text>
-                            </Text>
-                        </View>
+                        <Text style={styles.sliderLabel}>
+                            Distance de recherche : {formatDistance(userSearchDistance)}
+                        </Text>
                         <Slider
                             style={styles.slider}
                             minimumValue={100}
@@ -345,56 +181,25 @@ const SettingsScreen = () => {
                             step={100}
                             value={userSearchDistance}
                             onValueChange={setUserSearchDistance}
-                            minimumTrackTintColor={
-                                darkMode ? "#3498db" : "#2980b9"
-                            }
-                            maximumTrackTintColor={darkMode ? "#555" : "#ccc"}
-                            thumbTintColor={darkMode ? "#3498db" : "#2980b9"}
                         />
                     </View>
                 )}
 
                 {!isAuthenticated && (
-                    <Text
-                        style={[
-                            styles.infoText,
-                            darkMode && styles.infoTextDark,
-                        ]}
-                    >
+                    <Text style={styles.infoText}>
                         Connectez-vous pour activer les options de recherche.
                     </Text>
                 )}
             </View>
 
-            <Text
-                style={[
-                    styles.sectionTitle,
-                    darkMode && styles.sectionTitleDark,
-                ]}
-            >
-                Données
-            </Text>
+            <Text style={styles.sectionTitle}>Données</Text>
 
-            <View style={[styles.card, darkMode && styles.cardDark]}>
-                <TouchableOpacity
-                    style={styles.buttonContainer}
-                    onPress={handleClearHistory}
-                    disabled={isClearing}
-                >
+            <View style={styles.card}>
+                <TouchableOpacity style={styles.buttonContainer} onPress={handleClearHistory} disabled={isClearing}>
                     {isClearing ? (
-                        <ActivityIndicator
-                            size="small"
-                            color={darkMode ? "#ff6b6b" : "#e74c3c"}
-                        />
+                        <ActivityIndicator size="small" color="#e74c3c" />
                     ) : (
-                        <Text
-                            style={[
-                                styles.buttonText,
-                                darkMode && styles.buttonTextDark,
-                            ]}
-                        >
-                            Effacer l'historique de navigation
-                        </Text>
+                        <Text style={styles.buttonText}>Effacer l'historique de navigation</Text>
                     )}
                 </TouchableOpacity>
             </View>
@@ -407,9 +212,6 @@ const styles = StyleSheet.create({
         padding: 16,
         backgroundColor: "#f9f9f9",
     },
-    containerDark: {
-        backgroundColor: "#1e1e1e",
-    },
     loadingContainer: {
         flex: 1,
         justifyContent: "center",
@@ -421,9 +223,6 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: "#333",
     },
-    loadingTextDark: {
-        color: "#f5f5f5",
-    },
     sectionTitle: {
         fontSize: 20,
         fontWeight: "700",
@@ -431,22 +230,12 @@ const styles = StyleSheet.create({
         marginTop: 20,
         marginBottom: 10,
     },
-    sectionTitleDark: {
-        color: "#f5f5f5",
-    },
     card: {
         backgroundColor: "#fff",
         borderRadius: 12,
         padding: 12,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 6,
         elevation: 3,
         marginBottom: 16,
-    },
-    cardDark: {
-        backgroundColor: "#333",
     },
     optionRow: {
         flexDirection: "row",
@@ -460,9 +249,6 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: "#333",
     },
-    optionLabelDark: {
-        color: "#f5f5f5",
-    },
     disabledText: {
         color: "#888",
     },
@@ -471,22 +257,10 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
         borderBottomColor: "#eee",
     },
-    sliderRow: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-        paddingHorizontal: 5,
-        marginBottom: 5,
-    },
     sliderLabel: {
         fontSize: 14,
         color: "#555",
-    },
-    sliderLabelDark: {
-        color: "#ccc",
-    },
-    distanceValue: {
-        fontWeight: "bold",
+        marginBottom: 5,
     },
     slider: {
         width: "100%",
@@ -499,9 +273,6 @@ const styles = StyleSheet.create({
         padding: 10,
         textAlign: "center",
     },
-    infoTextDark: {
-        color: "#aaa",
-    },
     buttonContainer: {
         paddingVertical: 14,
         alignItems: "center",
@@ -510,9 +281,6 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: "#e74c3c",
         fontWeight: "600",
-    },
-    buttonTextDark: {
-        color: "#ff6b6b",
     },
 });
 
