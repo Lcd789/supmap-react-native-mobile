@@ -244,7 +244,7 @@ export default function Home() {
                 announcedSteps.current.add(currentStepIndex);
             }
 
-            if (distanceToEnd < 30) {
+            if (distanceToEnd < 40) {
                 const nextIndex = currentStepIndex + 1;
 
                 if (nextIndex >= selectedRoute.steps.length) {
