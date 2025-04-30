@@ -6,11 +6,13 @@ export interface RouteCoordinate {
 export type TransportMode = "driving" | "walking" | "bicycling" | "transit";
 
 export interface Step {
-    instruction?: string;
-    distance?: { text: string } | string | number;
-    duration?: { text: string };
-    html_instructions?: string;
+    html_instructions: string;
+    distance: { text: string; value: number };
+    duration: { text: string; value: number };
     maneuver?: string;
+    start_location: { lat: number; lng: number };
+    end_location: { lat: number; lng: number };
+    instruction?: string;
 }
 
 export interface GoogleMapsResponse {
@@ -64,8 +66,7 @@ export interface SavedTrip {
     timestamp: number;
     distance?: string;
     duration?: string;
-  }
-  
+}
 
 export interface RouteInfo {
     duration: string;

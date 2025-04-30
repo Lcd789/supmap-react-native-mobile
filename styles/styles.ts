@@ -231,6 +231,28 @@ export const profileStyles = StyleSheet.create({
         fontSize: 16,
         marginLeft: 10,
     },
+    label: {
+        fontSize: 14,
+        fontWeight: '500',
+        color: '#333',
+        marginBottom: 5,
+        alignSelf: 'flex-start',
+        marginLeft: 5,
+    },
+    retryButton: {
+        backgroundColor: '#007AFF', // Couleur de fond du bouton
+        paddingVertical: 12,
+        paddingHorizontal: 25,
+        borderRadius: 8,
+        marginTop: 15, // Espace après le message d'erreur
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    retryButtonText: {
+        color: '#fff', // Couleur du texte du bouton
+        fontSize: 16,
+        fontWeight: '600',
+    },
 });
 
 /* ===========================
