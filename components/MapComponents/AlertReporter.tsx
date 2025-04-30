@@ -99,7 +99,7 @@ export const AlertReporter: React.FC<AlertReporterProps> = ({
   const animatedStyle = useAnimatedStyle(() => ({
     position: "absolute",
     right: 20,
-    bottom: buttonOffset.value,
+    bottom: buttonOffset.value - 60,
     width: 50,
     height: 50,
     borderRadius: 25,
