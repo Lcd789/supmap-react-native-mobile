@@ -9,6 +9,7 @@ export function useLocation(navigationLaunched: boolean) {
   const [liveCoords, setLiveCoords] = useState<RouteCoordinate | null>(null);
   const [mapRegion, setMapRegion] = useState<Region | null>(null);
   const lastPositionRef = useRef<RouteCoordinate | null>(null);
+  const lastAcceptedPosition = useRef<RouteCoordinate | null>(null);
 
   const animatedBearing = useSharedValue("0deg");
 
@@ -32,6 +33,24 @@ export function useLocation(navigationLaunched: boolean) {
     return (bearing + 360) % 360;
   };
 
+  const getDistance = (
+    coord1: { latitude: number; longitude: number },
+    coord2: { latitude: number; longitude: number }
+  ): number => {
+    const toRad = (x: number) => (x * Math.PI) / 180;
+    const R = 6371000;
+    const dLat = toRad(coord2.latitude - coord1.latitude);
+    const dLon = toRad(coord2.longitude - coord1.longitude);
+    const lat1 = toRad(coord1.latitude);
+    const lat2 = toRad(coord2.latitude);
+
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.sin(dLon / 2) ** 2 * Math.cos(lat1) * Math.cos(lat2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+
   useEffect(() => {
     let subscription: Location.LocationSubscription;
 
@@ -51,6 +70,16 @@ export function useLocation(navigationLaunched: boolean) {
         (location) => {
           const { latitude, longitude } = location.coords;
           const currentPos = { latitude, longitude };
+
+          // Filtrage anti-jitter (si on a déjà une position)
+          if (
+            lastAcceptedPosition.current &&
+            getDistance(lastAcceptedPosition.current, currentPos) < 5
+          ) {
+            return; // Ne rien faire si la position est trop proche
+          }
+
+          lastAcceptedPosition.current = currentPos;
 
           if (lastPositionRef.current) {
             const bearing = getBearing(lastPositionRef.current, currentPos);
