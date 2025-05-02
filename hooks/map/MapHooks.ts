@@ -549,6 +549,7 @@ export const useCreateMapAlert = () => {
         try {
             const token = await SecureStore.getItemAsync("authToken");
 
+
             const response = await fetch(`${API_BASE_URL}/private/map/alert`, {
                 method: "POST",
                 headers: {

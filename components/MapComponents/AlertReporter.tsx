@@ -18,7 +18,9 @@ import Animated, {
   Easing,
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
+import * as SecureStore from "expo-secure-store";
 import { useCreateMapAlert } from "@/hooks/map/MapHooks";
+import {router} from "expo-router";
 
 // Mise à jour du type AlertType pour correspondre à votre modèle
 export type AlertType =
@@ -72,7 +74,7 @@ export const AlertReporter: React.FC<AlertReporterProps> = ({
   const [modalVisible, setModalVisible] = useState(false);
   const { createAlert, loading, error, success } = useCreateMapAlert();
 
-  // animation de la position du bouton
+
   const buttonOffset = useSharedValue(100);
 
   useEffect(() => {
@@ -109,6 +111,39 @@ export const AlertReporter: React.FC<AlertReporterProps> = ({
     zIndex: 999,
     elevation: 6,
   }));
+
+  // Vérifier si l'utilisateur est connecté
+  const checkAuth = async () => {
+    try {
+      const token = await SecureStore.getItemAsync("authToken");
+
+      if (token) {
+        // L'utilisateur est connecté, ouvrir le modal des alertes
+        setModalVisible(true);
+      } else {
+        // L'utilisateur n'est pas connecté, afficher un message
+        Alert.alert(
+            "Connexion requise",
+            "Vous devez être connecté pour signaler une alerte.",
+            [
+              {
+                text: "Se connecter",
+                onPress: () => {
+                  router.replace("/login")
+                }
+              },
+              {
+                text: "Annuler",
+                style: "cancel"
+              }
+            ]
+        );
+      }
+    } catch (error) {
+      console.error("Erreur lors de la vérification d'authentification:", error);
+      Alert.alert("Erreur", "Une erreur est survenue lors de la vérification de votre compte.");
+    }
+  };
 
   const handleSelect = async (type: AlertType) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -148,7 +183,7 @@ export const AlertReporter: React.FC<AlertReporterProps> = ({
       <>
         <Animated.View style={animatedStyle}>
           <TouchableOpacity
-              onPress={() => setModalVisible(true)}
+              onPress={checkAuth} // Modification ici : appeler checkAuth au lieu de setModalVisible(true)
               disabled={loading} // Désactiver le bouton pendant le chargement
           >
             <MaterialIcons name="warning" size={24} color="#fff" />
