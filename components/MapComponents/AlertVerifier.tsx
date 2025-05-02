@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Animated } from "react-native";
 import { useGetAlertsByPosition, useValidateAlert, useInvalidateAlert } from "@/hooks/map/MapHooks";
 import { AlertMarker, AlertType } from "./AlertReporter";
-import SecureStore from "expo-secure-store";
+import * as SecureStore from "expo-secure-store";
 
 // Type pour la position de l'utilisateur
 interface LiveCoordinates {
@@ -127,57 +127,129 @@ export const AlertVerifier: React.FC<AlertVerifierProps> = ({
     }
   }, [alerts]);
 
-  // Vérifier les alertes à proximité pour les notifications
+  // Ajoutez cette fonction pour décoder le token JWT
+  const decodeJWT = (token: string) => {
+    try {
+      // Séparation des parties du token
+      const parts = token.split('.');
+      if (parts.length !== 3) {
+        console.error("Format de token invalide");
+        return null;
+      }
+
+      // Décodage de la partie payload (la deuxième partie)
+      const payload = parts[1];
+      const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(
+          atob(base64)
+              .split('')
+              .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+              .join('')
+      );
+
+      return JSON.parse(jsonPayload);
+    } catch (error) {
+      console.error("Erreur lors du décodage du token:", error);
+      return null;
+    }
+  };
+
+// Vérifier les alertes à proximité pour les notifications
   useEffect(() => {
     if (!liveCoords || alertsLoading || !alerts || alerts.length === 0) return;
 
-    const nearby = alerts.find((alert) => {
-      if (alreadyAskedRef.current.has(alert.id)) return false;
+    const checkAlertAndAuth = async () => {
+      try {
+        // Vérifier si l'utilisateur est connecté
+        const token = await SecureStore.getItemAsync("authToken");
 
-      const dist = getDistanceFromLatLonInMeters(
-          liveCoords.latitude,
-          liveCoords.longitude,
-          alert.location.latitude,
-          alert.location.longitude
-      );
-      // Afficher une alerte si on est à moins de 100 mètres
-      return dist < 100;
-    });
+        // Si l'utilisateur n'est pas connecté, ne pas afficher la bannière de vérification
+        if (!token) {
+          console.log("Utilisateur non connecté, pas d'affichage de bannière de vérification");
+          return;
+        }
 
-    if (nearby && !showAlertBanner) {
-      setNearbyAlert(nearby);
-      setTimeLeft(20);
-      showBanner();
+        // Décoder le token pour obtenir l'ID utilisateur
+        let userId = null;
+        const decodedToken = decodeJWT(token);
+        if (decodedToken) {
+          // Extraire l'ID utilisateur du token décodé
+          userId = decodedToken.sub || decodedToken.id || decodedToken.userId;
+          console.log("ID utilisateur connecté:", userId);
+        } else {
+          console.log("Impossible de décoder le token");
+          return;
+        }
 
-      // Démarrer le compte à rebours
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
+        // Si l'ID utilisateur n'a pas pu être extrait, ne pas continuer
+        if (!userId) {
+          console.log("ID utilisateur non trouvé dans le token");
+          return;
+        }
 
-      timerRef.current = setInterval(() => {
-        setTimeLeft((prevTime) => {
-          if (prevTime <= 1) {
-            // Le temps est écoulé, on considère que l'alerte est toujours présente
-            if (timerRef.current) {
-              clearInterval(timerRef.current);
-              timerRef.current = null;
-            }
+        // L'utilisateur est connecté et son ID a été trouvé
+        // Rechercher une alerte à proximité qui n'a pas été créée par lui
+        const nearby = alerts.find((alert) => {
+          if (alreadyAskedRef.current.has(alert.id)) return false;
 
-            // Valider l'alerte automatiquement (elle est toujours présente)
-            if (nearbyAlert) {
-              validateAlert(nearbyAlert.id);
-            }
-
-            hideBanner();
-            return 0;
+          // Vérifier si l'alerte n'a PAS été créée par l'utilisateur actuel
+          if (alert.reportedByUserId === userId) {
+            console.log("Alerte créée par l'utilisateur actuel, ignorée:", alert.id);
+            return false;
           }
-          return prevTime - 1;
-        });
-      }, 1000);
 
-      // Marquer cette alerte comme traitée
-      alreadyAskedRef.current.add(nearby.id);
-    }
+          const dist = getDistanceFromLatLonInMeters(
+              liveCoords.latitude,
+              liveCoords.longitude,
+              alert.location.latitude,
+              alert.location.longitude
+          );
+          // Afficher une alerte si on est à moins de 100 mètres
+          return dist < 100;
+        });
+
+        if (nearby && !showAlertBanner) {
+          console.log("Alerte à proximité trouvée:", nearby.id);
+          setNearbyAlert(nearby);
+          setTimeLeft(20);
+          showBanner();
+
+          // Démarrer le compte à rebours
+          if (timerRef.current) {
+            clearInterval(timerRef.current);
+          }
+
+          timerRef.current = setInterval(() => {
+            setTimeLeft((prevTime) => {
+              if (prevTime <= 1) {
+                // Le temps est écoulé, on considère que l'alerte est toujours présente
+                if (timerRef.current) {
+                  clearInterval(timerRef.current);
+                  timerRef.current = null;
+                }
+
+                // Valider l'alerte automatiquement (elle est toujours présente)
+                if (nearby) {
+                  validateAlert(nearby.id);
+                }
+
+                hideBanner();
+                return 0;
+              }
+              return prevTime - 1;
+            });
+          }, 1000);
+
+          // Marquer cette alerte comme traitée
+          alreadyAskedRef.current.add(nearby.id);
+        }
+      } catch (error) {
+        console.error("Erreur lors de la vérification de l'authentification:", error);
+      }
+    };
+
+    // Appeler la fonction asynchrone
+    checkAlertAndAuth();
   }, [liveCoords, alerts]);
 
   // Nettoyer le timer quand le composant est démonté
