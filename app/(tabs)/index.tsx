@@ -21,7 +21,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useLocation } from "@/hooks/useLocation";
 import { useRoute } from "@/hooks/useRoute";
-import { useHistory } from "@/hooks/useHistory";
 import { SearchBar } from "@/components/MapComponents/SearchBar";
 import { RouteMap } from "@/components/MapComponents/RouteMap";
 import { RouteInfo } from "@/components/MapComponents/RouteInfo";
@@ -41,11 +40,11 @@ import { getAddressFromCoords, getCoordsFromAddress } from "@/utils/geocoding";
 import { RouteCoordinate } from "@/types";
 import ArrivalPopup from "@/components/MapComponents/ArrivalPopup";
 import { useSettings } from "@/hooks/user/SettingsContext";
+import { useSaveRoute } from "@/hooks/map/MapHooks";
 
 type RouteWithId = RouteCalculationResult & { id: string };
 
 export default function Home() {
-    const { addToHistory } = useHistory();
     const { darkMode } = useTheme();
     const [origin, setOrigin] = useState<string>("");
     const [destination, setDestination] = useState<string>("");
@@ -526,12 +525,7 @@ export default function Home() {
                 setAlternativeRoutes(routesWithIds);
                 setSelectedRoute(routesWithIds[0]);
 
-                addToHistory({
-                    origin: finalOrigin,
-                    destination: finalDestination,
-                    waypoints: validWaypoints.map((wp) => wp.address),
-                    mode: selectedMode,
-                });
+
 
                 const { bounds } = routesWithIds[0];
                 const newRegion = {
@@ -745,6 +739,10 @@ export default function Home() {
         zIndex: 1000,
     }));
 
+    const { saveRoute } = useSaveRoute();
+
+
+
     return (
         <SafeAreaView
             style={[
@@ -917,6 +915,8 @@ export default function Home() {
                             setSelectedRoute(route);
                             setNavigationLaunched(true);
                             setCurrentStepIndex(0);
+
+                            // Zoom sur la position actuelle
                             if (liveCoords) {
                                 const zoomRegion = {
                                     latitude: liveCoords.latitude,
@@ -924,17 +924,41 @@ export default function Home() {
                                     latitudeDelta: 0.005,
                                     longitudeDelta: 0.005,
                                 };
-                                mapRef.current?.animateToRegion(
-                                    zoomRegion,
-                                    800
-                                );
+                                mapRef.current?.animateToRegion(zoomRegion, 800);
                             }
-                            addToHistory({
-                                origin,
-                                destination,
-                                waypoints: waypoints.map((wp) => wp.address),
-                                mode: selectedMode,
-                            });
+
+                            try {
+                                // Vérifier la structure de l'objet route avec des valeurs par défaut sécurisées
+                                const routeData = route as any;
+                                const legs = routeData.legs || [];
+
+                                // Vérifier si les propriétés nécessaires existent
+                                const startLocation = legs[0]?.start_location || {};
+                                const endLocation = legs[legs.length - 1]?.end_location || {};
+
+                                const routeToSave = {
+                                    startAddress: origin,
+                                    endAddress: destination,
+                                    startPoint: {
+                                        latitude: startLocation.lat || 0,
+                                        longitude: startLocation.lng || 0,
+                                    },
+                                    endPoint: {
+                                        latitude: endLocation.lat || 0,
+                                        longitude: endLocation.lng || 0,
+                                    },
+                                    kilometersDistance: routeData.distanceValue ? routeData.distanceValue / 1000 : 0,
+                                    estimatedDurationInSeconds: routeData.durationValue || 0
+                                };
+
+                                // Sauvegarde dans l'historique
+                                saveRoute(routeToSave);
+                                console.log("Itinéraire sauvegardé dans l'historique");
+                            } catch (error) {
+                                console.error("Erreur lors de la sauvegarde de l'itinéraire:", error);
+                            }
+
+
                         }}
                     />
                 </View>

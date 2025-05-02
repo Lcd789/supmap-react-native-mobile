@@ -275,6 +275,7 @@ export const useSaveRoute = () => {
 
         try {
             const token = await SecureStore.getItemAsync("authToken");
+            console.log("routeData", JSON.stringify(routeData));
 
             const response = await fetch(`${API_BASE_URL}/private/map/save-route`, {
                 method: "POST",
