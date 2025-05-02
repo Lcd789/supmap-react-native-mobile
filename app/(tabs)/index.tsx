@@ -1051,4 +1051,5 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         zIndex: 5,
     },
+    
 });
