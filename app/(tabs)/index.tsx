@@ -84,6 +84,7 @@ export default function Home() {
     const [remainingDistance, setRemainingDistance] = useState(0);
     const [remainingDuration, setRemainingDuration] = useState(0);
     const [bannerStepIndex, setBannerStepIndex] = useState(0);
+    const bannerStep = selectedRoute?.steps?.[bannerStepIndex] ?? null;
 
     const searchBarAnimation = useSharedValue(0);
     const routeInfoAnimation = useSharedValue(0);
@@ -111,6 +112,8 @@ export default function Home() {
       handleSearch();
     };
 
+
+    
     const recalculateRouteFromCurrentPosition = useCallback(async () => {
         if (recalculationLock.current) return;
         if (!liveCoords) {
@@ -229,15 +232,13 @@ export default function Home() {
           };
           const distanceToEnd = getDistance(liveCoords, stepEnd);
       
-          // ← AJOUT : mise à jour de bannerStepIndex
-          const BANNER_THRESHOLD = 80; // en mètres
+          const BANNER_THRESHOLD = 80;
           const nextBannerIdx =
             distanceToEnd < BANNER_THRESHOLD && currentStepIndex + 1 < steps.length
               ? currentStepIndex + 1
               : currentStepIndex;
           setBannerStepIndex(nextBannerIdx);
       
-          // ← BLOC ORIGINAL 1 : pré-annonce de l'étape courante (<100 m)
           if (distanceToEnd < 100 && !announcedSteps.current.has(currentStepIndex)) {
             const instruction = step.html_instructions?.replace(/<[^>]*>/g, " ");
             if (instruction) {
@@ -251,7 +252,6 @@ export default function Home() {
             announcedSteps.current.add(currentStepIndex);
           }
       
-          // ← BLOC ORIGINAL 2 : passage à l'étape suivante (<40 m) + annonce
           if (distanceToEnd < 40) {
             const nextIndex = currentStepIndex + 1;
             if (nextIndex >= steps.length) {
@@ -770,6 +770,25 @@ export default function Home() {
 
     const { saveRoute } = useSaveRoute();
 
+    let bannerDist = 0;
+    let bannerDur = 0;
+    if (
+    navigationLaunched &&
+    liveCoords &&
+    selectedRoute?.steps?.[bannerStepIndex]
+    ) {
+    const bannerStep = selectedRoute.steps[bannerStepIndex];
+    const end = {
+        latitude: bannerStep.end_location.lat,
+        longitude: bannerStep.end_location.lng,
+    };
+    bannerDist = getDistance(liveCoords, end);
+    if (bannerStep.distance?.value && bannerStep.duration?.value) {
+        bannerDur = Math.round(
+        (bannerDist / bannerStep.distance.value) * bannerStep.duration.value
+        );
+    }
+    }
 
 
     return (
@@ -854,20 +873,15 @@ export default function Home() {
                 </View>
             )}
 
-            {selectedRoute &&
-                !isSearchVisible &&
-                navigationLaunched &&
-                currentStepIndex < selectedRoute.steps.length && (
+            {bannerStep && !isSearchVisible && navigationLaunched && (
                 <NextStepBanner
-                    key={currentStepIndex}
-                    nextStep={selectedRoute.steps[bannerStepIndex]}
+                   key={bannerStepIndex}
+                    nextStep={bannerStep}
                     onToggleSteps={toggleSteps}
-                    remainingDistance={remainingDistance}
-                    remainingDuration={remainingDuration}
-                    
+                    remainingDistance={bannerDist}
+                    remainingDuration={bannerDur}
                 />
-
-                )}
+            )}
 
             {hasArrived && !isSearchVisible && (
                 <ArrivalPopup
