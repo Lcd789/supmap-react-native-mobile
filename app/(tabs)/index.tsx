@@ -5,6 +5,7 @@ import {
     StyleSheet,
     Text,
     TouchableOpacity,
+    Alert,
 } from "react-native";
 import Animated, {
     useSharedValue,
@@ -24,6 +25,8 @@ import { useRoute } from "@/hooks/useRoute";
 import { SearchBar } from "@/components/MapComponents/SearchBar";
 import { RouteMap } from "@/components/MapComponents/RouteMap";
 import { RouteInfo } from "@/components/MapComponents/RouteInfo";
+import TripInfoBar from "@/components/MapComponents/TripInfoBar";
+
 import RouteSelector from "@/components/MapComponents/RouteSelector";
 import { NextStepBanner } from "@/components/MapComponents/NextStepBanner";
 import {
@@ -80,7 +83,8 @@ export default function Home() {
     const recalculationLock = useRef(false);
     const [remainingDistance, setRemainingDistance] = useState(0);
     const [remainingDuration, setRemainingDuration] = useState(0);
-    
+    const [bannerStepIndex, setBannerStepIndex] = useState(0);
+
     const searchBarAnimation = useSharedValue(0);
     const routeInfoAnimation = useSharedValue(0);
     const stepsAnimation = useSharedValue(0);
@@ -99,10 +103,13 @@ export default function Home() {
         unitsMetric,
     } = useSettings();
 
-    /**
-     * Recalcule un itinéraire complet depuis la position actuelle (liveCoords),
-     * en géocodant d’abord la position pour passer une adresse à calculateRoute.
-     */
+    const START_DISTANCE_THRESHOLD = 100;
+
+    const handleSearchFromCurrent = () => {
+      originRef.current = "📍 Ma position";
+      setOrigin("📍 Ma position");
+      handleSearch();
+    };
 
     const recalculateRouteFromCurrentPosition = useCallback(async () => {
         if (recalculationLock.current) return;
@@ -209,77 +216,73 @@ export default function Home() {
 
     useEffect(() => {
         if (
-            navigationLaunched &&
-            liveCoords &&
-            selectedRoute &&
-            selectedRoute.steps &&
-            currentStepIndex < selectedRoute.steps.length
+          navigationLaunched &&
+          liveCoords &&
+          selectedRoute?.steps &&
+          currentStepIndex < selectedRoute.steps.length
         ) {
-            const step = selectedRoute.steps[currentStepIndex];
-            const stepEnd = {
-                latitude: step.end_location.lat,
-                longitude: step.end_location.lng,
-            };
-
-            const distanceToEnd = getDistance(liveCoords, stepEnd);
-
+          const steps = selectedRoute.steps;
+          const step = steps[currentStepIndex];
+          const stepEnd = {
+            latitude: step.end_location.lat,
+            longitude: step.end_location.lng,
+          };
+          const distanceToEnd = getDistance(liveCoords, stepEnd);
+      
+          // ← AJOUT : mise à jour de bannerStepIndex
+          const BANNER_THRESHOLD = 80; // en mètres
+          const nextBannerIdx =
+            distanceToEnd < BANNER_THRESHOLD && currentStepIndex + 1 < steps.length
+              ? currentStepIndex + 1
+              : currentStepIndex;
+          setBannerStepIndex(nextBannerIdx);
+      
+          // ← BLOC ORIGINAL 1 : pré-annonce de l'étape courante (<100 m)
+          if (distanceToEnd < 100 && !announcedSteps.current.has(currentStepIndex)) {
+            const instruction = step.html_instructions?.replace(/<[^>]*>/g, " ");
+            if (instruction) {
+              Speech.stop();
+              Speech.speak(instruction, {
+                language: "fr-FR",
+                pitch: 1.0,
+                rate: 1.0,
+              });
+            }
+            announcedSteps.current.add(currentStepIndex);
+          }
+      
+          // ← BLOC ORIGINAL 2 : passage à l'étape suivante (<40 m) + annonce
+          if (distanceToEnd < 40) {
+            const nextIndex = currentStepIndex + 1;
+            if (nextIndex >= steps.length) {
+              setHasArrived(true);
+              setNavigationLaunched(false);
+              return;
+            }
+      
+            setCurrentStepIndex(nextIndex);
+      
+            const nextStep = steps[nextIndex];
             if (
-                distanceToEnd < 100 &&
-                !announcedSteps.current.has(currentStepIndex)
+              nextStep.html_instructions &&
+              !announcedSteps.current.has(nextIndex)
             ) {
-                const instruction = step.html_instructions?.replace(
-                    /<[^>]*>/g,
-                    " "
-                );
-                if (instruction) {
-                    console.log("📢 Pré-annonce :", instruction);
-                    Speech.stop();
-                    Speech.speak(instruction, {
-                        language: "fr-FR",
-                        pitch: 1.0,
-                        rate: 1.0,
-                    });
-                }
-                announcedSteps.current.add(currentStepIndex);
+              const km = ((nextStep.distance?.value ?? 0) / 1000).toFixed(1);
+              const cleanInstr = nextStep.html_instructions.replace(/<[^>]*>/g, " ");
+              const message = `Dans ${km} km, ${cleanInstr}`;
+              Speech.stop();
+              Speech.speak(message, {
+                language: "fr-FR",
+                pitch: 1.0,
+                rate: 1.0,
+              });
+              announcedSteps.current.add(nextIndex);
             }
-
-            if (distanceToEnd < 40) {
-                const nextIndex = currentStepIndex + 1;
-
-                if (nextIndex >= selectedRoute.steps.length) {
-                    setHasArrived(true);
-                    setNavigationLaunched(false);
-                    console.log("🎉 Arrivé à destination !");
-                    return;
-                }
-
-                setCurrentStepIndex(nextIndex);
-
-                const nextStep = selectedRoute.steps[nextIndex];
-                if (
-                    nextStep &&
-                    nextStep.html_instructions &&
-                    !announcedSteps.current.has(nextIndex)
-                ) {
-                    const distanceMeters = nextStep.distance?.value ?? 0;
-                    const km = (distanceMeters / 1000).toFixed(1);
-                    const cleanInstruction = nextStep.html_instructions.replace(
-                        /<[^>]*>/g,
-                        " "
-                    );
-                    const message = `Dans ${km} kilomètres, ${cleanInstruction}`;
-                    console.log("🔮 Pré-étape suivante :", message);
-                    Speech.stop();
-                    Speech.speak(message, {
-                        language: "fr-FR",
-                        pitch: 1.0,
-                        rate: 1.0,
-                    });
-                    announcedSteps.current.add(nextIndex);
-                }
-            }
+          }
         }
-    }, [liveCoords, navigationLaunched, selectedRoute, currentStepIndex]);
+      }, [liveCoords, navigationLaunched, selectedRoute, currentStepIndex]);
+      
+      
 
     useEffect(() => {
         floatingButtonOffset.value = withTiming(
@@ -315,7 +318,7 @@ export default function Home() {
         let closePoints = 0;
         selectedRoute.polyline.forEach((point) => {
             const distance = getDistance(liveCoords, point);
-            if (distance < 40) {
+            if (distance < 30) {
                 closePoints++;
             }
         });
@@ -425,6 +428,32 @@ export default function Home() {
             (wp) => wp.address.trim() !== ""
         );
 
+        if (finalOrigin !== "📍 Ma position" && liveCoords) {
+            const coords = await getCoordsFromAddress(finalOrigin);
+            if (coords) {
+            const distanceToStart = getDistance(
+                liveCoords,
+                { latitude: coords.lat, longitude: coords.lng }
+            );
+             if (distanceToStart > START_DISTANCE_THRESHOLD) {
+                   const distanceLabel =
+                     distanceToStart >= 1000
+                       ? `${(distanceToStart / 1000).toFixed(2)} km`
+                       : `${Math.round(distanceToStart)} m`;
+                
+                   Alert.alert(
+                     "Point de départ trop éloigné",
+                     `Le point de départ est à ${distanceLabel} de votre position actuelle. Voulez-vous démarrer depuis votre position ?`,
+                     [
+                      { text: "Annuler", style: "cancel" },
+                      { text: "Démarrer", onPress: handleSearchFromCurrent },
+                    ]
+                  );
+                   return;
+                }
+            }
+        }
+  
         toggleSearchBar();
         setAlternativeRoutes([]);
         setSelectedRoute(null);
@@ -831,10 +860,11 @@ export default function Home() {
                 currentStepIndex < selectedRoute.steps.length && (
                 <NextStepBanner
                     key={currentStepIndex}
-                    nextStep={selectedRoute.steps[currentStepIndex]}
+                    nextStep={selectedRoute.steps[bannerStepIndex]}
                     onToggleSteps={toggleSteps}
                     remainingDistance={remainingDistance}
                     remainingDuration={remainingDuration}
+                    
                 />
 
                 )}
@@ -1062,6 +1092,12 @@ export default function Home() {
                     console.log("Nouvelles alertes reçues:", newAlerts.length);
                 }}
             />
+            {navigationLaunched && selectedRoute && (
+            <TripInfoBar
+                remainingDistance={remainingDistance}
+                remainingDuration={remainingDuration}
+            />
+            )}
         </SafeAreaView>
     );
 }
