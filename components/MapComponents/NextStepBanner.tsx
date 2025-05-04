@@ -2,17 +2,20 @@
 import React, { useEffect } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
-import { Step } from "@/types";                                    // type Step provenant de vos définitions :contentReference[oaicite:0]{index=0}:contentReference[oaicite:1]{index=1}
+import { Step } from "@/types";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Speech from "expo-speech";
 import { useTheme } from "@/utils/ThemeContext";
 import { useSettings } from "@/hooks/user/SettingsContext";
 
+// On récupère le type exact des noms d'icônes supportés
+type IconName = keyof typeof MaterialIcons.glyphMap;
+
 interface NextStepBannerProps {
   nextStep: Step | null;
   onToggleSteps: () => void;
-  remainingDistance: number;
-  remainingDuration: number;
+  remainingDistance: number;  // en mètres, recalculé dynamiquement
+  remainingDuration: number;  // en secondes, recalculé dynamiquement
 }
 
 export const NextStepBanner: React.FC<NextStepBannerProps> = ({
@@ -23,43 +26,24 @@ export const NextStepBanner: React.FC<NextStepBannerProps> = ({
 }) => {
   const insets = useSafeAreaInsets();
   const { darkMode } = useTheme();
-  const { voiceGuidance, setVoiceGuidance, unitsMetric } = useSettings();
+  const { voiceGuidance, setVoiceGuidance } = useSettings();
 
+  // On force la valeur de guidance sur le store à chaque render
   useEffect(() => {
     setVoiceGuidance(voiceGuidance);
   }, [voiceGuidance]);
 
+  // Synthèse vocale de l'instruction lorsque nextStep change
   useEffect(() => {
-    if (voiceGuidance && nextStep && nextStep.html_instructions) {
+    if (voiceGuidance && nextStep?.html_instructions) {
       const instruction = nextStep.html_instructions.replace(/<[^>]*>/g, " ");
       Speech.stop();
-      Speech.speak(instruction, {
-        language: "fr-FR",
-        pitch: 1.1,
-        rate: 1.1,
-      });
+      Speech.speak(instruction, { language: "fr-FR", pitch: 1.1, rate: 1.1 });
     }
   }, [nextStep, voiceGuidance]);
 
-  const toggleVoice = () => {
-    setVoiceGuidance(!voiceGuidance);
-    Speech.stop();
-  };
-
-  const getManeuverIcon = (maneuver: string): string => {
-    const icons: { [key: string]: string } = {
-      "turn-right": "turn-right",
-      "turn-left": "turn-left",
-      straight: "straight",
-      "roundabout-right": "rotate-right",
-      "roundabout-left": "rotate-left",
-      "uturn-right": "u-turn-right",
-      "uturn-left": "u-turn-left",
-    };
-    return icons[maneuver] || "arrow-forward";
-  };
-
   if (!nextStep) {
+    // Affichage final à l'arrivée
     return (
       <View
         style={[
@@ -77,23 +61,36 @@ export const NextStepBanner: React.FC<NextStepBannerProps> = ({
     );
   }
 
-    const distanceText =
+  // DISTANCE SANS DÉCIMALES
+  const distanceText =
     remainingDistance < 1000
-        ? `${remainingDistance} m`
-        : `${(remainingDistance/1000).toFixed(1)} km`;
+      ? `${remainingDistance} m`
+      : `${Math.round(remainingDistance / 1000)} km`;
 
-    const minutes = Math.floor(remainingDuration/60);
-    const seconds = remainingDuration % 60;
-    const timeText =
+  // TEMPS
+  const minutes = Math.floor(remainingDuration / 60);
+  const seconds = remainingDuration % 60;
+  const timeText =
     minutes > 0
-        ? `${minutes} min${seconds>0?` ${seconds}s`:''}`
-        : `${seconds}s`;
+      ? `${minutes} min${seconds > 0 ? ` ${seconds}s` : ""}`
+      : `${seconds}s`;
 
+  // Nettoyage des balises HTML
+  const instruction = nextStep.html_instructions.replace(/<[^>]*>/g, " ");
 
-  const instruction =
-    typeof nextStep.html_instructions === "string"
-      ? nextStep.html_instructions.replace(/<[^>]*>/g, " ")
-      : "Étape suivante";
+  // Sélection de l'icône de manœuvre typée
+  const getManeuverIcon = (maneuver: string): IconName => {
+    const icons: Record<string, IconName> = {
+      "turn-right": "turn-right",
+      "turn-left": "turn-left",
+      straight: "straight",
+      "roundabout-right": "rotate-right",
+      "roundabout-left": "rotate-left",
+      "uturn-right": "u-turn-right",
+      "uturn-left": "u-turn-left",
+    };
+    return icons[maneuver] ?? "arrow-forward";
+  };
 
   const backgroundColor = darkMode ? "#333" : "#fff";
   const textColor = darkMode ? "#fff" : "#000";
@@ -106,9 +103,7 @@ export const NextStepBanner: React.FC<NextStepBannerProps> = ({
       <View style={styles.bannerContent}>
         {nextStep.maneuver && (
           <MaterialIcons
-            name={
-              getManeuverIcon(nextStep.maneuver) as keyof typeof MaterialIcons.glyphMap
-            }
+            name={getManeuverIcon(nextStep.maneuver)}
             size={72}
             color="#2196F3"
             style={styles.stepIcon}
@@ -122,7 +117,10 @@ export const NextStepBanner: React.FC<NextStepBannerProps> = ({
             {distanceText} • {timeText}
           </Text>
         </View>
-        <TouchableOpacity onPress={toggleVoice} style={styles.voiceButton}>
+        <TouchableOpacity
+          onPress={() => setVoiceGuidance(!voiceGuidance)}
+          style={styles.voiceButton}
+        >
           <MaterialIcons
             name={voiceGuidance ? "volume-up" : "volume-off"}
             size={28}
