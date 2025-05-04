@@ -771,25 +771,23 @@ export default function Home() {
     const { saveRoute } = useSaveRoute();
 
     let bannerDist = 0;
-    let bannerDur = 0;
-    if (
-    navigationLaunched &&
-    liveCoords &&
-    selectedRoute?.steps?.[bannerStepIndex]
-    ) {
-    const bannerStep = selectedRoute.steps[bannerStepIndex];
-    const end = {
-        latitude: bannerStep.end_location.lat,
+    let bannerDur  = 0;
+
+    if (navigationLaunched && liveCoords && bannerStep) {
+    bannerDist = getDistance(
+        liveCoords,
+        {
+        latitude:  bannerStep.end_location.lat,
         longitude: bannerStep.end_location.lng,
-    };
-    bannerDist = getDistance(liveCoords, end);
+        }
+    );
     if (bannerStep.distance?.value && bannerStep.duration?.value) {
         bannerDur = Math.round(
-        (bannerDist / bannerStep.distance.value) * bannerStep.duration.value
+        (bannerDist / bannerStep.distance.value)
+        * bannerStep.duration.value
         );
     }
     }
-
 
     return (
         <SafeAreaView
@@ -873,15 +871,15 @@ export default function Home() {
                 </View>
             )}
 
-            {bannerStep && !isSearchVisible && navigationLaunched && (
-                <NextStepBanner
-                   key={bannerStepIndex}
-                    nextStep={bannerStep}
-                    onToggleSteps={toggleSteps}
-                    remainingDistance={bannerDist}
-                    remainingDuration={bannerDur}
-                />
-            )}
+            { bannerStep && navigationLaunched && (
+            <NextStepBanner
+                key={bannerStepIndex}
+                nextStep={bannerStep}
+                onToggleSteps={toggleSteps}
+                remainingDistance={bannerDist}
+                remainingDuration={bannerDur}
+            />
+            ) }
 
             {hasArrived && !isSearchVisible && (
                 <ArrivalPopup

@@ -59,7 +59,6 @@ export const NextStepBanner: React.FC<NextStepBannerProps> = ({
     return icons[maneuver] || "arrow-forward";
   };
 
-  // 1) Si nextStep est null, on affiche l'arrivée
   if (!nextStep) {
     return (
       <View
@@ -78,23 +77,19 @@ export const NextStepBanner: React.FC<NextStepBannerProps> = ({
     );
   }
 
-  // 2) Calcul de la distance et de la durée pour cette seule étape :contentReference[oaicite:2]{index=2}:contentReference[oaicite:3]{index=3}
-  const stepDistance = nextStep.distance?.value ?? 0;
-  const stepDuration = nextStep.duration?.value ?? 0;
+    const distanceText =
+    remainingDistance < 1000
+        ? `${remainingDistance} m`
+        : `${(remainingDistance/1000).toFixed(1)} km`;
 
-  const distanceText =
-    stepDistance < 1000
-      ? `${stepDistance} m`
-      : `${(stepDistance / 1000).toFixed(1)} km`;
-
-  const minutes = Math.floor(stepDuration / 60);
-  const seconds = stepDuration % 60;
-  const timeText =
+    const minutes = Math.floor(remainingDuration/60);
+    const seconds = remainingDuration % 60;
+    const timeText =
     minutes > 0
-      ? `${minutes} min${seconds > 0 ? ` ${seconds}s` : ""}`
-      : `${seconds}s`;
+        ? `${minutes} min${seconds>0?` ${seconds}s`:''}`
+        : `${seconds}s`;
 
-  // 3) Préparation de l'instruction texte
+
   const instruction =
     typeof nextStep.html_instructions === "string"
       ? nextStep.html_instructions.replace(/<[^>]*>/g, " ")
