@@ -13,6 +13,7 @@ import { TransportModeSelector } from "./TransportModeSelector";
 import { searchBarStyles } from "../../styles/styles";
 import { useSettings } from "@/hooks/user/SettingsContext";
 import { useGetRouteHistory } from "@/hooks/map/MapHooks";
+import FavoriteLocationsSelector from "./FavoriteLocationSelector";
 
 const GOOGLE_PLACES_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_API_KEY;
 
@@ -72,6 +73,10 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     const [showOriginHistory, setShowOriginHistory] = useState(false);
     const [showDestinationHistory, setShowDestinationHistory] = useState(false);
 
+    // État pour contrôler l'affichage des favoris
+    const [showFavoritesOrigin, setShowFavoritesOrigin] = useState(false);
+    const [showFavoritesDestination, setShowFavoritesDestination] = useState(false);
+
     // Récupérer l'historique au chargement du composant
     useEffect(() => {
         fetchRouteHistory();
@@ -119,6 +124,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
 
     const handleOriginChange = async (text: string) => {
         onOriginChange(text);
+        setShowFavoritesOrigin(text.length === 0);
 
         // Si le texte est vide, afficher l'historique
         if (text.length === 0) {
@@ -146,6 +152,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
 
     const handleDestinationChange = async (text: string) => {
         onDestinationChange(text);
+        setShowFavoritesDestination(text.length === 0);
 
         // Si le texte est vide, afficher l'historique
         if (text.length === 0) {
@@ -213,6 +220,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     // Gérer l'affichage de l'historique lors du focus
     const handleOriginFocus = () => {
         setIsOriginFocused(true);
+        setShowFavoritesOrigin(origin.length === 0);
         if (origin.length === 0) {
             setShowOriginHistory(true);
             const historySuggestions = getHistorySuggestions('origin');
@@ -225,6 +233,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
 
     const handleDestinationFocus = () => {
         setIsDestinationFocused(true);
+        setShowFavoritesDestination(destination.length === 0);
         if (destination.length === 0) {
             setShowDestinationHistory(true);
             const historySuggestions = getHistorySuggestions('destination');
@@ -232,6 +241,22 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                 ...historySuggestions
             ]);
         }
+    };
+
+    // Gérer la sélection d'un lieu favori
+    const handleSelectFavoriteForOrigin = (address: string) => {
+        onOriginChange(address);
+        setShowFavoritesOrigin(false);
+    };
+
+    const handleSelectFavoriteForDestination = (address: string) => {
+        onDestinationChange(address);
+        setShowFavoritesDestination(false);
+        setTimeout(() => {
+            requestAnimationFrame(() => {
+                onSearch();
+            });
+        }, 150);
     };
 
     const renderSuggestionItem = (
@@ -286,6 +311,15 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                 }}
                 onChangeText={handleOriginChange}
             />
+
+            {/* Afficher les favoris pour l'origine si le champ est vide et en focus */}
+            {showFavoritesOrigin && (
+                <FavoriteLocationsSelector
+                    onSelectLocation={handleSelectFavoriteForOrigin}
+                    isOrigin={true}
+                />
+            )}
+
             {isOriginFocused && originSuggestions.length > 0 && (
                 <FlatList
                     data={originSuggestions}
@@ -314,6 +348,15 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                 }}
                 onChangeText={handleDestinationChange}
             />
+
+            {/* Afficher les favoris pour la destination si le champ est vide et en focus */}
+            {showFavoritesDestination && (
+                <FavoriteLocationsSelector
+                    onSelectLocation={handleSelectFavoriteForDestination}
+                    isOrigin={false}
+                />
+            )}
+
             {isDestinationFocused && destinationSuggestions.length > 0 && (
                 <FlatList
                     data={destinationSuggestions}

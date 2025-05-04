@@ -14,6 +14,7 @@ import { useSettings } from "@/hooks/user/SettingsContext";
 import { useAuth } from "@/hooks/user/AuthContext";
 import { useHistory } from "@/hooks/useHistory";
 import Slider from "@react-native-community/slider";
+import FavoriteLocationsManager from "@/components/MapComponents/FavoriteLocation";
 
 const SettingsScreen = () => {
     const insets = useSafeAreaInsets();
@@ -104,6 +105,18 @@ const SettingsScreen = () => {
                     <Switch value={avoidHighways} onValueChange={setAvoidHighways} />
                 </View>
             </View>
+
+            {/* Lieux favoris */}
+            <Text style={styles.sectionTitle}>Lieux favoris</Text>
+            {isAuthenticated ? (
+                <FavoriteLocationsManager />
+            ) : (
+                <View style={styles.card}>
+                    <Text style={styles.infoText}>
+                        Connectez-vous pour gérer vos lieux favoris.
+                    </Text>
+                </View>
+            )}
 
             <Text style={styles.sectionTitle}>Affichage</Text>
 
