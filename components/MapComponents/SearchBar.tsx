@@ -11,9 +11,8 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { TransportMode, Waypoint } from "../../types";
 import { TransportModeSelector } from "./TransportModeSelector";
 import { searchBarStyles } from "../../styles/styles";
-import { useHistory } from "@/hooks/useHistory";
-import { Appearance } from "react-native";
 import { useSettings } from "@/hooks/user/SettingsContext";
+import { useGetRouteHistory } from "@/hooks/map/MapHooks";
 
 const GOOGLE_PLACES_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_API_KEY;
 
@@ -36,56 +35,65 @@ interface SearchBarProps {
 }
 
 export const SearchBar: React.FC<SearchBarProps> = ({
-    origin,
-    destination,
-    waypoints,
-    selectedMode,
-    isLoading,
-    liveCoords,
-    onOriginChange,
-    onDestinationChange,
-    onWaypointAdd,
-    onWaypointRemove,
-    onWaypointUpdate,
-    onModeSelect,
-    onSearch,
-    onReverse,
-    onClose,
-}) => {
+                                                        origin,
+                                                        destination,
+                                                        waypoints,
+                                                        selectedMode,
+                                                        isLoading,
+                                                        liveCoords,
+                                                        onOriginChange,
+                                                        onDestinationChange,
+                                                        onWaypointAdd,
+                                                        onWaypointRemove,
+                                                        onWaypointUpdate,
+                                                        onModeSelect,
+                                                        onSearch,
+                                                        onReverse,
+                                                        onClose,
+                                                    }) => {
     const { avoidTolls, setAvoidTolls, avoidHighways, setAvoidHighways } =
         useSettings();
 
     const isReverseButtonVisible = waypoints.length === 0;
 
     const [originSuggestions, setOriginSuggestions] = useState<
-        { description: string; isCurrentLocation?: boolean }[]
+        { description: string; isCurrentLocation?: boolean; isHistory?: boolean }[]
     >([]);
     const [destinationSuggestions, setDestinationSuggestions] = useState<
-        { description: string }[]
+        { description: string; isHistory?: boolean }[]
     >([]);
     const [waypointSuggestions, setWaypointSuggestions] = useState<{
         [index: number]: { description: string }[];
     }>({});
 
-    const { getHistory } = useHistory();
-    const [history, setHistory] = useState<any[]>([]);
+    const { routes, fetchRouteHistory } = useGetRouteHistory();
     const [isOriginFocused, setIsOriginFocused] = useState(false);
     const [isDestinationFocused, setIsDestinationFocused] = useState(false);
+    const [showOriginHistory, setShowOriginHistory] = useState(false);
+    const [showDestinationHistory, setShowDestinationHistory] = useState(false);
 
+    // Récupérer l'historique au chargement du composant
     useEffect(() => {
-        getHistory().then((h) => {
-            const uniqueHistory = h.filter(
-                (item, index, self) =>
-                    index ===
-                    self.findIndex(
-                        (t) =>
-                            t.origin === item.origin &&
-                            t.destination === item.destination
-                    )
-            );
-            setHistory(uniqueHistory);
-        });
+        fetchRouteHistory();
     }, []);
+
+    // Transformer les routes en suggestions d'historique
+    const getHistorySuggestions = (type: 'origin' | 'destination') => {
+        if (!routes || routes.length === 0) return [];
+
+        // Prendre les 5 dernières routes et extraire les adresses uniques
+        const addresses = routes
+            .slice(0, 5)
+            .map(route => type === 'origin' ? route.startAddress : route.endAddress)
+            // Filtrer les adresses uniques et non vides
+            .filter((address, index, self) =>
+                address &&
+                address.trim() !== '' &&
+                self.indexOf(address) === index
+            );
+
+        return addresses.map(address => ({ description: address, isHistory: true }));
+    };
 
     const fetchSuggestions = async (
         text: string
@@ -111,27 +119,50 @@ export const SearchBar: React.FC<SearchBarProps> = ({
 
     const handleOriginChange = async (text: string) => {
         onOriginChange(text);
-        if (text.length < 3) {
+
+        // Si le texte est vide, afficher l'historique
+        if (text.length === 0) {
+            setShowOriginHistory(true);
+            const historySuggestions = getHistorySuggestions('origin');
+            setOriginSuggestions([
+                { description: "📍 Ma position", isCurrentLocation: true },
+                ...historySuggestions
+            ]);
+        } else if (text.length < 3) {
+            setShowOriginHistory(false);
             setOriginSuggestions([
                 { description: "📍 Ma position", isCurrentLocation: true },
             ]);
-            return;
+        } else {
+            // Sinon afficher les suggestions de l'API
+            setShowOriginHistory(false);
+            const suggestions = await fetchSuggestions(text);
+            setOriginSuggestions([
+                { description: "📍 Ma position", isCurrentLocation: true },
+                ...suggestions,
+            ]);
         }
-        const suggestions = await fetchSuggestions(text);
-        setOriginSuggestions([
-            { description: "📍 Ma position", isCurrentLocation: true },
-            ...suggestions,
-        ]);
     };
 
     const handleDestinationChange = async (text: string) => {
         onDestinationChange(text);
-        if (text.length < 3) {
+
+        // Si le texte est vide, afficher l'historique
+        if (text.length === 0) {
+            setShowDestinationHistory(true);
+            const historySuggestions = getHistorySuggestions('destination');
+            setDestinationSuggestions([
+                ...historySuggestions
+            ]);
+        } else if (text.length < 3) {
+            setShowDestinationHistory(false);
             setDestinationSuggestions([]);
-            return;
+        } else {
+            // Sinon afficher les suggestions de l'API
+            setShowDestinationHistory(false);
+            const suggestions = await fetchSuggestions(text);
+            setDestinationSuggestions(suggestions);
         }
-        const suggestions = await fetchSuggestions(text);
-        setDestinationSuggestions(suggestions);
     };
 
     const handleWaypointChange = async (text: string, index: number) => {
@@ -143,6 +174,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     const handleOriginSelect = async (item: {
         description: string;
         isCurrentLocation?: boolean;
+        isHistory?: boolean;
     }) => {
         if (item.isCurrentLocation) {
             onOriginChange("📍 Ma position");
@@ -152,7 +184,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         setOriginSuggestions([]);
     };
 
-    const handleDestinationSelect = (item: { description: string }) => {
+    const handleDestinationSelect = (item: { description: string; isHistory?: boolean }) => {
         onDestinationChange(item.description);
         setDestinationSuggestions([]);
         setTimeout(() => {
@@ -178,8 +210,32 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         setAvoidHighways(!avoidHighways);
     };
 
+    // Gérer l'affichage de l'historique lors du focus
+    const handleOriginFocus = () => {
+        setIsOriginFocused(true);
+        if (origin.length === 0) {
+            setShowOriginHistory(true);
+            const historySuggestions = getHistorySuggestions('origin');
+            setOriginSuggestions([
+                { description: "📍 Ma position", isCurrentLocation: true },
+                ...historySuggestions
+            ]);
+        }
+    };
+
+    const handleDestinationFocus = () => {
+        setIsDestinationFocused(true);
+        if (destination.length === 0) {
+            setShowDestinationHistory(true);
+            const historySuggestions = getHistorySuggestions('destination');
+            setDestinationSuggestions([
+                ...historySuggestions
+            ]);
+        }
+    };
+
     const renderSuggestionItem = (
-        item: { description: string; isCurrentLocation?: boolean },
+        item: { description: string; isCurrentLocation?: boolean; isHistory?: boolean; },
         onPress: () => void
     ) => (
         <TouchableOpacity
@@ -192,6 +248,11 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                         <MaterialIcons name="my-location" size={16} />{" "}
                         {item.description}
                     </>
+                ) : item.isHistory ? (
+                    <>
+                        <MaterialIcons name="history" size={16} color="#777" />{" "}
+                        {item.description}
+                    </>
                 ) : (
                     item.description
                 )}
@@ -201,49 +262,34 @@ export const SearchBar: React.FC<SearchBarProps> = ({
 
     return (
         <View style={searchBarStyles.searchContainer}>
-        <View style={{ flexDirection: "row", justifyContent: "flex-end" }}>
-            <TouchableOpacity
-                onPress={() => {
-                    onClose && onClose();
-                }}
-                style={{ padding: 10 }}
-            >
-                <MaterialIcons name="close" size={24} color="#000" />
-            </TouchableOpacity>
-        </View>
+            <View style={{ flexDirection: "row", justifyContent: "flex-end" }}>
+                <TouchableOpacity
+                    onPress={() => {
+                        onClose && onClose();
+                    }}
+                    style={{ padding: 10 }}
+                >
+                    <MaterialIcons name="close" size={24} color="#000" />
+                </TouchableOpacity>
+            </View>
             <TextInput
                 style={[searchBarStyles.input, { color: "#000" }]}
                 placeholder="Point de départ"
                 placeholderTextColor="#555"
                 value={origin}
-                onFocus={() => setIsOriginFocused(true)}
-                onBlur={() => setIsOriginFocused(false)}
+                onFocus={handleOriginFocus}
+                onBlur={() => {
+                    setTimeout(() => {
+                        setIsOriginFocused(false);
+                        setShowOriginHistory(false);
+                    }, 100);
+                }}
                 onChangeText={handleOriginChange}
             />
-            {origin.length < 3 && isOriginFocused && history.length > 0 && (
-                <FlatList
-                    data={history}
-                    keyExtractor={(item) => item.id}
-                    keyboardShouldPersistTaps="handled"
-                    renderItem={({ item }) => (
-                        <TouchableOpacity
-                            style={searchBarStyles.suggestionItem}
-                            onPress={() =>
-                                handleOriginSelect({ description: item.origin })
-                            }
-                        >
-                            <Text style={{ color: "#000" }}>
-                                {item.origin} → {item.destination}
-                            </Text>
-                        </TouchableOpacity>
-                    )}
-                    style={searchBarStyles.suggestionList}
-                />
-            )}
-            {originSuggestions.length > 0 && (
+            {isOriginFocused && originSuggestions.length > 0 && (
                 <FlatList
                     data={originSuggestions}
-                    keyExtractor={(item) => item.description}
+                    keyExtractor={(item, index) => `origin-${item.description}-${index}`}
                     keyboardShouldPersistTaps="handled"
                     renderItem={({ item }) =>
                         renderSuggestionItem(item, () =>
@@ -259,38 +305,19 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                 placeholder="Destination"
                 placeholderTextColor="#555"
                 value={destination}
-                onFocus={() => setIsDestinationFocused(true)}
-                onBlur={() => setIsDestinationFocused(false)}
+                onFocus={handleDestinationFocus}
+                onBlur={() => {
+                    setTimeout(() => {
+                        setIsDestinationFocused(false);
+                        setShowDestinationHistory(false);
+                    }, 100);
+                }}
                 onChangeText={handleDestinationChange}
             />
-            {destination.length < 3 &&
-                isDestinationFocused &&
-                history.length > 0 && (
-                    <FlatList
-                        data={history}
-                        keyExtractor={(item) => item.id + "_dest"}
-                        keyboardShouldPersistTaps="handled"
-                        renderItem={({ item }) => (
-                            <TouchableOpacity
-                                style={searchBarStyles.suggestionItem}
-                                onPress={() =>
-                                    handleDestinationSelect({
-                                        description: item.destination,
-                                    })
-                                }
-                            >
-                                <Text style={{ color: "#000" }}>
-                                    {item.origin} → {item.destination}
-                                </Text>
-                            </TouchableOpacity>
-                        )}
-                        style={searchBarStyles.suggestionList}
-                    />
-                )}
-            {destinationSuggestions.length > 0 && (
+            {isDestinationFocused && destinationSuggestions.length > 0 && (
                 <FlatList
                     data={destinationSuggestions}
-                    keyExtractor={(item) => item.description}
+                    keyExtractor={(item, index) => `destination-${item.description}-${index}`}
                     keyboardShouldPersistTaps="handled"
                     renderItem={({ item }) =>
                         renderSuggestionItem(item, () =>
