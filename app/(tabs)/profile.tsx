@@ -1,349 +1,451 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
-    ScrollView,
-    Text,
-    View,
-    StyleSheet,
-    TextInput,
-    Alert,
-    TouchableOpacity,
-    ActivityIndicator,
-} from "react-native";
-import * as ImageSelector from "expo-image-picker";
-import { useState, useEffect, useCallback } from "react";
-import { LogOutIcon, Pencil, Save, Trash2 } from "lucide-react-native";
-import { Image } from "expo-image";
-import {
-    getUserDataApi,
-    deleteProfileApi,
-    updateUserApi,
-    updateProfileImageApi,
-} from "../../hooks/user/userHooks";
-import { useRouter } from "expo-router";
-import { useAuth } from "../../hooks/user/AuthContext";
-import { profileStyles } from "../../styles/styles";
-import { ApiError, UserData } from "../../utils/apiUtils";
+  ScrollView,
+  View,
+  Text,
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+} from 'react-native';
+import { Image } from 'expo-image';
+import { Save } from 'lucide-react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { useRouter } from 'expo-router';
 
-const DefaultProfileImage = require("../../assets/images/default-profile.png");
+import {
+  getUserDataApi,
+  updateUserApi,
+  updateProfileImageApi,
+} from '../../hooks/user/userHooks';
+import { useAuth } from '../../hooks/user/AuthContext';
+import { profileStyles, Colors } from '../../styles/styles';
+import { ApiError, UserData } from '../../utils/apiUtils';
+
+const DefaultProfileImage = require('../../assets/images/default-profile.png');
 
 export default function Profile() {
-    const router = useRouter();
-    const { isAuthenticated, logout: contextLogout, logoutAndRedirect } = useAuth();
+  const router = useRouter();
+  const { isAuthenticated, logout: contextLogout } = useAuth();
 
-    const [userData, setUserData] = useState<UserData | null>(null);
-    const [tempUsername, setTempUsername] = useState("");
-    const [tempEmail, setTempEmail] = useState("");
-    const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
-    const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
+  const [userData, setUserData] = useState<UserData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
 
-    const [isEditingUsername, setIsEditingUsername] = useState(false);
-    const [isEditingEmail, setIsEditingEmail] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
-    const [isSaving, setIsSaving] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'info' | 'activities'>('info');
+  const subTabs = ['Preferences', 'Favorites', 'Statistics', 'Notifications'];
+  const [activeSubTab, setActiveSubTab] = useState(subTabs[0]);
 
-    const fetchUserData = useCallback(async () => {
-        setIsLoading(true);
-        setError(null);
-        try {
-            const data = await getUserDataApi();
-            setUserData(data);
-            setTempUsername(data.username || "");
-            setTempEmail(data.email || "");
-            setProfileImageUrl(data.profileImage || null);
-            setSelectedImageUri(null);
-        } catch (err) {
-            setError(err instanceof ApiError || err instanceof Error ? err.message : "Failed to load profile.");
-            if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
-                await contextLogout();
-                router.replace("/login");
-            }
-        } finally {
-            setIsLoading(false);
-        }
-    }, [contextLogout, router]);
-
-    useEffect(() => {
-        if (isAuthenticated) {
-            fetchUserData();
-        } else {
-            setIsLoading(false);
-        }
-    }, [isAuthenticated, fetchUserData]);
-
-    const pickImageAsync = async () => {
-        const permissionResult = await ImageSelector.requestMediaLibraryPermissionsAsync();
-        if (!permissionResult.granted) {
-            Alert.alert("Permission refusée", "Vous devez autoriser l'accès à la galerie.");
-            return;
-        }
-
-        let result = await ImageSelector.launchImageLibraryAsync({
-            mediaTypes: ImageSelector.MediaTypeOptions.Images,
-            allowsEditing: true,
-            quality: 0.8,
-            aspect: [1, 1],
-        });
-
-        if (!result.canceled && result.assets?.length) {
-            setSelectedImageUri(result.assets[0].uri);
-            await handleProfileImageUpload(result.assets[0].uri);
-            fetchUserData();
-        }
-    };
-
-    const handleProfileImageUpload = async (imageUri: string) => {
-        setIsSaving(true);
-        setError(null);
-        try {
-            const filename = imageUri.split("/").pop() || `profile-${Date.now()}.jpg`;
-            const match = /\.(\w+)$/.exec(filename);
-            const type = match ? `image/${match[1]}` : `image/jpeg`;
-
-            const response = await updateProfileImageApi({ uri: imageUri, name: filename, type });
-
-            if (response?.imageUrl) {
-                setProfileImageUrl(response.imageUrl);
-                if (userData) {
-                    setUserData({ ...userData, profileImage: response.imageUrl });
-                }
-            }
-
-            setSelectedImageUri(null);
-            Alert.alert("Succès", response.message || "Image mise à jour.");
-        } catch (err) {
-            setError(err instanceof ApiError || err instanceof Error ? err.message : "Erreur de téléversement.");
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
-    const handleSaveChanges = async () => {
-        if (tempUsername === userData?.username && tempEmail === userData?.email) {
-            Alert.alert("Aucun changement", "Aucune modification détectée.");
-            setIsEditingUsername(false);
-            setIsEditingEmail(false);
-            return;
-        }
-
-        setIsSaving(true);
-        setError(null);
-        try {
-            const updateData: { username?: string; email?: string } = {};
-            if (tempUsername !== userData?.username) updateData.username = tempUsername;
-            if (tempEmail !== userData?.email) updateData.email = tempEmail;
-
-            const updatedData = await updateUserApi(updateData);
-            setUserData(updatedData);
-            setTempUsername(updatedData.username || "");
-            setTempEmail(updatedData.email || "");
-            setIsEditingUsername(false);
-            setIsEditingEmail(false);
-            Alert.alert("Succès", "Profil mis à jour avec succès.");
-        } catch (err) {
-            setError(err instanceof ApiError || err instanceof Error ? err.message : "Erreur de mise à jour.");
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
-    const handleDeleteAccount = async () => {
-        Alert.alert(
-            "Confirmation",
-            "Supprimer définitivement votre compte ?",
-            [
-                { text: "Annuler", style: "cancel" },
-                {
-                    text: "Supprimer",
-                    onPress: async () => {
-                        setIsSaving(true);
-                        try {
-                            await deleteProfileApi();
-                            Alert.alert("Compte supprimé");
-                            await contextLogout();
-                            router.replace("/login");
-                        } catch (err) {
-                            setError(err instanceof ApiError || err instanceof Error ? err.message : "Erreur.");
-                            setIsSaving(false);
-                        }
-                    },
-                    style: "destructive",
-                },
-            ]
-        );
-    };
-
-    const handleLogout = async () => {
-        setIsSaving(true);
-        try {
-            await logoutAndRedirect();
-        } catch {
-            Alert.alert("Erreur", "La déconnexion a échoué.");
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
-    const imageSource = selectedImageUri
-        ? { uri: selectedImageUri }
-        : profileImageUrl
-        ? { uri: profileImageUrl }
-        : DefaultProfileImage;
-
-    const hasUsernameChanges = userData && tempUsername !== userData.username;
-    const hasEmailChanges = userData && tempEmail !== userData.email;
-    const hasTextChanges = hasUsernameChanges || hasEmailChanges;
-
-    if (isLoading) {
-        return (
-            <View style={[profileStyles.container, styles.center]}>
-                <ActivityIndicator size="large" color="#000" />
-            </View>
-        );
+  // ─── Fetch user data ─────────────────────────────────────────
+  const fetchUserData = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const data = await getUserDataApi();
+      setUserData(data);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Erreur chargement.';
+      setError(msg);
+      if ((err as ApiError).status === 401 || (err as ApiError).status === 403) {
+        await contextLogout();
+        router.replace('/login');
+      }
+    } finally {
+      setIsLoading(false);
     }
+  }, [contextLogout, router]);
 
+  useEffect(() => {
+    if (isAuthenticated) fetchUserData();
+    else setIsLoading(false);
+  }, [isAuthenticated, fetchUserData]);
+
+  // ─── Pick & upload profile image ─────────────────────────────
+  const pickImageAsync = async () => {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      return Alert.alert('Permission refusée', 'Accès galerie nécessaire.');
+    }
+    const res = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (!res.canceled && res.assets.length) {
+      const uri = res.assets[0].uri;
+      setSelectedImageUri(uri);
+      await handleProfileImageUpload(uri);
+    }
+  };
+
+  const handleProfileImageUpload = async (uri: string) => {
+    setIsSaving(true);
+    setError(null);
+    try {
+      const name = uri.split('/').pop() || `profile-${Date.now()}.jpg`;
+      const ext = name.split('.').pop() || 'jpg';
+      const payload = { uri, name, type: `image/${ext}` };
+      const resp = await updateProfileImageApi(payload);
+      if (resp.imageUrl && userData) {
+        setUserData({ ...userData, profileImage: resp.imageUrl });
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur upload.');
+    } finally {
+      setIsSaving(false);
+      fetchUserData();
+    }
+  };
+
+  // ─── Save changes (Personal Info) ────────────────────────────
+  const handleSaveChanges = async () => {
+    if (!userData) return;
+    setIsSaving(true);
+    setError(null);
+    try {
+      const updated = await updateUserApi({});
+      setUserData(updated);
+      Alert.alert('Profil mis à jour !');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur update.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // ─── Loading Spinner ─────────────────────────────────────────
+  if (isLoading) {
     return (
-        <ScrollView
-            contentContainerStyle={profileStyles.container}
-            keyboardShouldPersistTaps="handled"
-        >
-            {error && <Text style={styles.errorText}>{error}</Text>}
-
-            <View style={profileStyles.content}>
-                <View style={profileStyles.imageSection}>
-                    <View style={profileStyles.imageContainer}>
-                        <Image source={imageSource} style={profileStyles.profileImage} />
-                    </View>
-                    <TouchableOpacity
-                        style={profileStyles.editImageButton}
-                        onPress={pickImageAsync}
-                        disabled={isSaving}
-                    >
-                        <Text style={profileStyles.editImageText}>Changer l'image</Text>
-                    </TouchableOpacity>
-                </View>
-
-                <View style={profileStyles.infoSection}>
-                    <View style={profileStyles.inputContainer}>
-                        <Text style={profileStyles.label}>Username</Text>
-                        <TextInput
-                            style={[
-                                profileStyles.input,
-                                !isEditingUsername && styles.inputReadOnly,
-                            ]}
-                            value={tempUsername}
-                            onChangeText={setTempUsername}
-                            editable={isEditingUsername && !isSaving}
-                            placeholder="Username"
-                            placeholderTextColor="#999"
-                            autoCapitalize="none"
-                        />
-                        <TouchableOpacity
-                            style={profileStyles.editButton}
-                            onPress={() => {
-                                setIsEditingUsername(!isEditingUsername);
-                                if (isEditingUsername) {
-                                    setTempUsername(userData?.username || "");
-                                }
-                            }}
-                            disabled={isSaving}
-                        >
-                            <Pencil size={20} color={isEditingUsername ? "#ff6347" : "#007AFF"} />
-                        </TouchableOpacity>
-                    </View>
-
-                    <View style={profileStyles.inputContainer}>
-                        <Text style={profileStyles.label}>Email</Text>
-                        <TextInput
-                            style={[
-                                profileStyles.input,
-                                !isEditingEmail && styles.inputReadOnly,
-                            ]}
-                            value={tempEmail}
-                            onChangeText={setTempEmail}
-                            editable={isEditingEmail && !isSaving}
-                            placeholder="Email"
-                            keyboardType="email-address"
-                            placeholderTextColor="#999"
-                            autoCapitalize="none"
-                        />
-                        <TouchableOpacity
-                            style={profileStyles.editButton}
-                            onPress={() => {
-                                setIsEditingEmail(!isEditingEmail);
-                                if (isEditingEmail) {
-                                    setTempEmail(userData?.email || "");
-                                }
-                            }}
-                            disabled={isSaving}
-                        >
-                            <Pencil size={20} color={isEditingEmail ? "#ff6347" : "#007AFF"} />
-                        </TouchableOpacity>
-                    </View>
-                </View>
-
-                <View style={profileStyles.actionButtons}>
-                    {(hasTextChanges || isEditingUsername || isEditingEmail) && (
-                        <TouchableOpacity
-                            style={[
-                                profileStyles.saveButton,
-                                isSaving && styles.buttonDisabled,
-                            ]}
-                            onPress={handleSaveChanges}
-                            disabled={
-                                isSaving || (!hasTextChanges && !isEditingUsername && !isEditingEmail)
-                            }
-                        >
-                            {isSaving ? (
-                                <ActivityIndicator color="white" size="small" />
-                            ) : (
-                                <>
-                                    <Save size={20} color="white" />
-                                    <Text style={profileStyles.saveButtonText}>Save Changes</Text>
-                                </>
-                            )}
-                        </TouchableOpacity>
-                    )}
-
-                    <TouchableOpacity
-                        style={[profileStyles.deleteButton, isSaving && styles.buttonDisabled]}
-                        onPress={handleDeleteAccount}
-                        disabled={isSaving}
-                    >
-                        <Trash2 size={20} color="white" />
-                        <Text style={profileStyles.deleteButtonText}>Delete my account</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        style={[profileStyles.logOutButton, isSaving && styles.buttonDisabled]}
-                        onPress={handleLogout}
-                        disabled={isSaving}
-                    >
-                        <LogOutIcon size={20} color="white" />
-                        <Text style={profileStyles.logOutButtonText}>Log out</Text>
-                    </TouchableOpacity>
-                </View>
-            </View>
-        </ScrollView>
+      <SafeAreaView style={[profileStyles.container, profileStyles.center]} edges={['top', 'bottom']}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </SafeAreaView>
     );
-}
+  }
 
-const styles = StyleSheet.create({
-    center: {
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-        padding: 20,
-    },
-    errorText: {
-        color: "red",
-        textAlign: "center",
-        marginBottom: 10,
-        paddingHorizontal: 20,
-    },
-    inputReadOnly: {
-        backgroundColor: "#eee",
-    },
-    buttonDisabled: {
-        opacity: 0.6,
-    },
-});
+  // ─── Determine profile image source ─────────────────────────
+  const imageSource = selectedImageUri
+    ? { uri: selectedImageUri }
+    : userData?.profileImage
+    ? { uri: userData.profileImage }
+    : DefaultProfileImage;
+
+  return (
+    <SafeAreaView style={profileStyles.container} edges={['top', 'bottom']}>
+      <ScrollView contentContainerStyle={profileStyles.scrollContent} keyboardShouldPersistTaps="handled">
+        {error && <Text style={profileStyles.errorText}>{error}</Text>}
+
+        {/* HEADER */}
+        <View style={profileStyles.header}>
+          <TouchableOpacity onPress={pickImageAsync}>
+            <View style={profileStyles.avatarWrapper}>
+              <Image source={imageSource} style={profileStyles.avatar} />
+            </View>
+          </TouchableOpacity>
+          <Text style={profileStyles.userName}>{userData?.username ?? '–'}</Text>
+          <Text style={profileStyles.userRole}>Mon Compte</Text>
+        </View>
+
+        {/* MAIN TABS (juste en-dessous, chevauchant le header) */}
+        <View style={profileStyles.tabsWrapper}>
+          <TouchableOpacity
+            style={[
+              profileStyles.tabButton,
+              activeTab === 'info' && profileStyles.tabButtonActive,
+            ]}
+            onPress={() => setActiveTab('info')}
+          >
+            <Text
+              style={[
+                profileStyles.tabText,
+                activeTab === 'info' && profileStyles.tabTextActive,
+              ]}
+            >
+              Personal Info
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              profileStyles.tabButton,
+              activeTab === 'activities' && profileStyles.tabButtonActive,
+            ]}
+            onPress={() => setActiveTab('activities')}
+          >
+            <Text
+              style={[
+                profileStyles.tabText,
+                activeTab === 'activities' && profileStyles.tabTextActive,
+              ]}
+            >
+              Activities
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* CONTENT: Personal Info */}
+        {activeTab === 'info' && (
+          <View>
+            {[
+              { label: 'Username', value: userData?.username ?? '–' },
+              { label: 'Email', value: userData?.email ?? '–' },
+              {
+                label: 'Mode de transport',
+                value:
+                  userData?.navigationPreferences
+                    ?.preferredTransportMode ?? '–',
+              },
+              {
+                label: 'Éviter péages',
+                value: userData?.navigationPreferences?.avoidTolls
+                  ? 'Oui'
+                  : 'Non',
+              },
+              {
+                label: 'Éviter autoroutes',
+                value: userData?.navigationPreferences?.avoidHighways
+                  ? 'Oui'
+                  : 'Non',
+              },
+              {
+                label: 'Distance alerte',
+                value: `${
+                  userData?.navigationPreferences
+                    ?.proximityAlertDistance ?? '-'
+                } m`,
+              },
+            ].map((it, i) => (
+              <View key={i} style={profileStyles.itemCard}>
+                <Text style={profileStyles.itemLabel}>{it.label}</Text>
+                <Text style={profileStyles.itemValue}>{it.value}</Text>
+              </View>
+            ))}
+
+            <View style={profileStyles.actionRow}>
+              <TouchableOpacity
+                style={[
+                  profileStyles.actionButton,
+                  profileStyles.saveButton,
+                  isSaving && { opacity: 0.6 },
+                ]}
+                onPress={handleSaveChanges}
+                disabled={isSaving}
+              >
+                <Save size={18} color="#fff" />
+                <Text style={profileStyles.actionText}>Save Changes</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* CONTENT: Activities */}
+        {activeTab === 'activities' && (
+          <>
+            {/* Sous-tabs scrollables */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={profileStyles.subTabContainer}
+            >
+              {subTabs.map((t) => (
+                <TouchableOpacity
+                  key={t}
+                  style={[
+                    profileStyles.subTabButton,
+                    activeSubTab === t && profileStyles.subTabButtonActive,
+                  ]}
+                  onPress={() => setActiveSubTab(t)}
+                >
+                  <Text
+                    style={[
+                      profileStyles.subTabText,
+                      activeSubTab === t && profileStyles.subTabTextActive,
+                    ]}
+                  >
+                    {t}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            {/* Contenu selon sous-tab (Statistics / Favorites / …) */}
+            {activeSubTab === 'Statistics' && (
+              <View style={profileStyles.section}>
+                <Text style={profileStyles.sectionTitle}>Your Stats</Text>
+                {[
+                  {
+                    label: 'Routes complétées',
+                    value:
+                      userData?.stats?.totalRoutesCompleted ?? '–',
+                  },
+                  {
+                    label: 'Distance totale (km)',
+                    value:
+                      userData?.stats?.totalDistanceTraveled ?? '–',
+                  },
+                  {
+                    label: 'Temps économisé (min)',
+                    value: userData?.stats?.totalTimeSaved ?? '–',
+                  },
+                  {
+                    label: 'Signalements envoyés',
+                    value:
+                      userData?.stats?.totalReportsSubmitted ?? '–',
+                  },
+                ].map((it, i) => (
+                  <View
+                    key={i}
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      paddingVertical: 8,
+                    }}
+                  >
+                    <Text>{it.label}</Text>
+                    <Text>{it.value}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+            
+            {/* Sub‐tab content */}
+            {activeSubTab === 'Statistics' && (
+              <View style={profileStyles.section}>
+                <Text style={profileStyles.sectionTitle}>
+                  Your Stats
+                </Text>
+                {[
+                  {
+                    label: 'Routes complétées',
+                    value:
+                      userData?.stats
+                        ?.totalRoutesCompleted ?? '–',
+                  },
+                  {
+                    label: 'Distance totale (km)',
+                    value:
+                      userData?.stats
+                        ?.totalDistanceTraveled ?? '–',
+                  },
+                  {
+                    label: 'Temps économisé (min)',
+                    value:
+                      userData?.stats
+                        ?.totalTimeSaved ?? '–',
+                  },
+                  {
+                    label: 'Signalements envoyés',
+                    value:
+                      userData?.stats
+                        ?.totalReportsSubmitted ?? '–',
+                  },
+                ].map((it, i) => (
+                  <View
+                    key={i}
+                    style={{
+                      flexDirection:  'row',
+                      justifyContent: 'space-between',
+                      paddingVertical: 8,
+                    }}
+                  >
+                    <Text>{it.label}</Text>
+                    <Text>{it.value}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {activeSubTab === 'Favorites' && (
+              <View style={profileStyles.section}>
+                <Text style={profileStyles.sectionTitle}>
+                  Favorite Locations
+                </Text>
+                {(userData?.favoriteLocations || []).map(
+                  (loc, i) => (
+                    <View
+                      key={i}
+                      style={profileStyles.itemCard}
+                    >
+                      <Text
+                        style={profileStyles.itemLabel}
+                      >
+                        {loc.name}
+                      </Text>
+                      <Text
+                        style={profileStyles.itemValue}
+                      >
+                        {loc.formattedAddress}
+                      </Text>
+                    </View>
+                  )
+                )}
+              </View>
+            )}
+
+            {activeSubTab === 'Notifications' && (
+              <View style={profileStyles.section}>
+                <Text style={profileStyles.sectionTitle}>
+                  Notification Settings
+                </Text>
+                <View
+                  style={{
+                    flexDirection:  'row',
+                    justifyContent: 'space-between',
+                    paddingVertical: 8,
+                  }}
+                >
+                  <Text>Email Enabled</Text>
+                  <Text>
+                    {userData?.notificationSettings
+                      ?.emailEnabled
+                      ? 'Yes'
+                      : 'No'}
+                  </Text>
+                </View>
+              </View>
+            )}
+
+            {activeSubTab === 'Preferences' && (
+              <View style={profileStyles.section}>
+                <Text style={profileStyles.sectionTitle}>
+                  Nav Preferences
+                </Text>
+                <View
+                  style={{
+                    flexDirection:  'row',
+                    justifyContent: 'space-between',
+                    paddingVertical: 8,
+                  }}
+                >
+                  <Text>Avoid Highways</Text>
+                  <Text>
+                    {userData?.navigationPreferences
+                      ?.avoidHighways
+                      ? 'Yes'
+                      : 'No'}
+                  </Text>
+                </View>
+                <View
+                  style={{
+                    flexDirection:  'row',
+                    justifyContent: 'space-between',
+                    paddingVertical: 8,
+                  }}
+                >
+                  <Text>Avoid Tolls</Text>
+                  <Text>
+                    {userData?.navigationPreferences
+                      ?.avoidTolls
+                      ? 'Yes'
+                      : 'No'}
+                  </Text>
+                </View>
+              </View>
+            )}
+          </>
+        )}
+      </ScrollView>
+    </SafeAreaView>
+  );
+}

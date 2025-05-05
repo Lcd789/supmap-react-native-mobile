@@ -1,5 +1,5 @@
 // globalStyles.ts
-import { StyleSheet } from "react-native";
+import { StyleSheet, Platform } from 'react-native';
 
 const primaryColor = "#2196F3";
 const backgroundColor = "#F7F7F7";
@@ -124,137 +124,227 @@ export const loginStyles = StyleSheet.create({
     },
 });
 
-/* ===========================
-   Profile (profile.tsx) styles
-   =========================== */
-export const profileStyles = StyleSheet.create({
+
+export const Colors = {
+    primary:    '#0057FF',
+    background: '#F0F2F5',
+    card:       '#FFFFFF',
+    text:       '#1D1D1D',
+    subtext:    '#6E6E6E',
+    border:     '#E0E0E0',
+    success:    '#43A047',
+    danger:     '#E53935',
+  };
+  
+  const Spacing = {
+    xs: 4,
+    sm: 8,
+    md: 16,
+    lg: 24,
+    xl: 32,
+  };
+  
+  const Border = {
+    radius: 24,
+    width:  1,
+  };
+  
+  const Typography = {
+    xs: 12,
+    sm: 14,
+    md: 16,
+    lg: 20,
+    xl: 24,
+    xxl: 32,
+  };
+  
+  const Shadow = Platform.select({
+    ios: {
+      shadowColor:   '#000',
+      shadowOffset:  { width: 0, height: 6 },
+      shadowOpacity: 0.1,
+      shadowRadius:  8,
+    },
+    android: { elevation: 6 },
+  });
+  
+  export const profileStyles = StyleSheet.create({
+    // ── Container général ───────────────────────────────────────
     container: {
-        flexGrow: 1,
-        backgroundColor: backgroundColor,
-        padding,
+      flex: 1,
+      backgroundColor: Colors.background,
     },
-    content: {
-        flex: 1,
-        alignItems: "center",
-        justifyContent: "center",
+    scrollContent: {
+      paddingBottom: Spacing.lg,
     },
-    imageSection: {
-        alignItems: "center",
-        marginBottom: 30,
+    center: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
     },
-    imageContainer: {
-        width: 120,
-        height: 120,
-        borderRadius: 60,
-        overflow: "hidden",
-        backgroundColor: borderColor,
-        marginBottom: 10,
+  
+    // ── Header & avatar ────────────────────────────────────────
+    header: {
+      backgroundColor:        Colors.primary,
+      paddingVertical:        Spacing.xl,
+      alignItems:             'center',
+      borderBottomLeftRadius:  Border.radius,
+      borderBottomRightRadius: Border.radius,
     },
-    profileImage: {
-        width: "100%",
-        height: "100%",
+    avatarWrapper: {
+      marginTop:    -(Spacing.xl * 0.75), // -24
+      width:         Spacing.xl * 1.5,     // 48
+      height:        Spacing.xl * 1.5,     // 48
+      borderRadius: (Spacing.xl * 1.5) / 2,
+      overflow:      'hidden',
+      borderWidth:   Border.width,
+      borderColor:  Colors.card,
+      ...Shadow,
     },
-    editImageButton: {
-        padding: 8,
+    avatar: {
+      width:  '100%',
+      height: '100%',
     },
-    editImageText: {
-        color: primaryColor,
-        fontSize: 16,
+    userName: {
+      marginTop:  Spacing.sm,
+      fontSize:   Typography.xxl,
+      fontWeight: '700',
+      color:      Colors.card,
     },
-    infoSection: {
-        width: "100%",
-        marginBottom: 30,
+    userRole: {
+      fontSize:  Typography.sm,
+      color:     Colors.card,
+      marginTop: Spacing.xs,
     },
-    inputContainer: {
-        flexDirection: "row",
-        alignItems: "center",
-        marginBottom: 15,
-        backgroundColor: cardBackground,
-        borderRadius,
-        padding: 5,
-        ...shadow,
+  
+    // ── Main Tabs (chevauchent le header) ───────────────────────
+    tabsWrapper: {
+      flexDirection:  'row',
+      justifyContent: 'center',
+      marginTop:     -Spacing.lg, // descendre sous le header
+      zIndex:         10,
+      elevation:      10,
     },
-    input: {
-        flex: 1,
-        padding: 12,
-        fontSize: 16,
-        color: textColor,
+    tabContainer: {
+      flexDirection:   'row',
+      backgroundColor: '#ECECEC',
+      borderRadius:    Border.radius,
+      overflow:        'hidden',
+      marginHorizontal: Spacing.md,
     },
-    editButton: {
-        padding: 10,
+    tabButton: {
+      flex:            1,
+      alignItems:      'center',
+      paddingVertical: Spacing.sm,
     },
-    actionButtons: {
-        width: "100%",
-        alignItems: "center",
+    tabButtonActive: {
+      backgroundColor: Colors.card,
+    },
+    tabText: {
+      fontSize: Typography.md,
+      color:    Colors.card,
+    },
+    tabTextActive: {
+      fontSize:   Typography.md,
+      fontWeight: '600',
+      color:      Colors.subtext,
+    },
+  
+    // ── Sub-Tabs (Activities) ───────────────────────────────────
+    subTabContainer: {
+      paddingVertical:   Spacing.sm,
+      paddingHorizontal: Spacing.md,
+    },
+    subTabButton: {
+      marginRight:      Spacing.sm,
+      paddingVertical:   Spacing.xs,
+      paddingHorizontal: Spacing.md,
+      borderRadius:      Border.radius / 1.5,
+      backgroundColor:   Colors.card,
+      borderWidth:       Border.width,
+      borderColor:       Colors.border,
+    },
+    subTabButtonActive: {
+      backgroundColor: Colors.primary,
+    },
+    subTabText: {
+      fontSize: Typography.sm,
+      color:    Colors.text,
+    },
+    subTabTextActive: {
+      color:      Colors.card,
+      fontWeight: '600',
+    },
+  
+    // ── Sections & titres ─────────────────────────────────────
+    section: {
+      backgroundColor:  Colors.card,
+      borderRadius:     Border.radius / 1.5,
+      padding:          Spacing.md,
+      marginHorizontal: Spacing.md,
+      marginBottom:     Spacing.md,
+      ...Shadow,
+    },
+    sectionTitle: {
+      fontSize:     Typography.lg,
+      fontWeight:   '600',
+      color:        Colors.primary,
+      marginBottom: Spacing.sm,
+    },
+  
+    // ── Items “Personal Info” ───────────────────────────────────
+    itemCard: {
+      backgroundColor: Colors.card,
+      borderRadius:    Border.radius / 1.5,
+      padding:         Spacing.md,
+      marginBottom:    Spacing.md,
+      borderWidth:     Border.width,
+      borderColor:     Colors.border,
+    },
+    itemLabel: {
+      fontSize: Typography.sm,
+      color:    Colors.subtext,
+    },
+    itemValue: {
+      fontSize:   Typography.md,
+      color:      Colors.text,
+      marginTop:  Spacing.xs,
+    },
+  
+    // ── Bouton “Save” uniquement ───────────────────────────────
+    actionRow: {
+      flexDirection:    'row',
+      justifyContent:   'center',
+      paddingHorizontal: Spacing.md,
+      marginTop:        Spacing.md,
+    },
+    actionButton: {
+      flexDirection:     'row',
+      alignItems:        'center',
+      justifyContent:    'center',
+      paddingVertical:   Spacing.sm,
+      paddingHorizontal: Spacing.lg,
+      borderRadius:      Border.radius / 1.5,
+      backgroundColor:   Colors.success,
+      ...Shadow,
     },
     saveButton: {
-        flexDirection: "row",
-        alignItems: "center",
-        backgroundColor: "#00A000",
-        padding: 15,
-        borderRadius,
-        marginBottom: 15,
-        width: "100%",
-        justifyContent: "center",
+      backgroundColor: Colors.success,
     },
-    saveButtonText: {
-        color: "#fff",
-        fontSize: 16,
-        marginLeft: 10,
+    actionText: {
+      fontSize:   Typography.md,
+      fontWeight: '600',
+      color:      Colors.card,
+      marginLeft: Spacing.sm,
     },
-    deleteButton: {
-        flexDirection: "row",
-        alignItems: "center",
-        backgroundColor: "#D32F2F",
-        padding: 15,
-        borderRadius,
-        width: "100%",
-        justifyContent: "center",
+  
+    // ── Erreurs & loader ───────────────────────────────────────
+    errorText: {
+      color:         Colors.danger,
+      textAlign:     'center',
+      marginVertical: Spacing.sm,
     },
-    deleteButtonText: {
-        color: "#fff",
-        fontSize: 16,
-        marginLeft: 10,
-    },
-    logOutButton: {
-        flexDirection: "row",
-        alignItems: "center",
-        backgroundColor: primaryColor,
-        padding: 15,
-        marginTop: 15,
-        borderRadius,
-        width: "100%",
-        justifyContent: "center",
-    },
-    logOutButtonText: {
-        color: "#fff",
-        fontSize: 16,
-        marginLeft: 10,
-    },
-    label: {
-        fontSize: 14,
-        fontWeight: '500',
-        color: '#333',
-        marginBottom: 5,
-        alignSelf: 'flex-start',
-        marginLeft: 5,
-    },
-    retryButton: {
-        backgroundColor: '#007AFF', // Couleur de fond du bouton
-        paddingVertical: 12,
-        paddingHorizontal: 25,
-        borderRadius: 8,
-        marginTop: 15, // Espace après le message d'erreur
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    retryButtonText: {
-        color: '#fff', // Couleur du texte du bouton
-        fontSize: 16,
-        fontWeight: '600',
-    },
-});
-
+  });
 /* ===========================
    Register (register.tsx) styles
    =========================== */
