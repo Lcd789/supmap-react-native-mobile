@@ -131,17 +131,42 @@ export default function Home() {
             const originText =
                 address ?? `${liveCoords.latitude},${liveCoords.longitude}`;
 
-            const validWaypoints = waypoints.filter(
-                (wp) => wp.address.trim() !== ""
-            );
+                const rawWaypoints = await Promise.all(
+                    waypoints
+                        .filter((wp) => wp.address.trim() !== "")
+                        .map(async (wp) => {
+                          if (wp.address === "📍 Ma position") {
+                            if (!liveCoords) return null;
+                            return {
+                              ...wp,
+                              address: `${liveCoords.latitude},${liveCoords.longitude}`,
+                            };
+                          }
+                          return wp;
+                        })
+                  );
+                  const validWaypoints = rawWaypoints.filter(Boolean) as Waypoint[];
+                  
 
-            const newRoutes = await calculateRoute(
+            
+console.log("🔄 Recalcul - origin:", originText);
+console.log("🧭 Recalcul - destination:", destinationRef.current);
+
+const cleanedWaypoints = validWaypoints.filter(
+  (wp) => wp.address !== originText && wp.address !== destinationRef.current
+);
+
+console.log("🔄 Recalcul - origin:", originText);
+console.log("🧭 Recalcul - destination:", destinationRef.current);
+console.log("🧭 Recalcul - waypoints:", cleanedWaypoints.map((w: Waypoint) => w.address));
+
+const newRoutes = await calculateRoute(
                 originText,
                 destinationRef.current,
                 validWaypoints,
                 selectedMode,
                 { avoidTolls, avoidHighways }
-            );
+              );
 
             if (newRoutes?.length) {
                 const withIds = newRoutes.map((r, i) => ({
@@ -318,7 +343,7 @@ export default function Home() {
         let closePoints = 0;
         selectedRoute.polyline.forEach((point) => {
             const distance = getDistance(liveCoords, point);
-            if (distance < 30) {
+            if (distance < 50) {
                 closePoints++;
             }
         });
@@ -424,10 +449,24 @@ export default function Home() {
 
         if (!finalOrigin.trim() || !finalDestination.trim()) return;
 
-        const validWaypoints = waypoints.filter(
-            (wp) => wp.address.trim() !== ""
-        );
-
+        const validWaypoints = await Promise.all(
+            waypoints
+                .filter((wp) => wp.address.trim() !== "")
+                .map(async (wp) => {
+                  if (wp.address === "📍 Ma position") {
+                    if (!liveCoords) return null;
+                    // On transmet directement lat,lng pour éviter toute confusion
+                   return {
+                      ...wp,
+                      address: `${liveCoords.latitude},${liveCoords.longitude}`,
+                    };
+                  }
+                  return wp;
+                })
+          );
+          
+          const filteredWaypoints = validWaypoints.filter(Boolean) as Waypoint[];
+          
         if (finalOrigin !== "📍 Ma position" && liveCoords) {
             const coords = await getCoordsFromAddress(finalOrigin);
             if (coords) {
@@ -466,18 +505,7 @@ export default function Home() {
                     return;
                 }
 
-                const address = await getAddressFromCoords(
-                    liveCoords.latitude,
-                    liveCoords.longitude
-                );
-                if (!address) {
-                    setRouteError(
-                        "Impossible de récupérer votre position actuelle."
-                    );
-                    return;
-                }
-
-                finalOrigin = address;
+                finalOrigin = `${liveCoords.latitude},${liveCoords.longitude}`;
             }
 
             if (finalDestination === "📍 Ma position") {
@@ -486,18 +514,7 @@ export default function Home() {
                     return;
                 }
 
-                const address = await getAddressFromCoords(
-                    liveCoords.latitude,
-                    liveCoords.longitude
-                );
-                if (!address) {
-                    setRouteError(
-                        "Impossible de récupérer votre position actuelle."
-                    );
-                    return;
-                }
-
-                finalDestination = address;
+                finalDestination = `${liveCoords.latitude},${liveCoords.longitude}`;
             }
 
             const needsGeocoding = (text: string) =>
@@ -535,10 +552,18 @@ export default function Home() {
                 }
             }
 
-            const routeResult = await calculateRoute(
+            
+console.log("🔍 Final origin:", finalOrigin);
+console.log("🏁 Final destination:", finalDestination);
+
+console.log("📤 Appel calculateRoute avec :");
+console.log(" - Origin:", finalOrigin);
+console.log(" - Destination:", finalDestination);
+
+const routeResult = await calculateRoute(
                 finalOrigin,
                 finalDestination,
-                validWaypoints,
+                filteredWaypoints,
                 selectedMode,
                 { avoidTolls }
             );
@@ -575,6 +600,7 @@ export default function Home() {
                 }
             }
         } catch (error: any) {
+            console.log("❌ Erreur calculateRoute :", error);
             setRouteError(
                 error.message || "Erreur lors du calcul de l'itinéraire"
             );

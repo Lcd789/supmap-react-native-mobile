@@ -1,3 +1,4 @@
+// SearchBar.tsx
 import React, { useEffect, useState } from "react";
 import {
   View,
@@ -73,7 +74,6 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   const [showFavoritesOrigin, setShowFavoritesOrigin] = useState(false);
   const [showFavoritesDestination, setShowFavoritesDestination] = useState(false);
 
-  // Load history on mount
   useEffect(() => {
     fetchRouteHistory();
   }, []);
@@ -85,9 +85,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
       .map((route) =>
         type === "origin" ? route.startAddress : route.endAddress
       )
-      .filter(
-        (address, idx, arr) => address && arr.indexOf(address) === idx
-      );
+      .filter((address, idx, arr) => address && arr.indexOf(address) === idx);
     return addresses.map((desc) => ({ description: desc, isHistory: true }));
   };
 
@@ -113,7 +111,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     return [];
   };
 
-  // Handlers for origin
+  // --- Handlers pour origin ---
   const handleOriginChange = async (text: string) => {
     onOriginChange(text);
     setShowFavoritesOrigin(text.length === 0);
@@ -145,7 +143,18 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     setOriginSuggestions([]);
   };
 
-  // Handlers for destination
+  // --- Handlers pour waypoints ---
+  const handleWaypointChange = async (text: string, idx: number) => {
+    onWaypointUpdate(idx, text);
+    const sug = await fetchSuggestions(text);
+    setWaypointSuggestions((p) => ({ ...p, [idx]: sug }));
+  };
+  const handleWaypointSelect = (item: { description: string }, idx: number) => {
+    onWaypointUpdate(idx, item.description);
+    setWaypointSuggestions((p) => ({ ...p, [idx]: [] }));
+  };
+
+  // --- Handlers pour destination ---
   const handleDestinationChange = async (text: string) => {
     onDestinationChange(text);
     setShowFavoritesDestination(text.length === 0);
@@ -162,28 +171,11 @@ export const SearchBar: React.FC<SearchBarProps> = ({
       setDestinationSuggestions(sug);
     }
   };
-
   const handleDestinationSelect = (item: { description: string }) => {
     onDestinationChange(item.description);
-    setDestinationSuggestions([]);
-    setTimeout(() => requestAnimationFrame(onSearch), 150);
+    setDestinationSuggestions([]); 
+    // suppression du setTimeout(onSearch): plus de recherche automatique
   };
-
-  // Handlers for waypoints
-  const handleWaypointChange = async (text: string, idx: number) => {
-    onWaypointUpdate(idx, text);
-    const sug = await fetchSuggestions(text);
-    setWaypointSuggestions((p) => ({ ...p, [idx]: sug }));
-  };
-
-  const handleWaypointSelect = (item: { description: string }, idx: number) => {
-    onWaypointUpdate(idx, item.description);
-    setWaypointSuggestions((p) => ({ ...p, [idx]: [] }));
-  };
-
-  // Toggles
-  const toggleTolls = () => setAvoidTolls(!avoidTolls);
-  const toggleHighways = () => setAvoidHighways(!avoidHighways);
 
   const renderItem = (
     item: { description: string; isCurrentLocation?: boolean; isHistory?: boolean },
@@ -202,15 +194,20 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     </TouchableOpacity>
   );
 
+  const toggleTolls = () => setAvoidTolls(!avoidTolls);
+  const toggleHighways = () => setAvoidHighways(!avoidHighways);
+
   return (
     <View style={styles.container}>
+      {/* En-tête */}
       <View style={styles.topRow}>
+        <Text style={styles.title}>Recherche d’itinéraire</Text>
         <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
           <MaterialIcons name="close" size={24} color="#333" />
         </TouchableOpacity>
       </View>
 
-      {/* Origin Input */}
+      {/* Point de départ */}
       <View style={styles.inputWrapper}>
         <MaterialIcons name="place" size={20} style={styles.icon} />
         <TextInput
@@ -222,9 +219,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
             setIsOriginFocused(true);
             handleOriginChange("");
           }}
-          onBlur={() =>
-            setTimeout(() => setIsOriginFocused(false), 100)
-          }
+          onBlur={() => setTimeout(() => setIsOriginFocused(false), 100)}
           onChangeText={handleOriginChange}
         />
       </View>
@@ -247,58 +242,22 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         />
       )}
 
-      {/* Destination Input */}
-      <View style={styles.inputWrapper}>
-        <MaterialIcons name="flag" size={20} style={styles.icon} />
-        <TextInput
-          style={styles.input}
-          placeholder="Destination"
-          placeholderTextColor="#888"
-          value={destination}
-          onFocus={() => {
-            setIsDestinationFocused(true);
-            handleDestinationChange("");
-          }}
-          onBlur={() =>
-            setTimeout(() => setIsDestinationFocused(false), 100)
-          }
-          onChangeText={handleDestinationChange}
-        />
-      </View>
-      {showFavoritesDestination && (
-        <FavoriteLocationsSelector
-          onSelectLocation={(addr) => {
-            onDestinationChange(addr);
-            setShowFavoritesDestination(false);
-            setTimeout(() => requestAnimationFrame(onSearch), 150);
-          }}
-          isOrigin={false}
-        />
-      )}
-      {isDestinationFocused && destinationSuggestions.length > 0 && (
-        <FlatList
-          data={destinationSuggestions}
-          keyExtractor={(item, i) => `${item.description}-${i}`}
-          renderItem={({ item }) => renderItem(item, () => handleDestinationSelect(item))}
-          style={styles.suggestionList}
-          keyboardShouldPersistTaps="handled"
-        />
-      )}
-
-      {/* Waypoints */}
+      {/* Étapes (waypoints) */}
       {waypoints.map((wp, idx) => (
-        <View key={wp.id} style={styles.waypointRow}>
-          <MaterialIcons name="navigation" size={20} style={styles.icon} />
-          <TextInput
-            style={styles.input}
-            placeholder={`Étape ${idx + 1}`}
-            placeholderTextColor="#888"
-            value={wp.address}
-            onChangeText={(t) => handleWaypointChange(t, idx)}
-          />
-          <TouchableOpacity onPress={() => onWaypointRemove(idx)}>
-            <MaterialIcons name="close" size={20} color="#d00" />
-          </TouchableOpacity>
+        <View key={wp.id} style={{ marginBottom: 12, zIndex: 10 }}>
+          <View style={styles.waypointRow}>
+            <MaterialIcons name="navigation" size={20} style={styles.icon} />
+            <TextInput
+              style={styles.input}
+              placeholder={`Étape ${idx + 1}`}
+              placeholderTextColor="#888"
+              value={wp.address}
+              onChangeText={(t) => handleWaypointChange(t, idx)}
+            />
+            <TouchableOpacity onPress={() => onWaypointRemove(idx)}>
+              <MaterialIcons name="close" size={20} color="#d00" />
+            </TouchableOpacity>
+          </View>
           {waypointSuggestions[idx]?.length > 0 && (
             <FlatList
               data={waypointSuggestions[idx]}
@@ -313,7 +272,45 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         </View>
       ))}
 
-      {/* Reverse & Add Waypoint */}
+      {/* Destination */}
+      <View style={styles.inputWrapper}>
+        <MaterialIcons name="flag" size={20} style={styles.icon} />
+        <TextInput
+          style={styles.input}
+          placeholder="Destination"
+          placeholderTextColor="#888"
+          value={destination}
+          onFocus={() => {
+            setIsDestinationFocused(true);
+            handleDestinationChange("");
+          }}
+          onBlur={() => setTimeout(() => setIsDestinationFocused(false), 100)}
+          onChangeText={handleDestinationChange}
+        />
+      </View>
+      {showFavoritesDestination && (
+        <FavoriteLocationsSelector
+          onSelectLocation={(addr) => {
+            onDestinationChange(addr);
+            setShowFavoritesDestination(false);
+            // plus d'appel automatique à onSearch ici non plus
+          }}
+          isOrigin={false}
+        />
+      )}
+      {isDestinationFocused && destinationSuggestions.length > 0 && (
+        <FlatList
+          data={destinationSuggestions}
+          keyExtractor={(item, i) => `${item.description}-${i}`}
+          renderItem={({ item }) =>
+            renderItem(item, () => handleDestinationSelect(item))
+          }
+          style={styles.suggestionList}
+          keyboardShouldPersistTaps="handled"
+        />
+      )}
+
+      {/* Inverser / Ajouter une étape */}
       <View style={styles.buttonRow}>
         {waypoints.length === 0 && (
           <TouchableOpacity onPress={onReverse} style={styles.reverseBtn}>
@@ -323,14 +320,16 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         <TouchableOpacity
           onPress={onWaypointAdd}
           style={styles.addWaypointBtn}
-          disabled={waypoints.length >= 5}
+          disabled={waypoints.length >= 3}
         >
           <MaterialIcons name="add" size={24} />
-          <Text style={styles.addText}>Ajouter une étape ({waypoints.length}/5)</Text>
+          <Text style={styles.addText}>
+            Ajouter une étape ({waypoints.length}/3)
+          </Text>
         </TouchableOpacity>
       </View>
 
-      {/* Mode & Options */}
+      {/* Mode de transport et options */}
       <TransportModeSelector
         selectedMode={selectedMode}
         onModeSelect={onModeSelect}
@@ -338,17 +337,23 @@ export const SearchBar: React.FC<SearchBarProps> = ({
       {selectedMode === "driving" && (
         <View style={styles.toggleContainer}>
           <TouchableOpacity onPress={toggleTolls} style={styles.toggleRow}>
-            <MaterialIcons name={avoidTolls ? "toggle-on" : "toggle-off"} size={32} />
+            <MaterialIcons
+              name={avoidTolls ? "toggle-on" : "toggle-off"}
+              size={32}
+            />
             <Text style={styles.toggleLabel}>Éviter péages</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={toggleHighways} style={styles.toggleRow}>
-            <MaterialIcons name={avoidHighways ? "toggle-on" : "toggle-off"} size={32} />
+            <MaterialIcons
+              name={avoidHighways ? "toggle-on" : "toggle-off"}
+              size={32}
+            />
             <Text style={styles.toggleLabel}>Éviter autoroutes</Text>
           </TouchableOpacity>
         </View>
       )}
 
-      {/* Search Button */}
+      {/* Bouton Rechercher */}
       <TouchableOpacity
         style={[styles.searchBtn, isLoading && { opacity: 0.6 }]}
         onPress={onSearch}
@@ -365,25 +370,94 @@ export const SearchBar: React.FC<SearchBarProps> = ({
 };
 
 const styles = StyleSheet.create({
-  container: { backgroundColor: "#fff", borderRadius: 12, padding: 16, margin: 16, shadowColor: "#000", shadowOpacity: 0.1, shadowOffset: { width: 0, height: 2 }, shadowRadius: 8, elevation: 5 },
+  container: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 16,
+    margin: 16,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 8,
+    elevation: 5,
+  },
   topRow: { flexDirection: "row", justifyContent: "flex-end" },
   closeBtn: { padding: 4 },
-  inputWrapper: { flexDirection: "row", alignItems: "center", backgroundColor: "#f2f2f2", borderRadius: 24, paddingHorizontal: 12, marginVertical: 8 },
+  inputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f2f2f2",
+    borderRadius: 24,
+    paddingHorizontal: 12,
+    marginVertical: 8,
+  },
   icon: { marginRight: 8, color: "#888" },
   iconSmall: { marginRight: 6, color: "#888" },
   input: { flex: 1, height: 42, color: "#000" },
-  suggestionList: { backgroundColor: "#fff", borderRadius: 8, maxHeight: 140, marginHorizontal: 4, marginTop: -4, paddingVertical: 4, shadowColor: "#000", shadowOpacity: 0.1, shadowOffset: { width: 0, height: 2 }, shadowRadius: 4, elevation: 4, zIndex: 999 },
-  suggestionItem: { padding: 10, borderBottomWidth: 1, borderBottomColor: "#eee" },
-  suggestionText: { fontSize: 14, color: "#000", flexDirection: "row", alignItems: "center" },
+  suggestionList: {
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    maxHeight: 140,
+    marginHorizontal: 4,
+    marginTop: -4,
+    paddingVertical: 4,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 4,
+    zIndex: 999,
+  },
+  suggestionItem: {
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+  },
+  suggestionText: {
+    fontSize: 14,
+    color: "#000",
+    flexDirection: "row",
+    alignItems: "center",
+  },
   historyIcon: { color: "#555" },
-  waypointRow: { flexDirection: "row", alignItems: "center", marginVertical: 4, zIndex: 10 },
-  buttonRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginVertical: 12 },
+  waypointRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f2f2f2",
+    borderRadius: 24,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+  },
+  buttonRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginVertical: 12,
+  },
   reverseBtn: { padding: 8 },
   addWaypointBtn: { flexDirection: "row", alignItems: "center" },
   addText: { marginLeft: 6, fontSize: 14, color: "#2196F3" },
-  toggleContainer: { flexDirection: "row", justifyContent: "space-around", marginVertical: 12 },
+  toggleContainer: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    marginVertical: 12,
+  },
   toggleRow: { flexDirection: "row", alignItems: "center" },
   toggleLabel: { marginLeft: 6, fontSize: 14, color: "#444" },
-  searchBtn: { backgroundColor: "#2196F3", borderRadius: 24, paddingVertical: 14, alignItems: "center", marginTop: 8 },
+  searchBtn: {
+    backgroundColor: "#2196F3",
+    borderRadius: 24,
+    paddingVertical: 14,
+    alignItems: "center",
+    marginTop: 8,
+  },
   searchTxt: { color: "#fff", fontSize: 16, fontWeight: "bold" },
+  title: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#333",
+    flex: 1,
+    paddingLeft: 8,
+    alignSelf: "center",
+  },
 });

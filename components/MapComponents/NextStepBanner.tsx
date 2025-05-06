@@ -61,10 +61,10 @@ export const NextStepBanner: React.FC<NextStepBannerProps> = ({
     );
   }
 
-  // DISTANCE SANS DÉCIMALES
+  // DISTANCE SANS DÉCIMALES (arrondi au mètre)
   const distanceText =
     remainingDistance < 1000
-      ? `${remainingDistance} m`
+      ? `${Math.round(remainingDistance)} m`    // ← ici on arrondit
       : `${Math.round(remainingDistance / 1000)} km`;
 
   // TEMPS
