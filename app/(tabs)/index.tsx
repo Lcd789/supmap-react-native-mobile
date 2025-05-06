@@ -697,8 +697,36 @@ const routeResult = await calculateRoute(
         );
     };
 
+    // Modifié : confirmation avant d'ouvrir la recherche si navigation en cours
     const toggleSearchBar = () => {
         const newValue = isSearchVisible ? 0 : 1;
+        // Si on ouvre la recherche et qu'une navigation est active, demander confirmation
+        if (newValue === 1 && navigationLaunched) {
+            Alert.alert(
+                "Arrêter la navigation",
+                "Êtes-vous sûr de vouloir annuler votre trajet en cours ?",
+                [
+                    { text: "Non", style: "cancel" },
+                    {
+                        text: "Oui",
+                        onPress: () => {
+                            searchBarAnimation.value = withSpring(
+                                newValue,
+                                { damping: 18, stiffness: 120 },
+                                () => {
+                                    runOnJS(setIsSearchVisible)(true);
+                                    runOnJS(setNavigationLaunched)(false);
+                                    runOnJS(setAlternativeRoutes)([]);
+                                    runOnJS(setSelectedRoute)(null);
+                                    runOnJS(setRemainingPolyline)([]);
+                                }
+                            );
+                        },
+                    },
+                ]
+            );
+            return;
+        }
         if (newValue === 1) {
             searchBarAnimation.value = withSpring(
                 newValue,
@@ -707,6 +735,8 @@ const routeResult = await calculateRoute(
                     runOnJS(setIsSearchVisible)(true);
                     runOnJS(setNavigationLaunched)(false);
                     runOnJS(setAlternativeRoutes)([]);
+                    runOnJS(setSelectedRoute)(null);
+                    runOnJS(setRemainingPolyline)([]);
                 }
             );
         } else {
@@ -1149,5 +1179,5 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         zIndex: 5,
     },
-    
 });
+
