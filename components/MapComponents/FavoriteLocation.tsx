@@ -281,7 +281,7 @@ const FavoriteLocationsManager = () => {
                         <Text style={{
                             color: newFavorite.locationType === option.type ? "#fff" : "#333",
                             fontWeight: "500",
-                            fontSize: 12,
+                            fontSize: 11,
                             marginTop: 4
                         }}>
                             {option.label}
