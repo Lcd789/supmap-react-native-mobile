@@ -1,5 +1,5 @@
 // FavoriteLocationsSelector.tsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
     View,
     Text,
@@ -10,25 +10,120 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useGetFavoriteLocations, FavoriteLocation } from '@/hooks/map/MapHooks';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface FavoriteLocationsSelectorProps {
     onSelectLocation: (address: string) => void;
     isOrigin?: boolean; // Pour déterminer si c'est pour l'origine ou la destination
 }
 
+const CACHE_KEY = 'favorite_locations_cache';
+
 const FavoriteLocationsSelector: React.FC<FavoriteLocationsSelectorProps> = ({
                                                                                  onSelectLocation,
                                                                                  isOrigin = false
                                                                              }) => {
-    const { locations, fetchFavoriteLocations, loading } = useGetFavoriteLocations();
-    const [isMounted, setIsMounted] = useState(true);
+    const { locations, fetchFavoriteLocations, loading: apiLoading } = useGetFavoriteLocations();
+    const [cachedLocations, setCachedLocations] = useState<FavoriteLocation[]>([]);
+    const [loading, setLoading] = useState(true);
+    const isMounted = useRef(true);
+    const lastFetchTime = useRef(0);
+    const MIN_FETCH_INTERVAL = 30000; // 30 secondes minimum entre les appels API
 
+    // Chargement initial depuis le cache et mise à jour en arrière-plan
     useEffect(() => {
-        fetchFavoriteLocations();
+        // Fonction pour charger les données depuis le cache
+        const loadFromCache = async () => {
+            try {
+                const cachedData = await AsyncStorage.getItem(CACHE_KEY);
+                if (cachedData) {
+                    const parsed = JSON.parse(cachedData);
+                    if (isMounted.current) {
+                        setCachedLocations(parsed);
+                        setLoading(false);
+                    }
+                }
+            } catch (error) {
+                console.error('Erreur lors du chargement du cache:', error);
+            }
+        };
+
+        // Charger depuis le cache immédiatement
+        loadFromCache();
+
+        // Toujours rafraîchir depuis l'API si assez de temps est passé
+        const now = Date.now();
+        if (now - lastFetchTime.current > MIN_FETCH_INTERVAL) {
+            fetchFavoriteLocations();
+            lastFetchTime.current = now;
+        }
+
         return () => {
-            setIsMounted(false);
+            isMounted.current = false;
         };
     }, []);
+
+    // Mise à jour du cache quand de nouvelles données arrivent de l'API
+    useEffect(() => {
+        const updateCache = async () => {
+            // Si les données de l'API sont présentes et différentes du cache
+            if (locations && (!cachedLocations.length || needsUpdate(locations, cachedLocations))) {
+                try {
+                    // Mettre à jour le cache
+                    await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(locations));
+                    // Mettre à jour l'état local
+                    setCachedLocations(locations);
+                    setLoading(false);
+                } catch (error) {
+                    console.error('Erreur lors de la mise à jour du cache:', error);
+                }
+            } else if (locations && locations.length === 0) {
+                // Si l'API retourne une liste vide, cela pourrait signifier que tous les favoris ont été supprimés
+                try {
+                    await AsyncStorage.removeItem(CACHE_KEY);
+                    setCachedLocations([]);
+                    setLoading(false);
+                } catch (error) {
+                    console.error('Erreur lors de la mise à jour du cache:', error);
+                }
+            } else if (!apiLoading && cachedLocations.length === 0 && !loading) {
+                // Si l'API a fini de charger, qu'on n'a pas de données en cache, et qu'on n'est pas déjà en chargement
+                setLoading(false);
+            }
+        };
+
+        if (locations) {
+            updateCache();
+        }
+    }, [locations, apiLoading]);
+
+    // Fonction pour vérifier si les données ont changé
+    const needsUpdate = (newData: FavoriteLocation[], oldData: FavoriteLocation[]): boolean => {
+        // Comparaison simple par nombre d'éléments
+        if (newData.length !== oldData.length) return true;
+
+        // Comparaison plus détaillée si nécessaire
+        const newIds = new Set(newData.map(item => item.id));
+        const oldIds = new Set(oldData.map(item => item.id));
+
+        // Vérifier si tous les IDs correspondent
+        for (const id of newIds) {
+            if (!oldIds.has(id)) return true;
+        }
+
+        // Vérifier si les propriétés importantes ont changé
+        for (let i = 0; i < newData.length; i++) {
+            const newItem = newData[i];
+            const oldItem = oldData.find(item => item.id === newItem.id);
+
+            if (!oldItem) return true;
+            if (newItem.name !== oldItem.name) return true;
+            if (newItem.formattedAddress !== oldItem.formattedAddress) return true;
+            if (newItem.locationType !== oldItem.locationType) return true;
+        }
+
+        return false;
+    };
 
     // Fonction pour obtenir l'icône basée sur le type de localisation
     const getLocationTypeIcon = (locationType: string): any => {
@@ -43,7 +138,16 @@ const FavoriteLocationsSelector: React.FC<FavoriteLocationsSelectorProps> = ({
         }
     };
 
-    if (loading) {
+    // Rafraîchir manuellement les données
+    const refreshData = () => {
+        const now = Date.now();
+        if (now - lastFetchTime.current > MIN_FETCH_INTERVAL) {
+            fetchFavoriteLocations();
+            lastFetchTime.current = now;
+        }
+    };
+
+    if (loading && !cachedLocations.length) {
         return (
             <View style={styles.loaderContainer}>
                 <ActivityIndicator size="small" color="#2196F3" />
@@ -51,7 +155,7 @@ const FavoriteLocationsSelector: React.FC<FavoriteLocationsSelectorProps> = ({
         );
     }
 
-    if (!locations || locations.length === 0) {
+    if (!cachedLocations || cachedLocations.length === 0) {
         return (
             <View style={styles.emptyContainer}>
                 <Text style={styles.emptyText}>Aucun lieu favori</Text>
@@ -64,14 +168,18 @@ const FavoriteLocationsSelector: React.FC<FavoriteLocationsSelectorProps> = ({
             <View style={styles.header}>
                 <MaterialIcons name="star" size={16} color="#888" />
                 <Text style={styles.headerText}>Lieux favoris</Text>
+                {apiLoading && (
+                    <ActivityIndicator size="small" color="#2196F3" style={styles.smallLoader} />
+                )}
             </View>
 
             <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.scrollContent}
+                onMomentumScrollEnd={refreshData} // Rafraîchir quand l'utilisateur fait défiler
             >
-                {locations.map((location, index) => (
+                {cachedLocations.map((location, index) => (
                     <TouchableOpacity
                         key={location.id}
                         style={styles.locationCard}
@@ -110,6 +218,10 @@ const styles = StyleSheet.create({
         color: '#666',
         marginLeft: 4,
         fontWeight: '500',
+        flex: 1,
+    },
+    smallLoader: {
+        marginLeft: 8,
     },
     scrollContent: {
         paddingHorizontal: 4,
