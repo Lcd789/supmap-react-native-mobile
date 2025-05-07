@@ -12,7 +12,6 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSettings } from "@/hooks/user/SettingsContext";
 import { useAuth } from "@/hooks/user/AuthContext";
-import { useHistory } from "@/hooks/useHistory";
 import {
     useUpdateNavigationPreferences,
     NavigationPreferences,
@@ -32,8 +31,6 @@ const CACHE_VALIDITY_DURATION = 24 * 60 * 60 * 1000;
 const SettingsScreen = () => {
     const insets = useSafeAreaInsets();
     const { isAuthenticated } = useAuth();
-    const { clearHistory } = useHistory();
-    const [isClearing, setIsClearing] = useState(false);
     const {
         avoidTolls,
         setAvoidTolls,
@@ -45,14 +42,6 @@ const SettingsScreen = () => {
         setVoiceGuidance,
         unitsMetric,
         setUnitsMetric,
-        enableEventSearch,
-        setEnableEventSearch,
-        eventSearchDistance,
-        setEventSearchDistance,
-        enableUserSearch,
-        setEnableUserSearch,
-        userSearchDistance,
-        setUserSearchDistance,
         isSettingsLoading,
     } = useSettings();
 
@@ -61,8 +50,8 @@ const SettingsScreen = () => {
         avoidTolls: avoidTolls,
         avoidHighways: avoidHighways,
         avoidTraffic: !showTraffic,
-        showUsers: enableUserSearch,
-        proximityAlertDistance: userSearchDistance,
+        showUsers: false,
+        proximityAlertDistance: 1000,
         preferredTransportMode: "CAR" // Valeur par défaut
     });
 
@@ -145,8 +134,6 @@ const SettingsScreen = () => {
         setAvoidTolls(prefs.avoidTolls);
         setAvoidHighways(prefs.avoidHighways);
         setShowTraffic(!prefs.avoidTraffic);
-        setEnableUserSearch(prefs.showUsers);
-        setUserSearchDistance(prefs.proximityAlertDistance);
     };
 
     // Charger les préférences au montage du composant
@@ -162,11 +149,9 @@ const SettingsScreen = () => {
                 avoidTolls: avoidTolls,
                 avoidHighways: avoidHighways,
                 avoidTraffic: !showTraffic,
-                showUsers: enableUserSearch,
-                proximityAlertDistance: userSearchDistance
             }));
         }
-    }, [avoidTolls, avoidHighways, showTraffic, enableUserSearch, userSearchDistance, loadingNavPrefs]);
+    }, [avoidTolls, avoidHighways, showTraffic, loadingNavPrefs]);
 
     // Effet pour afficher le succès
     useEffect(() => {
@@ -200,37 +185,6 @@ const SettingsScreen = () => {
         return `${distance} m`;
     };
 
-    const handleClearHistory = () => {
-        Alert.alert(
-            "Effacer l'historique",
-            "Êtes-vous sûr de vouloir effacer tout l'historique de navigation ?",
-            [
-                { text: "Annuler", style: "cancel" },
-                {
-                    text: "Confirmer",
-                    style: "destructive",
-                    onPress: async () => {
-                        try {
-                            setIsClearing(true);
-                            await clearHistory();
-                            Alert.alert(
-                                "Succès",
-                                "L'historique de navigation a été effacé avec succès."
-                            );
-                        } catch {
-                            Alert.alert(
-                                "Erreur",
-                                "Une erreur s'est produite lors de la suppression de l'historique."
-                            );
-                        } finally {
-                            setIsClearing(false);
-                        }
-                    },
-                },
-            ]
-        );
-    };
-
     // Modes de transport disponibles
     const transportModes: { type: TransportMode; label: string; icon: any }[] = [
         { type: "CAR", label: "Voiture", icon: "directions-car" },
@@ -250,104 +204,89 @@ const SettingsScreen = () => {
         );
     }
 
+    // Composant pour afficher un message de connexion requis
+    const LoginRequiredMessage = () => (
+        <View style={styles.loginRequiredContainer}>
+            <MaterialIcons name="lock" size={48} color="#888" />
+            <Text style={styles.loginRequiredText}>
+                Connexion requise
+            </Text>
+            <Text style={styles.loginRequiredSubtext}>
+                Veuillez vous connecter pour accéder à cette fonctionnalité.
+            </Text>
+        </View>
+    );
+
     return (
         <ScrollView contentContainerStyle={[styles.container, { paddingTop: insets.top }]}>
             <Text style={styles.sectionTitle}>Paramètres d'itinéraire</Text>
 
-            <View style={styles.card}>
-                <Text style={styles.subsectionTitle}>Mode de transport préféré</Text>
-                <View style={styles.transportModesContainer}>
-                    {transportModes.map((mode) => (
-                        <TouchableOpacity
-                            key={mode.type}
-                            style={[
-                                styles.transportModeButton,
-                                navPreferences.preferredTransportMode === mode.type && styles.transportModeButtonActive
-                            ]}
-                            onPress={() => setNavPreferences({
-                                ...navPreferences,
-                                preferredTransportMode: mode.type
-                            })}
-                        >
-                            <MaterialIcons
-                                name={mode.icon}
-                                size={28}
-                                color={navPreferences.preferredTransportMode === mode.type ? "#fff" : "#333"}
-                            />
-                            <Text
+            {isAuthenticated ? (
+                <View style={styles.card}>
+                    <Text style={styles.subsectionTitle}>Mode de transport préféré</Text>
+                    <View style={styles.transportModesContainer}>
+                        {transportModes.map((mode) => (
+                            <TouchableOpacity
+                                key={mode.type}
                                 style={[
-                                    styles.transportModeText,
-                                    navPreferences.preferredTransportMode === mode.type && styles.transportModeTextActive
+                                    styles.transportModeButton,
+                                    navPreferences.preferredTransportMode === mode.type && styles.transportModeButtonActive
                                 ]}
+                                onPress={() => setNavPreferences({
+                                    ...navPreferences,
+                                    preferredTransportMode: mode.type
+                                })}
                             >
-                                {mode.label}
-                            </Text>
-                        </TouchableOpacity>
-                    ))}
-                </View>
+                                <MaterialIcons
+                                    name={mode.icon}
+                                    size={28}
+                                    color={navPreferences.preferredTransportMode === mode.type ? "#fff" : "#333"}
+                                />
+                                <Text
+                                    style={[
+                                        styles.transportModeText,
+                                        navPreferences.preferredTransportMode === mode.type && styles.transportModeTextActive
+                                    ]}
+                                >
+                                    {mode.label}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
 
-                <View style={styles.optionRow}>
-                    <Text style={styles.optionLabel}>Éviter les péages</Text>
-                    <Switch
-                        value={navPreferences.avoidTolls}
-                        onValueChange={(value) => {
-                            setAvoidTolls(value);
-                            setNavPreferences({...navPreferences, avoidTolls: value});
-                        }}
-                    />
-                </View>
+                    <View style={styles.optionRow}>
+                        <Text style={styles.optionLabel}>Éviter les péages</Text>
+                        <Switch
+                            value={navPreferences.avoidTolls}
+                            onValueChange={(value) => {
+                                setAvoidTolls(value);
+                                setNavPreferences({...navPreferences, avoidTolls: value});
+                            }}
+                        />
+                    </View>
 
-                <View style={styles.optionRow}>
-                    <Text style={styles.optionLabel}>Éviter les autoroutes</Text>
-                    <Switch
-                        value={navPreferences.avoidHighways}
-                        onValueChange={(value) => {
-                            setAvoidHighways(value);
-                            setNavPreferences({...navPreferences, avoidHighways: value});
-                        }}
-                    />
-                </View>
+                    <View style={styles.optionRow}>
+                        <Text style={styles.optionLabel}>Éviter les autoroutes</Text>
+                        <Switch
+                            value={navPreferences.avoidHighways}
+                            onValueChange={(value) => {
+                                setAvoidHighways(value);
+                                setNavPreferences({...navPreferences, avoidHighways: value});
+                            }}
+                        />
+                    </View>
 
-                <View style={styles.optionRow}>
-                    <Text style={styles.optionLabel}>Éviter le trafic</Text>
-                    <Switch
-                        value={navPreferences.avoidTraffic}
-                        onValueChange={(value) => {
-                            setShowTraffic(!value);
-                            setNavPreferences({...navPreferences, avoidTraffic: value});
-                        }}
-                    />
-                </View>
+                    <View style={styles.optionRow}>
+                        <Text style={styles.optionLabel}>Éviter le trafic</Text>
+                        <Switch
+                            value={navPreferences.avoidTraffic}
+                            onValueChange={(value) => {
+                                setShowTraffic(!value);
+                                setNavPreferences({...navPreferences, avoidTraffic: value});
+                            }}
+                        />
+                    </View>
 
-                <View style={styles.optionRow}>
-                    <Text style={styles.optionLabel}>Afficher les utilisateurs</Text>
-                    <Switch
-                        value={navPreferences.showUsers}
-                        onValueChange={(value) => {
-                            setEnableUserSearch(value);
-                            setNavPreferences({...navPreferences, showUsers: value});
-                        }}
-                    />
-                </View>
-
-                <View style={styles.sliderContainer}>
-                    <Text style={styles.sliderLabel}>
-                        Distance d'alerte de proximité : {formatDistance(navPreferences.proximityAlertDistance)}
-                    </Text>
-                    <Slider
-                        style={styles.slider}
-                        minimumValue={100}
-                        maximumValue={10000}
-                        step={100}
-                        value={navPreferences.proximityAlertDistance}
-                        onValueChange={(value) => {
-                            setNavPreferences({...navPreferences, proximityAlertDistance: value});
-                            setUserSearchDistance(value);
-                        }}
-                    />
-                </View>
-
-                {isAuthenticated && (
                     <TouchableOpacity
                         style={styles.saveButton}
                         onPress={handleSaveNavPreferences}
@@ -359,16 +298,14 @@ const SettingsScreen = () => {
                             <Text style={styles.saveButtonText}>Enregistrer les préférences</Text>
                         )}
                     </TouchableOpacity>
-                )}
 
-                {updateError && <Text style={styles.errorText}>{updateError}</Text>}
-
-                {!isAuthenticated && (
-                    <Text style={styles.infoText}>
-                        Connectez-vous pour sauvegarder vos préférences de navigation.
-                    </Text>
-                )}
-            </View>
+                    {updateError && <Text style={styles.errorText}>{updateError}</Text>}
+                </View>
+            ) : (
+                <View style={styles.card}>
+                    <LoginRequiredMessage />
+                </View>
+            )}
 
             {/* Lieux favoris */}
             <Text style={styles.sectionTitle}>Lieux favoris</Text>
@@ -376,9 +313,7 @@ const SettingsScreen = () => {
                 <FavoriteLocationsManager />
             ) : (
                 <View style={styles.card}>
-                    <Text style={styles.infoText}>
-                        Connectez-vous pour gérer vos lieux favoris.
-                    </Text>
+                    <LoginRequiredMessage />
                 </View>
             )}
 
@@ -404,97 +339,6 @@ const SettingsScreen = () => {
                     <Text style={styles.optionLabel}>Guidage vocal</Text>
                     <Switch value={voiceGuidance} onValueChange={setVoiceGuidance} />
                 </View>
-
-                <View style={styles.optionRow}>
-                    <Text style={styles.optionLabel}>Unités métriques</Text>
-                    <Switch value={unitsMetric} onValueChange={setUnitsMetric} />
-                </View>
-            </View>
-
-            <Text style={styles.sectionTitle}>Recherche</Text>
-
-            <View style={styles.card}>
-                <View style={styles.optionRow}>
-                    <Text style={[styles.optionLabel, !isAuthenticated && styles.disabledText]}>
-                        Rechercher des événements
-                    </Text>
-                    <Switch
-                        value={enableEventSearch}
-                        onValueChange={setEnableEventSearch}
-                        disabled={!isAuthenticated}
-                    />
-                </View>
-
-                {isAuthenticated && enableEventSearch && (
-                    <View style={styles.sliderContainer}>
-                        <Text style={styles.sliderLabel}>
-                            Distance de recherche : {formatDistance(eventSearchDistance)}
-                        </Text>
-                        <Slider
-                            style={styles.slider}
-                            minimumValue={100}
-                            maximumValue={5000}
-                            step={100}
-                            value={eventSearchDistance}
-                            onValueChange={setEventSearchDistance}
-                        />
-                    </View>
-                )}
-
-                <View style={styles.optionRow}>
-                    <Text style={[styles.optionLabel, !isAuthenticated && styles.disabledText]}>
-                        Rechercher des utilisateurs
-                    </Text>
-                    <Switch
-                        value={enableUserSearch}
-                        onValueChange={(value) => {
-                            setEnableUserSearch(value);
-                            setNavPreferences({...navPreferences, showUsers: value});
-                        }}
-                        disabled={!isAuthenticated}
-                    />
-                </View>
-
-                {isAuthenticated && enableUserSearch && (
-                    <View style={styles.sliderContainer}>
-                        <Text style={styles.sliderLabel}>
-                            Distance de recherche : {formatDistance(userSearchDistance)}
-                        </Text>
-                        <Slider
-                            style={styles.slider}
-                            minimumValue={100}
-                            maximumValue={5000}
-                            step={100}
-                            value={userSearchDistance}
-                            onValueChange={(value) => {
-                                setUserSearchDistance(value);
-                                setNavPreferences({...navPreferences, proximityAlertDistance: value});
-                            }}
-                        />
-                    </View>
-                )}
-
-                {!isAuthenticated && (
-                    <Text style={styles.infoText}>
-                        Connectez-vous pour activer les options de recherche.
-                    </Text>
-                )}
-            </View>
-
-            <Text style={styles.sectionTitle}>Données</Text>
-
-            <View style={styles.card}>
-                <TouchableOpacity
-                    style={styles.buttonContainer}
-                    onPress={handleClearHistory}
-                    disabled={isClearing}
-                >
-                    {isClearing ? (
-                        <ActivityIndicator size="small" color="#e74c3c" />
-                    ) : (
-                        <Text style={styles.buttonText}>Effacer l'historique de navigation</Text>
-                    )}
-                </TouchableOpacity>
             </View>
         </ScrollView>
     );
@@ -572,15 +416,6 @@ const styles = StyleSheet.create({
         padding: 10,
         textAlign: "center",
     },
-    buttonContainer: {
-        paddingVertical: 14,
-        alignItems: "center",
-    },
-    buttonText: {
-        fontSize: 16,
-        color: "#e74c3c",
-        fontWeight: "600",
-    },
     errorText: {
         color: "#e74c3c",
         fontSize: 14,
@@ -629,6 +464,23 @@ const styles = StyleSheet.create({
         color: "#fff",
         fontSize: 16,
         fontWeight: "600",
+    },
+    loginRequiredContainer: {
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 20,
+    },
+    loginRequiredText: {
+        fontSize: 18,
+        fontWeight: "600",
+        color: "#555",
+        marginTop: 12,
+    },
+    loginRequiredSubtext: {
+        fontSize: 14,
+        color: "#888",
+        textAlign: "center",
+        marginTop: 8,
     },
 });
 

@@ -24,7 +24,9 @@ import {
   Home as HomeIcon,
   Briefcase as BriefcaseIcon,
   Map as MapIcon,
-  Edit2 as EditIcon
+  Edit2 as EditIcon,
+  LogOut as LogOutIcon,
+  Trash2 as TrashIcon
 } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
@@ -33,12 +35,13 @@ import {
   getUserDataApi,
   updateUserApi,
   updateProfileImageApi,
-} from '../../hooks/user/userHooks';
-import { useAuth } from '../../hooks/user/AuthContext';
-import { Colors } from '../../styles/styles';
-import { ApiError, UserData } from '../../utils/apiUtils';
+  deleteProfileApi
+} from '@/hooks/user/userHooks';
+import { useAuth } from '@/hooks/user/AuthContext';
+import { Colors } from '@/styles/styles';
+import { ApiError, UserData } from '@/utils/apiUtils';
 
-const DefaultProfileImage = require('../../assets/images/default-profile.png');
+const DefaultProfileImage = require('@/assets/images/default-profile.png');
 const screenWidth = Dimensions.get('window').width;
 
 export default function Profile() {
@@ -48,6 +51,7 @@ export default function Profile() {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
 
@@ -201,6 +205,64 @@ export default function Profile() {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  // ─── Handle logout ────────────────────────────────────────────
+  const handleLogout = async () => {
+    Alert.alert(
+        "Déconnexion",
+        "Êtes-vous sûr de vouloir vous déconnecter ?",
+        [
+          { text: "Annuler", style: "cancel" },
+          {
+            text: "Déconnexion",
+            style: "destructive",
+            onPress: async () => {
+              try {
+                await contextLogout();
+                router.replace('/login');
+              } catch (error) {
+                setError("Erreur lors de la déconnexion.");
+              }
+            }
+          }
+        ]
+    );
+  };
+
+  // ─── Handle delete account ───────────────────────────────────
+  const handleDeleteAccount = async () => {
+    Alert.alert(
+        "Supprimer le compte",
+        "Êtes-vous sûr de vouloir supprimer définitivement votre compte ? Cette action est irréversible.",
+        [
+          { text: "Annuler", style: "cancel" },
+          {
+            text: "Supprimer",
+            style: "destructive",
+            onPress: async () => {
+              try {
+                setIsDeleting(true);
+                await deleteProfileApi();
+                await contextLogout();
+                Alert.alert(
+                    "Compte supprimé",
+                    "Votre compte a été supprimé avec succès.",
+                    [
+                      {
+                        text: "OK",
+                        onPress: () => router.replace('/login')
+                      }
+                    ]
+                );
+              } catch (error) {
+                setError("Erreur lors de la suppression du compte.");
+                setIsDeleting(false);
+              }
+            }
+          }
+        ]
+    );
   };
 
   // ─── Loading Spinner ─────────────────────────────────────────
@@ -393,6 +455,32 @@ export default function Profile() {
                     <Text style={styles.infoLabel}>Distance alerte</Text>
                     <Text style={styles.infoValue}>{userData?.navigationPreferences?.proximityAlertDistance ?? '–'} m</Text>
                   </View>
+                </View>
+
+                {/* Boutons déconnexion et suppression de compte */}
+                <View style={styles.actionButtonsContainer}>
+                  <TouchableOpacity
+                      style={styles.logoutButton}
+                      onPress={handleLogout}
+                  >
+                    <LogOutIcon size={18} color="#fff" />
+                    <Text style={styles.actionButtonText}>Déconnexion</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                      style={styles.deleteAccountButton}
+                      onPress={handleDeleteAccount}
+                      disabled={isDeleting}
+                  >
+                    {isDeleting ? (
+                        <ActivityIndicator color="#fff" size="small" />
+                    ) : (
+                        <>
+                          <TrashIcon size={18} color="#fff" />
+                          <Text style={styles.actionButtonText}>Supprimer mon compte</Text>
+                        </>
+                    )}
+                  </TouchableOpacity>
                 </View>
 
                 {editMode && (
@@ -839,6 +927,34 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginLeft: 8
   },
+  // Nouveaux styles pour les boutons d'action
+  actionButtonsContainer: {
+    marginBottom: 16,
+    flexDirection: 'column',
+    gap: 12
+  },
+  logoutButton: {
+    backgroundColor: '#3498db',
+    borderRadius: 10,
+    padding: 16,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  deleteAccountButton: {
+    backgroundColor: '#e74c3c',
+    borderRadius: 10,
+    padding: 16,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  actionButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 16,
+    marginLeft: 8
+  },
   subTabsContainer: {
     flexDirection: 'row',
     backgroundColor: '#fff',
@@ -872,67 +988,67 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontWeight: '600'
   },
-    statItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingVertical: 12
-    },
-    statIconContainer: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
-      backgroundColor: 'rgba(33, 150, 243, 0.1)',
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginRight: 12
-    },
-    statContent: {
-      flex: 1
-    },
-    statLabel: {
-      fontSize: 14,
-      color: '#555'
-    },
-    statValue: {
-      fontSize: 18,
-      fontWeight: '600',
-      color: '#333',
-      marginTop: 2
-    },
-    favoriteItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingVertical: 12
-    },
-    favoriteIconContainer: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
-      backgroundColor: 'rgba(33, 150, 243, 0.1)',
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginRight: 12
-    },
-    favoriteContent: {
-      flex: 1
-    },
-    favoriteName: {
-      fontSize: 15,
-      fontWeight: '600',
-      color: '#333'
-    },
-    favoriteAddress: {
-      fontSize: 13,
-      color: '#777',
-      marginTop: 2
-    },
-    emptyState: {
-      alignItems: 'center',
-      paddingVertical: 30
-    },
-    emptyStateText: {
-      marginTop: 12,
-      color: '#999',
-      fontSize: 14
-    }
-  });
+  statItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12
+  },
+  statIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(33, 150, 243, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12
+  },
+  statContent: {
+    flex: 1
+  },
+  statLabel: {
+    fontSize: 14,
+    color: '#555'
+  },
+  statValue: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginTop: 2
+  },
+  favoriteItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12
+  },
+  favoriteIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(33, 150, 243, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12
+  },
+  favoriteContent: {
+    flex: 1
+  },
+  favoriteName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#333'
+  },
+  favoriteAddress: {
+    fontSize: 13,
+    color: '#777',
+    marginTop: 2
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 30
+  },
+  emptyStateText: {
+    marginTop: 12,
+    color: '#999',
+    fontSize: 14
+  }
+});

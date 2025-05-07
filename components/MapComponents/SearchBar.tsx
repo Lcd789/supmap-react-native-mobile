@@ -10,7 +10,7 @@ import {
   StyleSheet,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
-import { TransportMode, Waypoint } from "../../types";
+import { TransportMode, Waypoint } from "@/types";
 import { TransportModeSelector } from "./TransportModeSelector";
 import { useSettings } from "@/hooks/user/SettingsContext";
 import { useGetRouteHistory } from "@/hooks/map/MapHooks";
