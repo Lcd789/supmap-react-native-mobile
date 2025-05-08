@@ -177,9 +177,9 @@ const FavoriteLocationsSelector: React.FC<FavoriteLocationsSelectorProps> = ({
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.scrollContent}
-                onMomentumScrollEnd={refreshData} // Rafraîchir quand l'utilisateur fait défiler
+                onMomentumScrollEnd={refreshData}
             >
-                {cachedLocations.map((location, index) => (
+                {cachedLocations.map((location) => (
                     <TouchableOpacity
                         key={location.id}
                         style={styles.locationCard}
@@ -193,7 +193,7 @@ const FavoriteLocationsSelector: React.FC<FavoriteLocationsSelectorProps> = ({
                                 color="#fff"
                             />
                         </View>
-                        <Text style={styles.locationName} numberOfLines={1}>
+                        <Text style={styles.locationName} numberOfLines={1} ellipsizeMode="tail">
                             {location.name}
                         </Text>
                     </TouchableOpacity>
@@ -206,6 +206,7 @@ const FavoriteLocationsSelector: React.FC<FavoriteLocationsSelectorProps> = ({
 const styles = StyleSheet.create({
     container: {
         marginVertical: 8,
+        zIndex: 1000, // Assurer que la barre de favoris est au-dessus des autres éléments
     },
     header: {
         flexDirection: 'row',
@@ -236,8 +237,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         borderWidth: 1,
         borderColor: '#e0f2fe',
-        maxWidth: 150,
-        minWidth: 100,
+        minWidth: 120,
+        maxWidth: 200,
     },
     iconContainer: {
         width: 32,
@@ -247,6 +248,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: 8,
+        flexShrink: 0, // Ne pas réduire l'icône
     },
     locationName: {
         fontSize: 14,
