@@ -485,9 +485,9 @@ const styles = StyleSheet.create({
     marginVertical: 12,
   },
   favoritesContainer: {
-    marginBottom: 12,
+    marginBottom: 0,
   },
-  reverseBtn: { padding: 8 },
+  reverseBtn: { padding: 0 },
   addWaypointBtn: { flexDirection: "row", alignItems: "center" },
   addText: { marginLeft: 6, fontSize: 14, color: "#2196F3" },
   toggleContainer: {
