@@ -166,8 +166,6 @@ const FavoriteLocationsSelector: React.FC<FavoriteLocationsSelectorProps> = ({
     return (
         <View style={styles.container}>
             <View style={styles.header}>
-                <MaterialIcons name="star" size={16} color="#888" />
-                <Text style={styles.headerText}>Lieux favoris</Text>
                 {apiLoading && (
                     <ActivityIndicator size="small" color="#2196F3" style={styles.smallLoader} />
                 )}

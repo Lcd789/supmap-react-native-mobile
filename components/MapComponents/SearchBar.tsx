@@ -352,6 +352,14 @@ export const SearchBar: React.FC<SearchBarProps> = ({
             />
         )}
 
+        {/* Section Favoris (sans titre, sans bordure) */}
+        <View style={styles.favoritesContainer}>
+          <FavoriteLocationsSelector
+              onSelectLocation={handleFavoriteSelect}
+              isOrigin={false}
+          />
+        </View>
+
         {/* Inverser / Ajouter une étape */}
         <View style={styles.buttonRow}>
           {waypoints.length === 0 && (
@@ -369,16 +377,6 @@ export const SearchBar: React.FC<SearchBarProps> = ({
               Ajouter une étape ({waypoints.length}/3)
             </Text>
           </TouchableOpacity>
-        </View>
-
-        {/* Section Favoris (plus compacte) */}
-        <View style={styles.favoritesSection}>
-          <View style={styles.smallFavoritesHeader}>
-          </View>
-          <FavoriteLocationsSelector
-              onSelectLocation={handleFavoriteSelect}
-              isOrigin={false}
-          />
         </View>
 
         {/* Mode de transport et options */}
@@ -486,24 +484,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginVertical: 12,
   },
-  favoritesSection: {
+  favoritesContainer: {
     marginBottom: 12,
-    borderWidth: 0.5,
-    borderColor: "#e0e0e0",
-    borderRadius: 8,
-    padding: 8,
-    backgroundColor: "#fafafa",
-  },
-  smallFavoritesHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 4,
-  },
-  smallFavoritesSectionTitle: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#555",
-    marginLeft: 4,
   },
   reverseBtn: { padding: 8 },
   addWaypointBtn: { flexDirection: "row", alignItems: "center" },
