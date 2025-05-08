@@ -28,6 +28,11 @@ const NAV_PREFS_STORAGE_KEY = "navigation_preferences";
 // Durée de validité du cache (24 heures en millisecondes)
 const CACHE_VALIDITY_DURATION = 24 * 60 * 60 * 1000;
 
+// Constantes pour le slider de distance d'alerte
+const MIN_ALERT_DISTANCE = 100; // 100 mètres
+const MAX_ALERT_DISTANCE = 10000; // 10 kilomètres
+const ALERT_DISTANCE_STEP = 100; // Pas de 100 mètres
+
 const SettingsScreen = () => {
     const insets = useSafeAreaInsets();
     const { isAuthenticated } = useAuth();
@@ -52,7 +57,7 @@ const SettingsScreen = () => {
         avoidTraffic: !showTraffic,
         showUsers: false,
         proximityAlertDistance: 1000,
-        preferredTransportMode: "CAR" // Valeur par défaut
+        preferredTransportMode: "CAR"
     });
 
     // État pour le chargement des préférences de navigation
@@ -178,11 +183,22 @@ const SettingsScreen = () => {
         }
     };
 
+    // Fonction pour formater l'affichage de la distance
     const formatDistance = (distance: number) => {
         if (distance >= 1000) {
             return `${(distance / 1000).toFixed(1)} km`;
         }
         return `${distance} m`;
+    };
+
+    // Fonction pour gérer le changement de la distance d'alerte
+    const handleProximityAlertDistanceChange = (value: number) => {
+        // Arrondir à la centaine près
+        const roundedValue = Math.round(value / ALERT_DISTANCE_STEP) * ALERT_DISTANCE_STEP;
+        setNavPreferences({
+            ...navPreferences,
+            proximityAlertDistance: roundedValue
+        });
     };
 
     // Modes de transport disponibles
@@ -252,6 +268,28 @@ const SettingsScreen = () => {
                                 </Text>
                             </TouchableOpacity>
                         ))}
+                    </View>
+
+                    {/* Distance d'alerte de proximité */}
+                    <View style={styles.sliderContainer}>
+                        <Text style={styles.sliderLabel}>
+                            Distance d'alerte de proximité: {formatDistance(navPreferences.proximityAlertDistance)}
+                        </Text>
+                        <Slider
+                            style={styles.slider}
+                            minimumValue={MIN_ALERT_DISTANCE}
+                            maximumValue={MAX_ALERT_DISTANCE}
+                            step={ALERT_DISTANCE_STEP}
+                            value={navPreferences.proximityAlertDistance}
+                            onValueChange={handleProximityAlertDistanceChange}
+                            minimumTrackTintColor="#2196F3"
+                            maximumTrackTintColor="#cccccc"
+                            thumbTintColor="#2196F3"
+                        />
+                        <View style={styles.sliderLabelsContainer}>
+                            <Text style={styles.sliderMinMaxLabel}>{formatDistance(MIN_ALERT_DISTANCE)}</Text>
+                            <Text style={styles.sliderMinMaxLabel}>{formatDistance(MAX_ALERT_DISTANCE)}</Text>
+                        </View>
                     </View>
 
                     <View style={styles.optionRow}>
@@ -396,18 +434,28 @@ const styles = StyleSheet.create({
         color: "#888",
     },
     sliderContainer: {
-        paddingVertical: 10,
+        paddingVertical: 14,
         borderBottomWidth: 1,
         borderBottomColor: "#eee",
     },
     sliderLabel: {
-        fontSize: 14,
-        color: "#555",
-        marginBottom: 5,
+        fontSize: 16,
+        color: "#333",
+        marginBottom: 8,
     },
     slider: {
         width: "100%",
         height: 40,
+    },
+    sliderLabelsContainer: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        paddingHorizontal: 8,
+        marginTop: -5,
+    },
+    sliderMinMaxLabel: {
+        fontSize: 12,
+        color: "#888",
     },
     infoText: {
         fontSize: 14,

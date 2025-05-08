@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   ScrollView,
@@ -9,7 +9,8 @@ import {
   Alert,
   StyleSheet,
   Dimensions,
-  TextInput
+  TextInput,
+  AppState
 } from 'react-native';
 import { Image } from 'expo-image';
 import {
@@ -29,7 +30,7 @@ import {
   Trash2 as TrashIcon
 } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 
 import {
   getUserDataApi,
@@ -44,12 +45,33 @@ import { ApiError, UserData } from '@/utils/apiUtils';
 const DefaultProfileImage = require('@/assets/images/default-profile.png');
 const screenWidth = Dimensions.get('window').width;
 
+// Fonction pour traduire les modes de transport en français
+const translateTransportMode = (mode: string | undefined | null): string => {
+  if (!mode) return '–';
+
+  const translations: Record<string, string> = {
+    'CAR': 'Voiture',
+    'WALKING': 'À pied',
+    'BICYCLE': 'Vélo',
+    'PUBLIC_TRANSPORT': 'Transport public',
+    'MOTORCYCLE': 'Moto',
+    'TRUCK': 'Camion',
+  };
+
+  return translations[mode] || mode;
+};
+
 export default function Profile() {
   const router = useRouter();
   const { isAuthenticated, logout: contextLogout } = useAuth();
+  const appState = useRef(AppState.currentState);
+  const lastFetchTime = useRef(0);
+  const isMounted = useRef(true);
+  const initialLoadComplete = useRef(false);
 
   const [userData, setUserData] = useState<UserData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isBackgroundLoading, setIsBackgroundLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -66,16 +88,83 @@ export default function Profile() {
   const subTabs = ['Preferences', 'Favorites', 'Statistics', 'Notifications'];
   const [activeSubTab, setActiveSubTab] = useState(subTabs[0]);
 
+  // Définir une référence au composant monté/démonté
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+
   // ─── Fetch user data ─────────────────────────────────────────
-  const fetchUserData = useCallback(async () => {
-    setIsLoading(true);
+  const fetchUserData = useCallback(async (showLoading = true) => {
+    // Limiter les appels API - ne pas recharger si moins de 10 secondes se sont écoulées
+    const now = Date.now();
+    const THROTTLE_TIME = 10000; // 10 secondes
+
+    if (now - lastFetchTime.current < THROTTLE_TIME && initialLoadComplete.current) {
+      console.log('Ignoring fetch request - throttled');
+      return;
+    }
+
+    if (!isMounted.current) return;
+
+    if (showLoading) {
+      setIsLoading(true);
+    } else if (!initialLoadComplete.current) {
+      setIsLoading(true);
+    } else {
+      setIsBackgroundLoading(true);
+    }
+
     setError(null);
+
     try {
+      lastFetchTime.current = now;
       const data = await getUserDataApi();
-      setUserData(data);
-      setEditedUsername(data?.username || '');
-      setEditedEmail(data?.email || '');
+
+      if (!isMounted.current) return;
+
+      // Mise à jour des données
+      setUserData(prevData => {
+        if (!prevData) return data;
+
+        // Créer une nouvelle référence d'objet uniquement si les données ont changé
+        const hasChanged = JSON.stringify(prevData) !== JSON.stringify(data);
+
+        if (hasChanged) {
+          return {
+            ...prevData,
+            ...data,
+            navigationPreferences: {
+              ...prevData.navigationPreferences,
+              ...data.navigationPreferences
+            },
+            notificationSettings: {
+              ...prevData.notificationSettings,
+              ...data.notificationSettings
+            },
+            stats: {
+              ...prevData.stats,
+              ...data.stats
+            },
+            favoriteLocations: data.favoriteLocations || prevData.favoriteLocations
+          };
+        }
+
+        return prevData;
+      });
+
+      // Mise à jour des champs d'édition seulement si nécessaire
+      if (!editMode) {
+        setEditedUsername(data?.username || '');
+        setEditedEmail(data?.email || '');
+      }
+
+      initialLoadComplete.current = true;
     } catch (err) {
+      if (!isMounted.current) return;
+
       const msg = err instanceof Error ? err.message : 'Erreur chargement.';
       setError(msg);
       if ((err as ApiError).status === 401 || (err as ApiError).status === 403) {
@@ -83,14 +172,41 @@ export default function Profile() {
         router.replace('/login');
       }
     } finally {
+      if (!isMounted.current) return;
+
+      if (showLoading) {
+        setIsLoading(false);
+      } else {
+        setIsBackgroundLoading(false);
+      }
+    }
+  }, [contextLogout, router, editMode]);
+
+  // Chargement initial des données
+  useEffect(() => {
+    if (isAuthenticated && !initialLoadComplete.current) {
+      fetchUserData(true);
+    } else if (!isAuthenticated) {
       setIsLoading(false);
     }
-  }, [contextLogout, router]);
-
-  useEffect(() => {
-    if (isAuthenticated) fetchUserData();
-    else setIsLoading(false);
   }, [isAuthenticated, fetchUserData]);
+
+  // Rafraîchir les données quand l'utilisateur revient sur l'écran
+  useFocusEffect(
+      useCallback(() => {
+        let isMountedInEffect = true;
+
+        // Si l'utilisateur est authentifié et que les données initiales ont été chargées
+        if (isAuthenticated && initialLoadComplete.current && isMountedInEffect) {
+          // Rafraîchir silencieusement
+          fetchUserData(false);
+        }
+
+        return () => {
+          isMountedInEffect = false;
+        };
+      }, [isAuthenticated, fetchUserData])
+  );
 
   // ─── Pick & upload profile image ─────────────────────────────
   const pickImageAsync = async () => {
@@ -126,7 +242,7 @@ export default function Profile() {
       setError(err instanceof Error ? err.message : 'Erreur upload.');
     } finally {
       setIsSaving(false);
-      fetchUserData();
+      fetchUserData(false); // Rafraîchir en arrière-plan après l'upload
     }
   };
 
@@ -197,7 +313,10 @@ export default function Profile() {
       // Sinon, envoyer uniquement les champs modifiés
       console.log('Saving changes:', updatedData);
       const updated = await updateUserApi(updatedData);
-      setUserData(updated);
+      setUserData(prevData => {
+        if (!prevData) return updated;
+        return { ...prevData, ...updated };
+      });
       setEditMode(false);
       Alert.alert('Profil mis à jour !');
     } catch (err) {
@@ -296,12 +415,22 @@ export default function Profile() {
     }
   };
 
+  // Traduire les modes de transport
+  const translatedTransportMode = translateTransportMode(userData?.navigationPreferences?.preferredTransportMode);
+
   return (
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           {error && (
               <View style={styles.errorContainer}>
                 <Text style={styles.errorText}>{error}</Text>
+              </View>
+          )}
+
+          {/* Indicateur de chargement en arrière-plan */}
+          {isBackgroundLoading && (
+              <View style={styles.backgroundLoadingIndicator}>
+                <ActivityIndicator size="small" color={Colors.primary} />
               </View>
           )}
 
@@ -419,6 +548,22 @@ export default function Profile() {
                     )}
                   </View>
                 </View>
+                {editMode && (
+                    <TouchableOpacity
+                        style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
+                        onPress={handleSaveChanges}
+                        disabled={isSaving}
+                    >
+                      {isSaving ? (
+                          <ActivityIndicator color="#fff" size="small" />
+                      ) : (
+                          <>
+                            <Save size={18} color="#fff" />
+                            <Text style={styles.saveButtonText}>Enregistrer</Text>
+                          </>
+                      )}
+                    </TouchableOpacity>
+                )}
 
                 <View style={styles.infoCard}>
                   <Text style={styles.sectionTitle}>Navigation</Text>
@@ -426,7 +571,7 @@ export default function Profile() {
                     <Text style={styles.infoLabel}>Mode de transport</Text>
                     <View style={styles.transportBadge}>
                       <Text style={styles.transportBadgeText}>
-                        {userData?.navigationPreferences?.preferredTransportMode ?? '–'}
+                        {translatedTransportMode}
                       </Text>
                     </View>
                   </View>
@@ -483,22 +628,7 @@ export default function Profile() {
                   </TouchableOpacity>
                 </View>
 
-                {editMode && (
-                    <TouchableOpacity
-                        style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
-                        onPress={handleSaveChanges}
-                        disabled={isSaving}
-                    >
-                      {isSaving ? (
-                          <ActivityIndicator color="#fff" size="small" />
-                      ) : (
-                          <>
-                            <Save size={18} color="#fff" />
-                            <Text style={styles.saveButtonText}>Enregistrer</Text>
-                          </>
-                      )}
-                    </TouchableOpacity>
-                )}
+
               </View>
           )}
 
@@ -656,7 +786,7 @@ export default function Profile() {
                         <Text style={styles.infoLabel}>Mode de navigation</Text>
                         <View style={styles.transportBadge}>
                           <Text style={styles.transportBadgeText}>
-                            {userData?.navigationPreferences?.preferredTransportMode ?? '–'}
+                            {translatedTransportMode}
                           </Text>
                         </View>
                       </View>
@@ -707,6 +837,13 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingBottom: 24
   },
+  backgroundLoadingIndicator: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    padding: 8,
+    zIndex: 1000
+  },
   errorContainer: {
     margin: 16,
     padding: 12,
@@ -726,7 +863,7 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3
@@ -782,7 +919,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginTop: -16,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: {width: 0, height: 1},
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2
@@ -814,7 +951,7 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 16,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: {width: 0, height: 1},
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 1
@@ -962,7 +1099,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     paddingVertical: 4,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: {width: 0, height: 1},
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 1
