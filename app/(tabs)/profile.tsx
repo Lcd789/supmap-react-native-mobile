@@ -10,7 +10,9 @@ import {
   StyleSheet,
   Dimensions,
   TextInput,
-  AppState
+  AppState,
+  StatusBar,
+  Platform
 } from 'react-native';
 import { Image } from 'expo-image';
 import {
@@ -387,7 +389,12 @@ export default function Profile() {
   // ─── Loading Spinner ─────────────────────────────────────────
   if (isLoading) {
     return (
-        <SafeAreaView style={[styles.container, styles.center]} edges={['top', 'bottom']}>
+        <SafeAreaView style={[styles.container, styles.center]} edges={['bottom']}>
+          <StatusBar
+              translucent={Platform.OS === 'android'}
+              backgroundColor={Platform.OS === 'android' ? 'transparent' : undefined}
+              barStyle="light-content"
+          />
           <ActivityIndicator size="large" color={Colors.primary} />
         </SafeAreaView>
     );
@@ -419,7 +426,12 @@ export default function Profile() {
   const translatedTransportMode = translateTransportMode(userData?.navigationPreferences?.preferredTransportMode);
 
   return (
-      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <SafeAreaView style={styles.container} edges={['bottom']}>
+        <StatusBar
+            translucent={Platform.OS === 'android'}
+            backgroundColor={Platform.OS === 'android' ? 'transparent' : undefined}
+            barStyle="light-content"
+        />
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           {error && (
               <View style={styles.errorContainer}>
@@ -739,7 +751,6 @@ export default function Profile() {
                                     <Text style={styles.favoriteName}>{loc.name}</Text>
                                     <Text style={styles.favoriteAddress} numberOfLines={1}>{loc.formattedAddress}</Text>
                                   </View>
-                                  <ChevronRight size={18} color="#ccc" />
                                 </View>
                               </React.Fragment>
                           ))
@@ -858,7 +869,7 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: Colors.primary,
-    paddingTop: 20,
+    paddingTop: Platform.OS === 'android' ? 50 : 40,
     paddingBottom: 32,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
@@ -871,7 +882,8 @@ const styles = StyleSheet.create({
   profileSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20
+    paddingHorizontal: 20,
+    paddingTop: 20
   },
   avatarContainer: {
     position: 'relative',
