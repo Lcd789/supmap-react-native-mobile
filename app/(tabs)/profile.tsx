@@ -87,7 +87,7 @@ export default function Profile() {
   const [emailError, setEmailError] = useState('');
 
   const [activeTab, setActiveTab] = useState<'info' | 'activities'>('info');
-  const subTabs = ['Preferences', 'Favorites', 'Statistics', 'Notifications'];
+  const subTabs = ['Preferences', 'Favoris', 'Statistiques'];
   const [activeSubTab, setActiveSubTab] = useState(subTabs[0]);
 
   // Définir une référence au composant monté/démonté
@@ -411,12 +411,10 @@ export default function Profile() {
     switch (tab) {
       case 'Preferences':
         return <MapPin size={18} color={activeSubTab === tab ? Colors.primary : "#999"} />;
-      case 'Favorites':
+      case 'Favoris':
         return <Star size={18} color={activeSubTab === tab ? Colors.primary : "#999"} />;
-      case 'Statistics':
+      case 'Statistiques':
         return <Clock size={18} color={activeSubTab === tab ? Colors.primary : "#999"} />;
-      case 'Notifications':
-        return <Bell size={18} color={activeSubTab === tab ? Colors.primary : "#999"} />;
       default:
         return null;
     }
@@ -672,7 +670,7 @@ export default function Profile() {
                 </View>
 
                 {/* Contenu sous-tab */}
-                {activeSubTab === 'Statistics' && (
+                {activeSubTab === 'Statistiques' && (
                     <View style={styles.infoCard}>
                       <Text style={styles.sectionTitle}>Vos statistiques</Text>
 
@@ -724,7 +722,7 @@ export default function Profile() {
                     </View>
                 )}
 
-                {activeSubTab === 'Favorites' && (
+                {activeSubTab === 'Favoris' && (
                     <View style={styles.infoCard}>
                       <Text style={styles.sectionTitle}>Lieux favoris</Text>
 
@@ -754,37 +752,6 @@ export default function Profile() {
                                 </View>
                               </React.Fragment>
                           ))
-                      )}
-                    </View>
-                )}
-
-                {activeSubTab === 'Notifications' && (
-                    <View style={styles.infoCard}>
-                      <Text style={styles.sectionTitle}>Notifications</Text>
-
-                      <View style={styles.infoRow}>
-                        <Text style={styles.infoLabel}>Notifications par email</Text>
-                        <Text style={[
-                          styles.booleanValue,
-                          userData?.notificationSettings?.emailEnabled ? styles.booleanTrue : styles.booleanFalse
-                        ]}>
-                          {userData?.notificationSettings?.emailEnabled ? 'Activé' : 'Désactivé'}
-                        </Text>
-                      </View>
-
-                      {userData?.notificationSettings && 'pushEnabled' in userData.notificationSettings && (
-                          <>
-                            <View style={styles.divider} />
-                            <View style={styles.infoRow}>
-                              <Text style={styles.infoLabel}>Notifications push</Text>
-                              <Text style={[
-                                styles.booleanValue,
-                                (userData.notificationSettings as any).pushEnabled ? styles.booleanTrue : styles.booleanFalse
-                              ]}>
-                                {(userData.notificationSettings as any).pushEnabled ? 'Activé' : 'Désactivé'}
-                              </Text>
-                            </View>
-                          </>
                       )}
                     </View>
                 )}
@@ -825,6 +792,33 @@ export default function Profile() {
                           {userData?.navigationPreferences?.avoidTolls ? 'Oui' : 'Non'}
                         </Text>
                       </View>
+
+                      <View style={styles.divider} />
+
+                      <View style={styles.infoRow}>
+                        <Text style={styles.infoLabel}>Notifications par email</Text>
+                        <Text style={[
+                          styles.booleanValue,
+                          userData?.notificationSettings?.emailEnabled ? styles.booleanTrue : styles.booleanFalse
+                        ]}>
+                          {userData?.notificationSettings?.emailEnabled ? 'Activé' : 'Désactivé'}
+                        </Text>
+                      </View>
+
+                      {userData?.notificationSettings && 'pushEnabled' in userData.notificationSettings && (
+                          <>
+                            <View style={styles.divider} />
+                            <View style={styles.infoRow}>
+                              <Text style={styles.infoLabel}>Notifications push</Text>
+                              <Text style={[
+                                styles.booleanValue,
+                                (userData.notificationSettings as any).pushEnabled ? styles.booleanTrue : styles.booleanFalse
+                              ]}>
+                                {(userData.notificationSettings as any).pushEnabled ? 'Activé' : 'Désactivé'}
+                              </Text>
+                            </View>
+                          </>
+                      )}
                     </View>
                 )}
               </View>
