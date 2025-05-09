@@ -178,7 +178,6 @@ const newRoutes = await calculateRoute(
                 setCurrentStepIndex(0);
                 announcedSteps.current.clear();
 
-                // recentre la carte
                 const b = withIds[0].bounds;
                 const region = {
                     latitude: (b.northeast.lat + b.southwest.lat) / 2,
@@ -340,6 +339,8 @@ const newRoutes = await calculateRoute(
     const isOffRoute = (): boolean => {
         if (!liveCoords || !selectedRoute?.polyline) return false;
 
+        if (currentStepIndex === 0) return false;
+        
         let closePoints = 0;
         selectedRoute.polyline.forEach((point) => {
             const distance = getDistance(liveCoords, point);
@@ -351,25 +352,31 @@ const newRoutes = await calculateRoute(
         return closePoints < 2;
     };
 
-    useEffect(() => {
-        if (!navigationLaunched || !selectedRoute || !liveCoords) return;
-
-        const interval = setInterval(() => {
-            if (!recalculationLock.current && isOffRoute()) {
-                console.log(
-                    "⛔️ Off-route détecté – déclenchement recalculateRouteFromCurrentPosition"
-                );
-                recalculateRouteFromCurrentPosition();
-            }
-        }, 3000);
-
-        return () => clearInterval(interval);
-    }, [
-        navigationLaunched,
-        selectedRoute,
-        liveCoords,
-        recalculateRouteFromCurrentPosition,
-    ]);
+    +    useEffect(() => {
+                if (!navigationLaunched || !selectedRoute || !liveCoords) return;
+        
+                const interval = setInterval(() => {
+                    // On ne déclenche le recalcul qu'après la première étape
+                    if (
+                        !recalculationLock.current &&
+                        currentStepIndex > 0 &&
+                        isOffRoute()
+                    ) {
+                        console.log(
+                            "⛔️ Off-route détecté – déclenchement recalculateRouteFromCurrentPosition"
+                        );
+                        recalculateRouteFromCurrentPosition();
+                    }
+                }, 3000);
+        
+                return () => clearInterval(interval);
+            }, [
+                navigationLaunched,
+                selectedRoute,
+                liveCoords,
+                recalculateRouteFromCurrentPosition,
+                currentStepIndex,
+            ]);
 
     const getRemainingPolyline = () => {
         if (!selectedRoute?.polyline || !liveCoords) return [];
@@ -455,7 +462,6 @@ const newRoutes = await calculateRoute(
                 .map(async (wp) => {
                   if (wp.address === "📍 Ma position") {
                     if (!liveCoords) return null;
-                    // On transmet directement lat,lng pour éviter toute confusion
                    return {
                       ...wp,
                       address: `${liveCoords.latitude},${liveCoords.longitude}`,
@@ -634,7 +640,6 @@ const routeResult = await calculateRoute(
         let closestStepIndex = currentStepIndex;
         let minDistance = Infinity;
 
-        // 🔁 On ne teste que les étapes à venir (ou en cours)
         for (
             let index = currentStepIndex;
             index < selectedRoute.steps.length;
@@ -660,10 +665,9 @@ const routeResult = await calculateRoute(
 
         console.log("📍 Étape la plus proche détectée:", closestStepIndex);
 
-        // ✅ Mise à jour uniquement si changement
         if (closestStepIndex !== currentStepIndex) {
             setCurrentStepIndex(closestStepIndex);
-            announcedSteps.current.add(closestStepIndex); // ❌ ne jamais re-parler
+            announcedSteps.current.add(closestStepIndex);
             console.log(`📍 Étape mise à jour : ${closestStepIndex}`);
         } else {
             console.log("♻️ Étape inchangée, pas de recalage");
@@ -697,10 +701,8 @@ const routeResult = await calculateRoute(
         );
     };
 
-    // Modifié : confirmation avant d'ouvrir la recherche si navigation en cours
     const toggleSearchBar = () => {
         const newValue = isSearchVisible ? 0 : 1;
-        // Si on ouvre la recherche et qu'une navigation est active, demander confirmation
         if (newValue === 1 && navigationLaunched) {
             Alert.alert(
                 "Arrêter la navigation",
@@ -1014,7 +1016,6 @@ const routeResult = await calculateRoute(
                             setNavigationLaunched(true);
                             setCurrentStepIndex(0);
 
-                            // Zoom sur la position actuelle
                             if (liveCoords) {
                                 const zoomRegion = {
                                     latitude: liveCoords.latitude,
@@ -1026,11 +1027,9 @@ const routeResult = await calculateRoute(
                             }
 
                             try {
-                                // Vérifier la structure de l'objet route avec des valeurs par défaut sécurisées
                                 const routeData = route as any;
                                 const legs = routeData.legs || [];
 
-                                // Vérifier si les propriétés nécessaires existent
                                 const startLocation = legs[0]?.start_location || {};
                                 const endLocation = legs[legs.length - 1]?.end_location || {};
 
@@ -1049,7 +1048,6 @@ const routeResult = await calculateRoute(
                                     estimatedDurationInSeconds: routeData.durationValue || 0
                                 };
 
-                                // Sauvegarde dans l'historique
                                 saveRoute(routeToSave);
                                 console.log("Itinéraire sauvegardé dans l'historique");
                             } catch (error) {
