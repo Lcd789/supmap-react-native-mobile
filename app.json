@@ -16,21 +16,24 @@
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": true
         },
-        "GMSApiKey": "${EXPO_PUBLIC_GOOGLE_API_KEY}"
+        "GMSApiKey": "VOTRE_CLE_GOOGLE_MAPS_ICI"
       },
       "supportsTablet": true
     },
     "android": {
-    "config": {
-      "googleMaps": {
-        "apiKey": "${EXPO_PUBLIC_GOOGLE_API_KEY}"
-      }
+      "config": {
+        "googleMaps": {
+          "apiKey": "VOTRE_CLE_GOOGLE_MAPS_ICI"
+        }
       },
-      "permissions": ["ACCESS_FINE_LOCATION"],
+      "permissions": [
+        "ACCESS_FINE_LOCATION"
+      ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.romain18.Supmap"
     },
     "web": {
       "bundler": "metro",
@@ -60,6 +63,13 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "d5e1c441-f424-4c21-bb93-b71f25871ed0"
+      }
+    },
+    "owner": "romain-18"
   }
 }
