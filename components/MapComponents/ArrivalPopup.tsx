@@ -23,7 +23,7 @@ const ArrivalPopup: React.FC<ArrivalPopupProps> = ({ onClose }) => {
 const styles = StyleSheet.create({
   container: {
     position: "absolute",
-    bottom: 200,
+    bottom: 400,
     alignSelf: "center",
     backgroundColor: "white",
     padding: 16,
