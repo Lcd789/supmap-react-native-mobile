@@ -877,6 +877,14 @@ const routeResult = await calculateRoute(
                                     .end_location.lng,
                         }
                     }
+                    destinationCoord={
+                            selectedRoute?.steps && selectedRoute.steps.length > 0
+                                ? {
+                                    latitude: selectedRoute.steps[selectedRoute.steps.length - 1].end_location.lat,
+                                    longitude: selectedRoute.steps[selectedRoute.steps.length - 1].end_location.lng,
+                                }
+                            : null
+                    }
                     alertMarkers={alertMarkers}
                 />
             ) : (
@@ -1028,10 +1036,10 @@ const routeResult = await calculateRoute(
 
                             try {
                                 const routeData = route as any;
-                                const legs = routeData.legs || [];
+                                const steps = routeData.steps || [];
 
-                                const startLocation = legs[0]?.start_location || {};
-                                const endLocation = legs[legs.length - 1]?.end_location || {};
+                                const startLocation = steps[0]?.start_location || {};
+                                const endLocation = steps[steps.length - 1]?.end_location || {};
 
                                 const routeToSave = {
                                     startAddress: origin,
