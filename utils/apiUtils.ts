@@ -84,9 +84,6 @@ async function makeRequest<T>(
                 responseData = JSON.parse(responseText);
             }
         } catch (e) {
-            console.warn(
-                `ApiUtils : Could not parse response text as JSON for ${method} ${endpoint}: ${responseText}`
-            );
             if (response.ok && responseText) {
                 responseData = responseText;
             }
@@ -97,11 +94,6 @@ async function makeRequest<T>(
                 responseData?.message ||
                 responseData?.error ||
                 `ApiUtils : HTTP error! status: ${response.status}`;
-            console.error(
-                `ApiUtils : HTTP Error ${response.status} on ${method} ${endpoint}:`,
-                errorMessage,
-                responseText
-            );
             throw new ApiError(
                 errorMessage,
                 response.status,
@@ -114,10 +106,6 @@ async function makeRequest<T>(
         if (error instanceof ApiError) {
             throw error; 
         }
-        console.error(
-            `ApiUtils : Network or unexpected error during fetch to ${endpoint}:`,
-            error
-        );
         throw new ApiError(
             "ApiUtils : Network request failed. Please check your connection.",
             0,

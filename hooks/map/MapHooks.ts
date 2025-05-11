@@ -160,7 +160,6 @@ export const useCreateFavoriteLocation = () => {
 
         try {
             const token = await SecureStore.getItemAsync("authToken");
-            console.log("data",JSON.stringify(data))
 
             const response = await fetch(`${API_BASE_URL}/private/map/favorite/location`, {
                 method: "POST",
@@ -565,19 +564,15 @@ export const useCreateMapAlert = () => {
                 setSuccess(true);
             } else {
                 const errorText = await response.text();
-                console.error("Error response text:", errorText);
                 setError(errorText || "Erreur lors de la création de l'alerte.");
             }
         } catch (err: unknown) {
             if (err instanceof Error) {
-                console.error("Caught error:", err.message);
                 setError(err.message);
             } else {
-                console.error("Unknown error occurred");
                 setError("Erreur réseau ou inconnue.");
             }
         } finally {
-            console.log("createAlert finished");
             setLoading(false);
         }
     };
@@ -776,19 +771,15 @@ export const useGetAlertsByPosition = () => {
             if (response.ok) {
                 setAlerts(data.alerts || []);
             } else {
-                console.error("Error fetching alerts:", data.error);
                 setError(data.error || "Erreur lors de la récupération des alertes.");
             }
         } catch (err: unknown) {
             if (err instanceof Error) {
-                console.error("Caught error:", err.message);
                 setError(err.message);
             } else {
-                console.error("Unknown error occurred");
                 setError("Erreur réseau ou inconnue.");
             }
         } finally {
-            console.log("fetchAlertsByPosition finished");
             setLoading(false);
         }
     };

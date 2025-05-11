@@ -44,7 +44,6 @@ export async function getUserDataApi(): Promise<any> {
         
         throw new Error("Invalid user data received from API");
     } catch (error) {
-        console.error("getUserDataApi error:", error);
         throw error instanceof Error ? error : new Error("Failed to fetch user data");
     }
 }
@@ -77,7 +76,6 @@ export async function updateUserApi(
             "PUT",
             payload
         );
-        console.log("updateUserApi response:", response);
         
         if (response.includes("successfully")) {
             return await getUserDataApi();
@@ -85,7 +83,6 @@ export async function updateUserApi(
             throw new Error(response || "Update failed");
         }
     } catch (error) {
-        console.error("updateUserApi error:", error);
         throw error instanceof Error ? error : new Error("Failed to update user data");
     }
 }
@@ -161,7 +158,6 @@ export async function rateApp(
         
         throw new Error("Invalid user data received from API");
     } catch (error) {
-        console.error("getUserDataApi error:", error);
         throw error instanceof Error ? error : new Error("Failed to fetch user data");
     }
 }
