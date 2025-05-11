@@ -173,11 +173,9 @@ export const useCreateFavoriteLocation = () => {
 
             if (response.ok) {
                 setSuccess(true);
-                console.log("Favorite location created successfully");
             } else {
                 const errorText = await response.text();
                 setError(errorText || "Erreur lors de la création du favori.");
-                console.error("Error creating favorite location:", errorText);
             }
         } catch (err) {
             setError("Erreur réseau ou inconnue.");

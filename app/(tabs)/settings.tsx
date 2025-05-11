@@ -23,15 +23,12 @@ import Slider from "@react-native-community/slider";
 import FavoriteLocationsManager from "@/components/MapComponents/FavoriteLocation";
 import { MaterialIcons } from "@expo/vector-icons";
 
-// Clé pour le stockage local des préférences de navigation
 const NAV_PREFS_STORAGE_KEY = "navigation_preferences";
-// Durée de validité du cache (24 heures en millisecondes)
 const CACHE_VALIDITY_DURATION = 24 * 60 * 60 * 1000;
 
-// Constantes pour le slider de distance d'alerte
-const MIN_ALERT_DISTANCE = 100; // 100 mètres
-const MAX_ALERT_DISTANCE = 10000; // 10 kilomètres
-const ALERT_DISTANCE_STEP = 100; // Pas de 100 mètres
+const MIN_ALERT_DISTANCE = 100;
+const MAX_ALERT_DISTANCE = 10000;
+const ALERT_DISTANCE_STEP = 100;
 
 const SettingsScreen = () => {
     const insets = useSafeAreaInsets();
@@ -50,7 +47,6 @@ const SettingsScreen = () => {
         isSettingsLoading,
     } = useSettings();
 
-    // État pour les préférences de navigation
     const [navPreferences, setNavPreferences] = useState<NavigationPreferences>({
         avoidTolls: avoidTolls,
         avoidHighways: avoidHighways,
@@ -60,10 +56,8 @@ const SettingsScreen = () => {
         preferredTransportMode: "CAR"
     });
 
-    // État pour le chargement des préférences de navigation
     const [loadingNavPrefs, setLoadingNavPrefs] = useState(true);
 
-    // Hook pour mettre à jour les préférences de navigation
     const {
         updatePreferences,
         loading: updatingPrefs,
@@ -71,7 +65,6 @@ const SettingsScreen = () => {
         success: updateSuccess
     } = useUpdateNavigationPreferences();
 
-    // Fonction pour charger les préférences de navigation
     const loadNavigationPreferences = async () => {
         if (!isAuthenticated) {
             setLoadingNavPrefs(false);
@@ -80,53 +73,43 @@ const SettingsScreen = () => {
 
         setLoadingNavPrefs(true);
         try {
-            // D'abord, essayer de charger depuis le stockage local
             const cachedData = await AsyncStorage.getItem(NAV_PREFS_STORAGE_KEY);
 
             if (cachedData) {
                 const { preferences, timestamp } = JSON.parse(cachedData);
                 const now = Date.now();
 
-                // Vérifier si le cache est encore valide
                 if (now - timestamp < CACHE_VALIDITY_DURATION) {
-                    // Utiliser les données en cache
                     setNavPreferences(preferences);
                     updateLocalSettings(preferences);
                     setLoadingNavPrefs(false);
 
-                    // Optionnel: Rafraîchir en arrière-plan
                     fetchPreferencesFromAPI(false);
                     return;
                 }
             }
 
-            // Si pas de cache valide, charger depuis l'API
             await fetchPreferencesFromAPI(true);
 
         } catch (error) {
-            console.error("Erreur lors du chargement des préférences:", error);
             setLoadingNavPrefs(false);
         }
     };
 
-    // Fonction pour récupérer les préférences depuis l'API
     const fetchPreferencesFromAPI = async (updateLoadingState: boolean) => {
         try {
             const userData = await getUserDataApi();
 
             if (userData && userData.navigationPreferences) {
-                // Mettre à jour l'état avec les préférences récupérées
                 setNavPreferences(userData.navigationPreferences);
                 updateLocalSettings(userData.navigationPreferences);
 
-                // Mettre en cache les préférences
                 await AsyncStorage.setItem(NAV_PREFS_STORAGE_KEY, JSON.stringify({
                     preferences: userData.navigationPreferences,
                     timestamp: Date.now()
                 }));
             }
         } catch (error) {
-            console.error("Erreur lors de la récupération des préférences:", error);
         } finally {
             if (updateLoadingState) {
                 setLoadingNavPrefs(false);
@@ -134,19 +117,16 @@ const SettingsScreen = () => {
         }
     };
 
-    // Fonction pour mettre à jour les paramètres locaux
     const updateLocalSettings = (prefs: NavigationPreferences) => {
         setAvoidTolls(prefs.avoidTolls);
         setAvoidHighways(prefs.avoidHighways);
         setShowTraffic(!prefs.avoidTraffic);
     };
 
-    // Charger les préférences au montage du composant
     useEffect(() => {
         loadNavigationPreferences();
     }, [isAuthenticated]);
 
-    // Synchroniser les préférences locales avec l'état global
     useEffect(() => {
         if (!loadingNavPrefs) {
             setNavPreferences(prev => ({
@@ -158,12 +138,10 @@ const SettingsScreen = () => {
         }
     }, [avoidTolls, avoidHighways, showTraffic, loadingNavPrefs]);
 
-    // Effet pour afficher le succès
     useEffect(() => {
         if (updateSuccess) {
             Alert.alert("Succès", "Vos préférences de navigation ont été enregistrées.");
 
-            // Mettre à jour le cache avec les nouvelles préférences
             AsyncStorage.setItem(NAV_PREFS_STORAGE_KEY, JSON.stringify({
                 preferences: navPreferences,
                 timestamp: Date.now()
@@ -183,7 +161,6 @@ const SettingsScreen = () => {
         }
     };
 
-    // Fonction pour formater l'affichage de la distance
     const formatDistance = (distance: number) => {
         if (distance >= 1000) {
             return `${(distance / 1000).toFixed(1)} km`;
@@ -191,9 +168,7 @@ const SettingsScreen = () => {
         return `${distance} m`;
     };
 
-    // Fonction pour gérer le changement de la distance d'alerte
     const handleProximityAlertDistanceChange = (value: number) => {
-        // Arrondir à la centaine près
         const roundedValue = Math.round(value / ALERT_DISTANCE_STEP) * ALERT_DISTANCE_STEP;
         setNavPreferences({
             ...navPreferences,
@@ -201,7 +176,6 @@ const SettingsScreen = () => {
         });
     };
 
-    // Modes de transport disponibles
     const transportModes: { type: TransportMode; label: string; icon: any }[] = [
         { type: "CAR", label: "Voiture", icon: "directions-car" },
         { type: "MOTORCYCLE", label: "Moto", icon: "two-wheeler" },
@@ -210,7 +184,6 @@ const SettingsScreen = () => {
         { type: "WALKING", label: "À pied", icon: "directions-walk" }
     ];
 
-    // Afficher le chargement si les paramètres ou les préférences sont en cours de chargement
     if (isSettingsLoading || loadingNavPrefs) {
         return (
             <View style={[styles.loadingContainer, { paddingTop: insets.top }]}>
@@ -220,7 +193,6 @@ const SettingsScreen = () => {
         );
     }
 
-    // Composant pour afficher un message de connexion requis
     const LoginRequiredMessage = () => (
         <View style={styles.loginRequiredContainer}>
             <MaterialIcons name="lock" size={48} color="#888" />
@@ -270,7 +242,6 @@ const SettingsScreen = () => {
                         ))}
                     </View>
 
-                    {/* Distance d'alerte de proximité */}
                     <View style={styles.sliderContainer}>
                         <Text style={styles.sliderLabel}>
                             Distance d'alerte de proximité: {formatDistance(navPreferences.proximityAlertDistance)}
@@ -345,7 +316,6 @@ const SettingsScreen = () => {
                 </View>
             )}
 
-            {/* Lieux favoris */}
             <Text style={styles.sectionTitle}>Lieux favoris</Text>
             {isAuthenticated ? (
                 <FavoriteLocationsManager />

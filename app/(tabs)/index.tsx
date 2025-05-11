@@ -147,18 +147,9 @@ export default function Home() {
                   );
                   const validWaypoints = rawWaypoints.filter(Boolean) as Waypoint[];
                   
-
-            
-console.log("🔄 Recalcul - origin:", originText);
-console.log("🧭 Recalcul - destination:", destinationRef.current);
-
 const cleanedWaypoints = validWaypoints.filter(
   (wp) => wp.address !== originText && wp.address !== destinationRef.current
 );
-
-console.log("🔄 Recalcul - origin:", originText);
-console.log("🧭 Recalcul - destination:", destinationRef.current);
-console.log("🧭 Recalcul - waypoints:", cleanedWaypoints.map((w: Waypoint) => w.address));
 
 const newRoutes = await calculateRoute(
                 originText,
@@ -191,7 +182,6 @@ const newRoutes = await calculateRoute(
                 mapRef.current?.animateToRegion(region, 800);
             }
         } catch (err: any) {
-            console.error("Erreur recalcul :", err);
             setRouteError(
                 err.message ?? "Erreur lors du recalcul de l’itinéraire"
             );
@@ -356,15 +346,11 @@ const newRoutes = await calculateRoute(
                 if (!navigationLaunched || !selectedRoute || !liveCoords) return;
         
                 const interval = setInterval(() => {
-                    // On ne déclenche le recalcul qu'après la première étape
                     if (
                         !recalculationLock.current &&
                         currentStepIndex > 0 &&
                         isOffRoute()
                     ) {
-                        console.log(
-                            "⛔️ Off-route détecté – déclenchement recalculateRouteFromCurrentPosition"
-                        );
                         recalculateRouteFromCurrentPosition();
                     }
                 }, 3000);
@@ -392,8 +378,6 @@ const newRoutes = await calculateRoute(
         if (index !== -1) {
             lastPolylineIndex.current = index;
         }
-        console.log("📍 Live position:", liveCoords);
-        console.log("🔎 Recherche du point le plus proche sur la polyline...");
 
         return selectedRoute.polyline.slice(lastPolylineIndex.current);
     };
@@ -558,14 +542,6 @@ const newRoutes = await calculateRoute(
                 }
             }
 
-            
-console.log("🔍 Final origin:", finalOrigin);
-console.log("🏁 Final destination:", finalDestination);
-
-console.log("📤 Appel calculateRoute avec :");
-console.log(" - Origin:", finalOrigin);
-console.log(" - Destination:", finalDestination);
-
 const routeResult = await calculateRoute(
                 finalOrigin,
                 finalDestination,
@@ -606,7 +582,6 @@ const routeResult = await calculateRoute(
                 }
             }
         } catch (error: any) {
-            console.log("❌ Erreur calculateRoute :", error);
             setRouteError(
                 error.message || "Erreur lors du calcul de l'itinéraire"
             );
@@ -633,10 +608,7 @@ const routeResult = await calculateRoute(
     }
 
     const updateStepFromCurrentPosition = () => {
-        console.log("📣 Appel de updateStepFromCurrentPosition()");
         if (!liveCoords || !selectedRoute?.steps) return;
-        console.log("📍 Étape actuelle:", currentStepIndex);
-
         let closestStepIndex = currentStepIndex;
         let minDistance = Infinity;
 
@@ -653,9 +625,6 @@ const routeResult = await calculateRoute(
             };
 
             const distanceToEnd = getDistance(liveCoords, end);
-            console.log(
-                `🧩 Étape ${index} : dEnd=${distanceToEnd.toFixed(1)}m`
-            );
 
             if (distanceToEnd < minDistance) {
                 minDistance = distanceToEnd;
@@ -663,14 +632,11 @@ const routeResult = await calculateRoute(
             }
         }
 
-        console.log("📍 Étape la plus proche détectée:", closestStepIndex);
 
         if (closestStepIndex !== currentStepIndex) {
             setCurrentStepIndex(closestStepIndex);
             announcedSteps.current.add(closestStepIndex);
-            console.log(`📍 Étape mise à jour : ${closestStepIndex}`);
         } else {
-            console.log("♻️ Étape inchangée, pas de recalage");
         }
     };
 
@@ -1057,9 +1023,8 @@ const routeResult = await calculateRoute(
                                 };
 
                                 saveRoute(routeToSave);
-                                console.log("Itinéraire sauvegardé dans l'historique");
                             } catch (error) {
-                                console.error("Erreur lors de la sauvegarde de l'itinéraire:", error);
+                                console.error("Error:", error);
                             }
 
 
@@ -1162,8 +1127,6 @@ const routeResult = await calculateRoute(
                 onDismiss={(id) => {}}
                 onAlertsUpdate={(newAlerts) => {
                     setAlertMarkers(newAlerts);
-
-                    console.log("Nouvelles alertes reçues:", newAlerts.length);
                 }}
             />
             {navigationLaunched && selectedRoute && (

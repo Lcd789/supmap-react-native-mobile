@@ -47,7 +47,6 @@ import { ApiError, UserData } from '@/utils/apiUtils';
 const DefaultProfileImage = require('@/assets/images/default-profile.png');
 const screenWidth = Dimensions.get('window').width;
 
-// Fonction pour traduire les modes de transport en français
 const translateTransportMode = (mode: string | undefined | null): string => {
   if (!mode) return '–';
 
@@ -79,7 +78,6 @@ export default function Profile() {
   const [error, setError] = useState<string | null>(null);
   const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
 
-  // États pour les champs modifiables
   const [editMode, setEditMode] = useState(false);
   const [editedUsername, setEditedUsername] = useState('');
   const [editedEmail, setEditedEmail] = useState('');
@@ -90,7 +88,6 @@ export default function Profile() {
   const subTabs = ['Preferences', 'Favoris', 'Statistiques'];
   const [activeSubTab, setActiveSubTab] = useState(subTabs[0]);
 
-  // Définir une référence au composant monté/démonté
   useEffect(() => {
     isMounted.current = true;
     return () => {
@@ -98,11 +95,9 @@ export default function Profile() {
     };
   }, []);
 
-  // ─── Fetch user data ─────────────────────────────────────────
   const fetchUserData = useCallback(async (showLoading = true) => {
-    // Limiter les appels API - ne pas recharger si moins de 10 secondes se sont écoulées
     const now = Date.now();
-    const THROTTLE_TIME = 10000; // 10 secondes
+    const THROTTLE_TIME = 10000;
 
     if (now - lastFetchTime.current < THROTTLE_TIME && initialLoadComplete.current) {
       console.log('Ignoring fetch request - throttled');
@@ -127,11 +122,9 @@ export default function Profile() {
 
       if (!isMounted.current) return;
 
-      // Mise à jour des données
       setUserData(prevData => {
         if (!prevData) return data;
 
-        // Créer une nouvelle référence d'objet uniquement si les données ont changé
         const hasChanged = JSON.stringify(prevData) !== JSON.stringify(data);
 
         if (hasChanged) {
@@ -157,7 +150,6 @@ export default function Profile() {
         return prevData;
       });
 
-      // Mise à jour des champs d'édition seulement si nécessaire
       if (!editMode) {
         setEditedUsername(data?.username || '');
         setEditedEmail(data?.email || '');
@@ -184,7 +176,6 @@ export default function Profile() {
     }
   }, [contextLogout, router, editMode]);
 
-  // Chargement initial des données
   useEffect(() => {
     if (isAuthenticated && !initialLoadComplete.current) {
       fetchUserData(true);
@@ -193,14 +184,11 @@ export default function Profile() {
     }
   }, [isAuthenticated, fetchUserData]);
 
-  // Rafraîchir les données quand l'utilisateur revient sur l'écran
   useFocusEffect(
       useCallback(() => {
         let isMountedInEffect = true;
 
-        // Si l'utilisateur est authentifié et que les données initiales ont été chargées
         if (isAuthenticated && initialLoadComplete.current && isMountedInEffect) {
-          // Rafraîchir silencieusement
           fetchUserData(false);
         }
 
@@ -210,7 +198,6 @@ export default function Profile() {
       }, [isAuthenticated, fetchUserData])
   );
 
-  // ─── Pick & upload profile image ─────────────────────────────
   const pickImageAsync = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
@@ -244,20 +231,17 @@ export default function Profile() {
       setError(err instanceof Error ? err.message : 'Erreur upload.');
     } finally {
       setIsSaving(false);
-      fetchUserData(false); // Rafraîchir en arrière-plan après l'upload
+      fetchUserData(false);
     }
   };
 
-  // ─── Validation de l'email ─────────────────────────────────
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
   };
 
-  // ─── Toggle mode d'édition ────────────────────────────────
   const toggleEditMode = () => {
     if (editMode) {
-      // Si on quitte le mode édition, on réinitialise les valeurs
       setEditedUsername(userData?.username || '');
       setEditedEmail(userData?.email || '');
       setUsernameError('');
@@ -266,11 +250,9 @@ export default function Profile() {
     setEditMode(!editMode);
   };
 
-  // ─── Save changes (Personal Info) ────────────────────────────
   const handleSaveChanges = async () => {
     if (!userData) return;
 
-    // Validation
     let isValid = true;
 
     if (!editedUsername.trim()) {
@@ -295,7 +277,6 @@ export default function Profile() {
     setIsSaving(true);
     setError(null);
     try {
-      // Créer un objet avec uniquement les champs modifiés
       const updatedData: any = {};
 
       if (editedUsername !== userData.username) {
@@ -306,14 +287,11 @@ export default function Profile() {
         updatedData.email = editedEmail;
       }
 
-      // Si aucune modification, simplement quitter le mode édition
       if (Object.keys(updatedData).length === 0) {
         setEditMode(false);
         return;
       }
 
-      // Sinon, envoyer uniquement les champs modifiés
-      console.log('Saving changes:', updatedData);
       const updated = await updateUserApi(updatedData);
       setUserData(prevData => {
         if (!prevData) return updated;
@@ -328,7 +306,6 @@ export default function Profile() {
     }
   };
 
-  // ─── Handle logout ────────────────────────────────────────────
   const handleLogout = async () => {
     Alert.alert(
         "Déconnexion",
@@ -351,7 +328,6 @@ export default function Profile() {
     );
   };
 
-  // ─── Handle delete account ───────────────────────────────────
   const handleDeleteAccount = async () => {
     Alert.alert(
         "Supprimer le compte",
@@ -386,7 +362,6 @@ export default function Profile() {
     );
   };
 
-  // ─── Loading Spinner ─────────────────────────────────────────
   if (isLoading) {
     return (
         <SafeAreaView style={[styles.container, styles.center]} edges={['bottom']}>
@@ -400,7 +375,6 @@ export default function Profile() {
     );
   }
 
-  // ─── Determine profile image source ─────────────────────────
   const imageSource = selectedImageUri
       ? { uri: selectedImageUri }
       : userData?.profileImage
@@ -420,7 +394,6 @@ export default function Profile() {
     }
   };
 
-  // Traduire les modes de transport
   const translatedTransportMode = translateTransportMode(userData?.navigationPreferences?.preferredTransportMode);
 
   return (
@@ -437,14 +410,12 @@ export default function Profile() {
               </View>
           )}
 
-          {/* Indicateur de chargement en arrière-plan */}
           {isBackgroundLoading && (
               <View style={styles.backgroundLoadingIndicator}>
                 <ActivityIndicator size="small" color={Colors.primary} />
               </View>
           )}
 
-          {/* HEADER */}
           <View style={styles.header}>
             <View style={styles.profileSection}>
               <TouchableOpacity style={styles.avatarContainer} onPress={pickImageAsync}>
@@ -460,7 +431,6 @@ export default function Profile() {
             </View>
           </View>
 
-          {/* MAIN TABS */}
           <View style={styles.tabsContainer}>
             <TouchableOpacity
                 style={[
@@ -496,7 +466,6 @@ export default function Profile() {
             </TouchableOpacity>
           </View>
 
-          {/* CONTENT: Personal Info */}
           {activeTab === 'info' && (
               <View style={styles.contentContainer}>
                 <View style={styles.infoCard}>
@@ -513,7 +482,6 @@ export default function Profile() {
                     </TouchableOpacity>
                   </View>
 
-                  {/* Nom d'utilisateur */}
                   <View style={styles.infoRow}>
                     <Text style={styles.infoLabel}>Nom d'utilisateur</Text>
                     {editMode ? (
@@ -536,7 +504,6 @@ export default function Profile() {
 
                   <View style={styles.divider} />
 
-                  {/* Email */}
                   <View style={styles.infoRow}>
                     <Text style={styles.infoLabel}>Email</Text>
                     {editMode ? (
@@ -612,7 +579,6 @@ export default function Profile() {
                   </View>
                 </View>
 
-                {/* Boutons déconnexion et suppression de compte */}
                 <View style={styles.actionButtonsContainer}>
                   <TouchableOpacity
                       style={styles.logoutButton}
@@ -642,10 +608,8 @@ export default function Profile() {
               </View>
           )}
 
-          {/* CONTENT: Activities */}
           {activeTab === 'activities' && (
               <View style={styles.contentContainer}>
-                {/* Sous-tabs */}
                 <View style={styles.subTabsContainer}>
                   {subTabs.map((t) => (
                       <TouchableOpacity
@@ -669,7 +633,6 @@ export default function Profile() {
                   ))}
                 </View>
 
-                {/* Contenu sous-tab */}
                 {activeSubTab === 'Statistiques' && (
                     <View style={styles.infoCard}>
                       <Text style={styles.sectionTitle}>Vos statistiques</Text>
@@ -828,7 +791,6 @@ export default function Profile() {
   );
 }
 
-// ─── Style sheet ─────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -1071,7 +1033,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginLeft: 8
   },
-  // Nouveaux styles pour les boutons d'action
   actionButtonsContainer: {
     marginBottom: 16,
     flexDirection: 'column',

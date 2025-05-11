@@ -1,4 +1,3 @@
-// SearchBar.tsx
 import React, { useEffect, useState, useRef } from "react";
 import {
   View,
@@ -78,13 +77,11 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   const [showOriginHistory, setShowOriginHistory] = useState(false);
   const [showDestinationHistory, setShowDestinationHistory] = useState(false);
 
-  // Chargement initial des données
   useEffect(() => {
     fetchRouteHistory();
     fetchFavoriteLocations();
   }, []);
 
-  // Gestion des rechargements en arrière-plan lorsque l'application revient au premier plan
   useEffect(() => {
     const subscription = AppState.addEventListener("change", handleAppStateChange);
 
@@ -93,14 +90,10 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     };
   }, []);
 
-  // Fonction pour gérer les changements d'état de l'application
   const handleAppStateChange = (nextAppState: AppStateStatus) => {
-    // Si l'application était en arrière-plan et revient au premier plan
     if (appState.current.match(/inactive|background/) && nextAppState === "active") {
       const now = Date.now();
-      // Si plus de 30 secondes se sont écoulées depuis la dernière vérification
       if (now - lastFavoritesCheck.current > 30000) {
-        // Recharger les favoris en arrière-plan
         fetchFavoriteLocations();
         lastFavoritesCheck.current = now;
       }
@@ -142,7 +135,6 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     return [];
   };
 
-  // --- Handlers pour origin ---
   const handleOriginChange = async (text: string) => {
     onOriginChange(text);
 
@@ -174,7 +166,6 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     setOriginSuggestions([]);
   };
 
-  // --- Handlers pour waypoints ---
   const handleWaypointChange = async (text: string, idx: number) => {
     onWaypointUpdate(idx, text);
     const sug = await fetchSuggestions(text);
@@ -185,7 +176,6 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     setWaypointSuggestions((p) => ({ ...p, [idx]: [] }));
   };
 
-  // --- Handlers pour destination ---
   const handleDestinationChange = async (text: string) => {
     onDestinationChange(text);
 
@@ -210,7 +200,6 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   const handleOriginFocus = () => {
     setIsOriginFocused(true);
 
-    // Si le champ est vide, afficher l'historique
     if (origin.length === 0) {
       handleOriginChange("");
     }
@@ -219,27 +208,23 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   const handleDestinationFocus = () => {
     setIsDestinationFocused(true);
 
-    // Si le champ est vide, afficher l'historique
     if (destination.length === 0) {
       handleDestinationChange("");
     }
   };
 
   const handleOriginBlur = () => {
-    // Utiliser setTimeout pour permettre le clic sur les suggestions
     setTimeout(() => {
       setIsOriginFocused(false);
     }, 150);
   };
 
   const handleDestinationBlur = () => {
-    // Utiliser setTimeout pour permettre le clic sur les suggestions
     setTimeout(() => {
       setIsDestinationFocused(false);
     }, 150);
   };
 
-  // Handler pour cliquer sur un favori (va remplir la destination)
   const handleFavoriteSelect = (address: string) => {
     onDestinationChange(address);
   };
@@ -266,7 +251,6 @@ export const SearchBar: React.FC<SearchBarProps> = ({
 
   return (
       <View style={styles.container}>
-        {/* En-tête */}
         <View style={styles.topRow}>
           <Text style={styles.title}>Recherche d'itinéraire</Text>
           <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
@@ -274,7 +258,6 @@ export const SearchBar: React.FC<SearchBarProps> = ({
           </TouchableOpacity>
         </View>
 
-        {/* Point de départ */}
         <View style={styles.inputWrapper}>
           <MaterialIcons name="place" size={20} style={styles.icon} />
           <TextInput
@@ -297,7 +280,6 @@ export const SearchBar: React.FC<SearchBarProps> = ({
             />
         )}
 
-        {/* Étapes (waypoints) */}
         {waypoints.map((wp, idx) => (
             <View key={wp.id} style={{ marginBottom: 12, zIndex: 10 }}>
               <View style={styles.waypointRow}>
@@ -327,7 +309,6 @@ export const SearchBar: React.FC<SearchBarProps> = ({
             </View>
         ))}
 
-        {/* Destination */}
         <View style={styles.inputWrapper}>
           <MaterialIcons name="flag" size={20} style={styles.icon} />
           <TextInput
@@ -352,7 +333,6 @@ export const SearchBar: React.FC<SearchBarProps> = ({
             />
         )}
 
-        {/* Section Favoris (sans titre, sans bordure) */}
         <View style={styles.favoritesContainer}>
           <FavoriteLocationsSelector
               onSelectLocation={handleFavoriteSelect}
@@ -360,7 +340,6 @@ export const SearchBar: React.FC<SearchBarProps> = ({
           />
         </View>
 
-        {/* Inverser / Ajouter une étape */}
         <View style={styles.buttonRow}>
           {waypoints.length === 0 && (
               <TouchableOpacity onPress={onReverse} style={styles.reverseBtn}>
@@ -379,7 +358,6 @@ export const SearchBar: React.FC<SearchBarProps> = ({
           </TouchableOpacity>
         </View>
 
-        {/* Mode de transport et options */}
         <TransportModeSelector
             selectedMode={selectedMode}
             onModeSelect={onModeSelect}
@@ -403,7 +381,6 @@ export const SearchBar: React.FC<SearchBarProps> = ({
             </View>
         )}
 
-        {/* Bouton Rechercher */}
         <TouchableOpacity
             style={[styles.searchBtn, isLoading && { opacity: 0.6 }]}
             onPress={onSearch}

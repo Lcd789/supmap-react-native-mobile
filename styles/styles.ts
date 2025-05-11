@@ -1,4 +1,3 @@
-// globalStyles.ts
 import { StyleSheet, Platform } from 'react-native';
 
 const primaryColor = "#2196F3";
@@ -16,9 +15,6 @@ const shadow = {
     elevation: 5,
 };
 
-/* ===========================
-   Home (index.tsx) styles
-   =========================== */
 export const homeStyles = StyleSheet.create({
     container: {
         flex: 1,
@@ -44,7 +40,6 @@ export const homeStyles = StyleSheet.create({
         color: "red",
         textAlign: "center",
     },
-    // Nouveaux styles pour index.tsx
     floatingButton: {
         position: "absolute",
         bottom: 30,
@@ -64,9 +59,6 @@ export const homeStyles = StyleSheet.create({
     },
 });
 
-/* ===========================
-   Login (login.tsx) styles
-   =========================== */
 export const loginStyles = StyleSheet.create({
     container: {
         flex: 1,
@@ -169,7 +161,6 @@ export const Colors = {
   });
   
   export const profileStyles = StyleSheet.create({
-    // ── Container général ───────────────────────────────────────
     container: {
       flex: 1,
       backgroundColor: Colors.background,
@@ -183,7 +174,6 @@ export const Colors = {
       alignItems: 'center',
     },
   
-    // ── Header & avatar ────────────────────────────────────────
     header: {
       backgroundColor:        Colors.primary,
       paddingVertical:        Spacing.xl,
@@ -192,9 +182,9 @@ export const Colors = {
       borderBottomRightRadius: Border.radius,
     },
     avatarWrapper: {
-      marginTop:    -(Spacing.xl * 0.75), // -24
-      width:         Spacing.xl * 1.5,     // 48
-      height:        Spacing.xl * 1.5,     // 48
+      marginTop:    -(Spacing.xl * 0.75),
+      width:         Spacing.xl * 1.5,
+      height:        Spacing.xl * 1.5,
       borderRadius: (Spacing.xl * 1.5) / 2,
       overflow:      'hidden',
       borderWidth:   Border.width,
@@ -217,11 +207,10 @@ export const Colors = {
       marginTop: Spacing.xs,
     },
   
-    // ── Main Tabs (chevauchent le header) ───────────────────────
     tabsWrapper: {
       flexDirection:  'row',
       justifyContent: 'center',
-      marginTop:     -Spacing.lg, // descendre sous le header
+      marginTop:     -Spacing.lg,
       zIndex:         10,
       elevation:      10,
     },
@@ -250,7 +239,6 @@ export const Colors = {
       color:      Colors.subtext,
     },
   
-    // ── Sub-Tabs (Activities) ───────────────────────────────────
     subTabContainer: {
       paddingVertical:   Spacing.sm,
       paddingHorizontal: Spacing.md,
@@ -276,7 +264,6 @@ export const Colors = {
       fontWeight: '600',
     },
   
-    // ── Sections & titres ─────────────────────────────────────
     section: {
       backgroundColor:  Colors.card,
       borderRadius:     Border.radius / 1.5,
@@ -292,7 +279,6 @@ export const Colors = {
       marginBottom: Spacing.sm,
     },
   
-    // ── Items “Personal Info” ───────────────────────────────────
     itemCard: {
       backgroundColor: Colors.card,
       borderRadius:    Border.radius / 1.5,
@@ -311,7 +297,6 @@ export const Colors = {
       marginTop:  Spacing.xs,
     },
   
-    // ── Bouton “Save” uniquement ───────────────────────────────
     actionRow: {
       flexDirection:    'row',
       justifyContent:   'center',
@@ -338,16 +323,13 @@ export const Colors = {
       marginLeft: Spacing.sm,
     },
   
-    // ── Erreurs & loader ───────────────────────────────────────
     errorText: {
       color:         Colors.danger,
       textAlign:     'center',
       marginVertical: Spacing.sm,
     },
   });
-/* ===========================
-   Register (register.tsx) styles
-   =========================== */
+
 export const registerStyles = StyleSheet.create({
     container: {
         flex: 1,
@@ -378,9 +360,6 @@ export const registerStyles = StyleSheet.create({
     },
 });
 
-/* ===========================
-   Settings (settings.tsx) styles
-   =========================== */
 export const settingsStyles = StyleSheet.create({
     container: {
         flex: 1,
@@ -389,7 +368,6 @@ export const settingsStyles = StyleSheet.create({
         alignItems: "center",
         padding,
     },
-    // Nouveaux styles pour settings.tsx
     title: {
         fontSize: 24,
         fontWeight: "bold",
@@ -431,9 +409,6 @@ export const settingsStyles = StyleSheet.create({
     },
 });
 
-/* ===========================
-   Button (Button.tsx) styles
-   =========================== */
 export const buttonStyles = StyleSheet.create({
     buttonContainer: {
         width: "90%",
@@ -452,9 +427,6 @@ export const buttonStyles = StyleSheet.create({
     },
 });
 
-/* ===========================
-   ImageViewer (ImageViewer.tsx) styles
-   =========================== */
 export const imageViewerStyles = StyleSheet.create({
     imageContainer: {
         justifyContent: "center",
@@ -466,9 +438,6 @@ export const imageViewerStyles = StyleSheet.create({
     },
 });
 
-/* ===========================
-   RouteInfo (RouteInfo.tsx) styles
-   =========================== */
 export const routeInfoStyles = StyleSheet.create({
     routeInfoContainer: {
         position: "absolute",
@@ -524,9 +493,6 @@ export const routeInfoStyles = StyleSheet.create({
     },
 });
 
-/* ===========================
-   RouteMap (RouteMap.tsx) styles
-   =========================== */
 export const routeMapStyles = StyleSheet.create({
     map: {
         flex: 1,
@@ -547,9 +513,6 @@ export const routeMapStyles = StyleSheet.create({
     },
 });
 
-/* ===========================
-   SearchBar (SearchBar.tsx) styles
-   =========================== */
 export const searchBarStyles = StyleSheet.create({
     searchContainer: {
         position: "absolute",
@@ -644,9 +607,6 @@ export const searchBarStyles = StyleSheet.create({
       
 });
 
-/* ===========================
-   TransportModeSelector (TransportModeSelector.tsx) styles
-   =========================== */
 export const transportModeStyles = StyleSheet.create({
     transportMode: {
         flexDirection: "row",

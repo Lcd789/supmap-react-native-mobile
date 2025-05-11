@@ -1,4 +1,3 @@
-// FavoriteLocationsSelector.tsx
 import React, { useEffect, useState, useRef } from 'react';
 import {
     View,
@@ -14,7 +13,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface FavoriteLocationsSelectorProps {
     onSelectLocation: (address: string) => void;
-    isOrigin?: boolean; // Pour déterminer si c'est pour l'origine ou la destination
+    isOrigin?: boolean;
 }
 
 const CACHE_KEY = 'favorite_locations_cache';
@@ -28,11 +27,9 @@ const FavoriteLocationsSelector: React.FC<FavoriteLocationsSelectorProps> = ({
     const [loading, setLoading] = useState(true);
     const isMounted = useRef(true);
     const lastFetchTime = useRef(0);
-    const MIN_FETCH_INTERVAL = 30000; // 30 secondes minimum entre les appels API
+    const MIN_FETCH_INTERVAL = 30000; 
 
-    // Chargement initial depuis le cache et mise à jour en arrière-plan
     useEffect(() => {
-        // Fonction pour charger les données depuis le cache
         const loadFromCache = async () => {
             try {
                 const cachedData = await AsyncStorage.getItem(CACHE_KEY);
@@ -44,14 +41,12 @@ const FavoriteLocationsSelector: React.FC<FavoriteLocationsSelectorProps> = ({
                     }
                 }
             } catch (error) {
-                console.error('Erreur lors du chargement du cache:', error);
+                console.error('error :', error);
             }
         };
 
-        // Charger depuis le cache immédiatement
         loadFromCache();
 
-        // Toujours rafraîchir depuis l'API si assez de temps est passé
         const now = Date.now();
         if (now - lastFetchTime.current > MIN_FETCH_INTERVAL) {
             fetchFavoriteLocations();
@@ -63,31 +58,25 @@ const FavoriteLocationsSelector: React.FC<FavoriteLocationsSelectorProps> = ({
         };
     }, []);
 
-    // Mise à jour du cache quand de nouvelles données arrivent de l'API
     useEffect(() => {
         const updateCache = async () => {
-            // Si les données de l'API sont présentes et différentes du cache
             if (locations && (!cachedLocations.length || needsUpdate(locations, cachedLocations))) {
                 try {
-                    // Mettre à jour le cache
                     await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(locations));
-                    // Mettre à jour l'état local
                     setCachedLocations(locations);
                     setLoading(false);
                 } catch (error) {
-                    console.error('Erreur lors de la mise à jour du cache:', error);
+                    console.error('error:', error);
                 }
             } else if (locations && locations.length === 0) {
-                // Si l'API retourne une liste vide, cela pourrait signifier que tous les favoris ont été supprimés
                 try {
                     await AsyncStorage.removeItem(CACHE_KEY);
                     setCachedLocations([]);
                     setLoading(false);
                 } catch (error) {
-                    console.error('Erreur lors de la mise à jour du cache:', error);
+                    console.error('error:', error);
                 }
             } else if (!apiLoading && cachedLocations.length === 0 && !loading) {
-                // Si l'API a fini de charger, qu'on n'a pas de données en cache, et qu'on n'est pas déjà en chargement
                 setLoading(false);
             }
         };
@@ -97,21 +86,16 @@ const FavoriteLocationsSelector: React.FC<FavoriteLocationsSelectorProps> = ({
         }
     }, [locations, apiLoading]);
 
-    // Fonction pour vérifier si les données ont changé
     const needsUpdate = (newData: FavoriteLocation[], oldData: FavoriteLocation[]): boolean => {
-        // Comparaison simple par nombre d'éléments
         if (newData.length !== oldData.length) return true;
 
-        // Comparaison plus détaillée si nécessaire
         const newIds = new Set(newData.map(item => item.id));
         const oldIds = new Set(oldData.map(item => item.id));
 
-        // Vérifier si tous les IDs correspondent
         for (const id of newIds) {
             if (!oldIds.has(id)) return true;
         }
 
-        // Vérifier si les propriétés importantes ont changé
         for (let i = 0; i < newData.length; i++) {
             const newItem = newData[i];
             const oldItem = oldData.find(item => item.id === newItem.id);
@@ -125,7 +109,6 @@ const FavoriteLocationsSelector: React.FC<FavoriteLocationsSelectorProps> = ({
         return false;
     };
 
-    // Fonction pour obtenir l'icône basée sur le type de localisation
     const getLocationTypeIcon = (locationType: string): any => {
         switch (locationType) {
             case "HOME":
@@ -138,7 +121,6 @@ const FavoriteLocationsSelector: React.FC<FavoriteLocationsSelectorProps> = ({
         }
     };
 
-    // Rafraîchir manuellement les données
     const refreshData = () => {
         const now = Date.now();
         if (now - lastFetchTime.current > MIN_FETCH_INTERVAL) {
@@ -204,7 +186,7 @@ const FavoriteLocationsSelector: React.FC<FavoriteLocationsSelectorProps> = ({
 const styles = StyleSheet.create({
     container: {
         marginVertical: 8,
-        zIndex: 1000, // Assurer que la barre de favoris est au-dessus des autres éléments
+        zIndex: 1000,
     },
     header: {
         flexDirection: 'row',
@@ -246,7 +228,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: 8,
-        flexShrink: 0, // Ne pas réduire l'icône
+        flexShrink: 0,
     },
     locationName: {
         fontSize: 14,

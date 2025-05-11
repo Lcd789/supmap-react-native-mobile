@@ -131,7 +131,6 @@ export const RouteMap: React.FC<RouteMapProps> = ({
                 />
             )}
 
-            {/* Marqueur d’arrivée en drapeau */}
             {destinationCoord && (
                 <Marker
                     coordinate={destinationCoord}

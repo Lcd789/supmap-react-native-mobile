@@ -1,31 +1,27 @@
-// TripInfoBar.tsx
 import React from "react";
 import { View, Text, StyleSheet, Platform } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 
 interface TripInfoBarProps {
-  remainingDistance: number;  // en mètres
-  remainingDuration: number;  // en secondes
+  remainingDistance: number;
+  remainingDuration: number;
 }
 
 const TripInfoBar: React.FC<TripInfoBarProps> = ({
   remainingDistance,
   remainingDuration,
 }) => {
-  // Conversion sans décimales
   const minutes = Math.ceil(remainingDuration / 60);
   const kilometers = Math.round(remainingDistance / 1000);
 
   return (
     <View style={styles.container}>
-      {/* Pastille Temps */}
       <View style={styles.pill}>
         <MaterialIcons name="schedule" size={20} color="#000" style={styles.icon} />
         <Text style={styles.value}>{minutes}</Text>
         <Text style={styles.unit}>min</Text>
       </View>
 
-      {/* Pastille Distance */}
       <View style={styles.pill}>
         <MaterialIcons name="place" size={20} color="#000" style={styles.icon} />
         <Text style={styles.value}>{kilometers}</Text>
@@ -54,7 +50,6 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 14,
     marginHorizontal: 6,
-    // Ombre légère à la Waze
     ...Platform.select({
       ios: {
         shadowColor: "#000",

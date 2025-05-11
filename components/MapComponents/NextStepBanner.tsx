@@ -1,4 +1,3 @@
-// NextStepBanner.tsx
 import React, { useEffect } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -8,14 +7,13 @@ import * as Speech from "expo-speech";
 import { useTheme } from "@/utils/ThemeContext";
 import { useSettings } from "@/hooks/user/SettingsContext";
 
-// On récupère le type exact des noms d'icônes supportés
 type IconName = keyof typeof MaterialIcons.glyphMap;
 
 interface NextStepBannerProps {
   nextStep: Step | null;
   onToggleSteps: () => void;
-  remainingDistance: number;  // en mètres, recalculé dynamiquement
-  remainingDuration: number;  // en secondes, recalculé dynamiquement
+  remainingDistance: number;
+  remainingDuration: number;
 }
 
 export const NextStepBanner: React.FC<NextStepBannerProps> = ({
@@ -28,12 +26,10 @@ export const NextStepBanner: React.FC<NextStepBannerProps> = ({
   const { darkMode } = useTheme();
   const { voiceGuidance, setVoiceGuidance } = useSettings();
 
-  // On force la valeur de guidance sur le store à chaque render
   useEffect(() => {
     setVoiceGuidance(voiceGuidance);
   }, [voiceGuidance]);
 
-  // Synthèse vocale de l'instruction lorsque nextStep change
   useEffect(() => {
     if (voiceGuidance && nextStep?.html_instructions) {
       const instruction = nextStep.html_instructions.replace(/<[^>]*>/g, " ");
@@ -43,7 +39,6 @@ export const NextStepBanner: React.FC<NextStepBannerProps> = ({
   }, [nextStep, voiceGuidance]);
 
   if (!nextStep) {
-    // Affichage final à l'arrivée
     return (
       <View
         style={[
@@ -61,13 +56,11 @@ export const NextStepBanner: React.FC<NextStepBannerProps> = ({
     );
   }
 
-  // DISTANCE SANS DÉCIMALES (arrondi au mètre)
   const distanceText =
     remainingDistance < 1000
-      ? `${Math.round(remainingDistance)} m`    // ← ici on arrondit
+      ? `${Math.round(remainingDistance)} m`
       : `${Math.round(remainingDistance / 1000)} km`;
 
-  // TEMPS
   const minutes = Math.floor(remainingDuration / 60);
   const seconds = remainingDuration % 60;
   const timeText =
@@ -75,10 +68,8 @@ export const NextStepBanner: React.FC<NextStepBannerProps> = ({
       ? `${minutes} min${seconds > 0 ? ` ${seconds}s` : ""}`
       : `${seconds}s`;
 
-  // Nettoyage des balises HTML
   const instruction = nextStep.html_instructions.replace(/<[^>]*>/g, " ");
 
-  // Sélection de l'icône de manœuvre typée
   const getManeuverIcon = (maneuver: string): IconName => {
     const icons: Record<string, IconName> = {
       "turn-right": "turn-right",

@@ -1,4 +1,3 @@
-// useRoute.ts
 import { useState } from "react";
 import { RouteCalculationResult, Step, Waypoint, TransportMode } from "@/types";
 import polyline from "@mapbox/polyline";
@@ -10,9 +9,6 @@ interface RouteOptions {
   avoidHighways?: boolean;
 }
 
-/**
- * Vérifie que tous les points décodés du polyline restent en France
- */
 const isRouteInFrance = (
   polylinePoints: { latitude: number; longitude: number }[]
 ) =>
@@ -24,9 +20,7 @@ const isRouteInFrance = (
       pt.longitude <= 9.5
   );
 
-/**
- * Geocode an address into latitude/longitude using Google Geocoding API
- */
+
 async function geocodeAddress(address: string): Promise<{ lat: number; lng: number }> {
   const url =
     `https://maps.googleapis.com/maps/api/geocode/json` +
@@ -63,11 +57,9 @@ export function useRoute() {
     setError(null);
 
     try {
-      // --- Geocode origin and destination to ensure consistency
       const originCoords = await geocodeAddress(origin);
       const destCoords = await geocodeAddress(destination);
 
-      // --- Geocode waypoints to lat,lng
       const validWaypoints = waypoints.filter(wp => wp.address.trim() !== "");
       const waypointCoords = await Promise.all(
         validWaypoints.map(wp => geocodeAddress(wp.address))
@@ -78,13 +70,11 @@ export function useRoute() {
       const wpString =
         wpParamStrings.length > 0 ? `&waypoints=${wpParamStrings.join("|")}` : "";
 
-      // --- Construction du paramètre avoid
       const avoids: string[] = [];
       if (options?.avoidTolls) avoids.push("tolls");
       if (options?.avoidHighways) avoids.push("highways");
       const avoidQuery = avoids.length > 0 ? `&avoid=${avoids.join("|")}` : "";
 
-      // --- Assemblage de l'URL
       const url =
         `https://maps.googleapis.com/maps/api/directions/json` +
         `?origin=${originCoords.lat},${originCoords.lng}` +
@@ -98,9 +88,6 @@ export function useRoute() {
         `${avoidQuery}` +
         `&key=${API_KEY}`;
 
-      console.log("🔗 Google Directions URL :", url);
-
-      // --- Appel à l'API
       const response = await fetch(url);
       const data = await response.json();
 
@@ -108,7 +95,6 @@ export function useRoute() {
         throw new Error(data.error_message || `CALCULATION_ERROR (${data.status})`);
       }
 
-      // --- Parsing des routes retournées
       const parsedRoutes: RouteCalculationResult[] = data.routes.map(
         (route: any) => {
           const decodedPolyline = route.legs.flatMap((leg: any) =>

@@ -22,10 +22,8 @@ import {
     LocationType
 } from "@/hooks/map/MapHooks";
 
-// Définir ici votre clé API Google Places
 const GOOGLE_PLACES_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_API_KEY;
 
-// Interface pour les suggestions Google Places
 interface PlaceSuggestion {
     description: string;
     placeId: string;
@@ -48,7 +46,7 @@ const FavoriteLocationsManager = () => {
         city: "",
         postalCode: "",
         country: "France",
-        locationType: "CUSTOM" // Type par défaut parmi les trois disponibles
+        locationType: "CUSTOM"
     });
     const [nameError, setNameError] = useState("");
     const [addressError, setAddressError] = useState("");
@@ -56,7 +54,6 @@ const FavoriteLocationsManager = () => {
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [addressQuery, setAddressQuery] = useState("");
 
-    // Rafraîchir la liste des favoris au chargement et après ajout/suppression
     useEffect(() => {
         fetchFavoriteLocations();
     }, []);
@@ -81,7 +78,7 @@ const FavoriteLocationsManager = () => {
             city: "",
             postalCode: "",
             country: "France",
-            locationType: "CUSTOM" // Type par défaut
+            locationType: "CUSTOM"
         });
         setNameError("");
         setAddressError("");
@@ -139,7 +136,6 @@ const FavoriteLocationsManager = () => {
         );
     };
 
-    // Fonction pour obtenir l'icône basée sur le type de localisation
     const getLocationTypeIcon = (locationType: string): any => {
         switch (locationType) {
             case "HOME":
@@ -152,14 +148,12 @@ const FavoriteLocationsManager = () => {
         }
     };
 
-    // Labels et icônes correspondant aux types définis
     const locationTypes = [
         { type: "HOME" as LocationType, label: "Domicile", iconName: "home" as any },
         { type: "WORK" as LocationType, label: "Travail", iconName: "work" as any },
         { type: "CUSTOM" as LocationType, label: "Personnalisé", iconName: "star" as any }
     ];
 
-    // Fonction pour rechercher des adresses avec Google Places
     const searchPlaces = async (query: string) => {
         if (query.length < 3) {
             setAddressSuggestions([]);
@@ -189,13 +183,11 @@ const FavoriteLocationsManager = () => {
                 setShowSuggestions(false);
             }
         } catch (error) {
-            console.error("Erreur lors de la recherche d'adresses:", error);
             setAddressSuggestions([]);
             setShowSuggestions(false);
         }
     };
 
-    // Fonction pour obtenir les détails d'un lieu avec Google Places Details API
     const getPlaceDetails = async (placeId: string) => {
         try {
             const response = await fetch(
@@ -208,7 +200,6 @@ const FavoriteLocationsManager = () => {
                 const result = data.result;
                 const addressComponents = result.address_components;
 
-                // Extraire les composants de l'adresse
                 let street = "";
                 let city = "";
                 let postalCode = "";
@@ -247,7 +238,7 @@ const FavoriteLocationsManager = () => {
                 setShowSuggestions(false);
             }
         } catch (error) {
-            console.error("Erreur lors de la récupération des détails du lieu:", error);
+            console.error("error :", error);
         }
     };
 
@@ -292,9 +283,7 @@ const FavoriteLocationsManager = () => {
         </View>
     );
 
-    // Rendu d'un élément de la liste des favoris
     const renderFavoriteItem = (item: FavoriteLocation, index: number) => {
-        // Conversion du type pour éviter l'erreur TypeScript
         const iconName = getLocationTypeIcon(item.locationType);
 
         return (
@@ -357,7 +346,6 @@ const FavoriteLocationsManager = () => {
                 </ScrollView>
             )}
 
-            {/* Modal pour ajouter un nouveau favori */}
             <Modal
                 visible={modalVisible}
                 animationType="slide"
