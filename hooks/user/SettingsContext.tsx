@@ -9,25 +9,20 @@ import React, {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuth } from "./AuthContext";
 
-// Définition des types pour les paramètres de l'application
 interface SettingsContextType {
-    // Paramètres de route
     avoidTolls: boolean;
     setAvoidTolls: (value: boolean) => void;
     avoidHighways: boolean;
     setAvoidHighways: (value: boolean) => void;
 
-    // Paramètres d'affichage
     showTraffic: boolean;
     setShowTraffic: (value: boolean) => void;
 
-    // Paramètres de guidage
     voiceGuidance: boolean;
     setVoiceGuidance: (value: boolean) => void;
     unitsMetric: boolean;
     setUnitsMetric: (value: boolean) => void;
 
-    // Paramètres de recherche
     enableEventSearch: boolean;
     setEnableEventSearch: (value: boolean) => void;
     eventSearchDistance: number;
@@ -38,7 +33,6 @@ interface SettingsContextType {
     userSearchDistance: number;
     setUserSearchDistance: (value: number) => void;
 
-    // Fonctions utilitaires
     clearNavigationHistory: () => Promise<void>;
     isSettingsLoading: boolean;
 }
@@ -47,11 +41,9 @@ const SettingsContext = createContext<SettingsContextType | undefined>(
     undefined
 );
 
-// Clé utilisée pour stocker les paramètres dans AsyncStorage
 const SETTINGS_STORAGE_KEY = "gps_app_settings";
 const HISTORY_STORAGE_KEY = "gps_app_history";
 
-// Valeurs par défaut pour un utilisateur non connecté
 const DEFAULT_SETTINGS_LOGGED_OUT = {
     avoidTolls: false,
     avoidHighways: false,
@@ -64,7 +56,6 @@ const DEFAULT_SETTINGS_LOGGED_OUT = {
     userSearchDistance: 0,
 };
 
-// Valeurs par défaut pour un utilisateur connecté
 const DEFAULT_SETTINGS_LOGGED_IN = {
     ...DEFAULT_SETTINGS_LOGGED_OUT,
     enableEventSearch: true,
@@ -79,7 +70,6 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({
     const { isAuthenticated } = useAuth();
     const [isSettingsLoading, setIsSettingsLoading] = useState(true);
 
-    // États pour chaque paramètre
     const [avoidTolls, setAvoidTolls] = useState(
         DEFAULT_SETTINGS_LOGGED_OUT.avoidTolls
     );
@@ -108,7 +98,6 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({
         DEFAULT_SETTINGS_LOGGED_OUT.userSearchDistance
     );
 
-    // Charger les paramètres depuis AsyncStorage
     useEffect(() => {
         const loadSettings = async () => {
             setIsSettingsLoading(true);
@@ -120,14 +109,12 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({
                 if (storedSettings) {
                     const parsedSettings = JSON.parse(storedSettings);
 
-                    // Appliquer les paramètres stockés
                     setAvoidTolls(parsedSettings.avoidTolls);
                     setAvoidHighways(parsedSettings.avoidHighways);
                     setShowTraffic(parsedSettings.showTraffic);
                     setVoiceGuidance(parsedSettings.voiceGuidance);
                     setUnitsMetric(parsedSettings.unitsMetric);
 
-                    // Pour les paramètres dépendant de l'authentification, vérifier le statut
                     if (isAuthenticated) {
                         setEnableEventSearch(
                             parsedSettings.enableEventSearch ??
@@ -146,14 +133,12 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({
                                 DEFAULT_SETTINGS_LOGGED_IN.userSearchDistance
                         );
                     } else {
-                        // Si l'utilisateur n'est pas connecté, certaines fonctions sont désactivées
                         setEnableEventSearch(false);
                         setEventSearchDistance(0);
                         setEnableUserSearch(false);
                         setUserSearchDistance(0);
                     }
                 } else {
-                    // Si aucun paramètre n'est stocké, utiliser les valeurs par défaut selon le statut d'authentification
                     if (isAuthenticated) {
                         setAvoidTolls(DEFAULT_SETTINGS_LOGGED_IN.avoidTolls);
                         setAvoidHighways(
@@ -177,7 +162,6 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({
                             DEFAULT_SETTINGS_LOGGED_IN.userSearchDistance
                         );
                     } else {
-                        // Valeurs par défaut pour un utilisateur non connecté
                         setAvoidTolls(DEFAULT_SETTINGS_LOGGED_OUT.avoidTolls);
                         setAvoidHighways(
                             DEFAULT_SETTINGS_LOGGED_OUT.avoidHighways
@@ -202,11 +186,6 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({
                     }
                 }
             } catch (error) {
-                console.error(
-                    "Erreur lors du chargement des paramètres:",
-                    error
-                );
-                // En cas d'erreur, utiliser les valeurs par défaut
                 resetToDefaults(isAuthenticated);
             } finally {
                 setIsSettingsLoading(false);
@@ -216,7 +195,6 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({
         loadSettings();
     }, [isAuthenticated]);
 
-    // Réinitialiser tous les paramètres aux valeurs par défaut en fonction du statut d'authentification
     const resetToDefaults = (authenticated: boolean) => {
         const defaults = authenticated
             ? DEFAULT_SETTINGS_LOGGED_IN
@@ -233,7 +211,6 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({
         setUserSearchDistance(defaults.userSearchDistance);
     };
 
-    // Enregistrer les paramètres dans AsyncStorage quand ils changent
     useEffect(() => {
         const saveSettings = async () => {
             if (isSettingsLoading) return;
@@ -256,10 +233,7 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({
                     JSON.stringify(settings)
                 );
             } catch (error) {
-                console.error(
-                    "Erreur lors de l'enregistrement des paramètres:",
-                    error
-                );
+                console.error("Error saving settings:", error);
             }
         };
 
@@ -277,16 +251,11 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({
         isSettingsLoading,
     ]);
 
-    // Fonction pour effacer l'historique de navigation
     const clearNavigationHistory = useCallback(async () => {
         try {
             await AsyncStorage.removeItem(HISTORY_STORAGE_KEY);
             return Promise.resolve();
         } catch (error) {
-            console.error(
-                "Erreur lors de la suppression de l'historique de navigation:",
-                error
-            );
             return Promise.reject(error);
         }
     }, []);

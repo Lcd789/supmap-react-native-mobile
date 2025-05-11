@@ -558,7 +558,6 @@ export const useCreateMapAlert = () => {
                 body: JSON.stringify(data),
             });
 
-            console.log("Response status:", response.status);
 
             if (response.ok) {
                 setSuccess(true);
@@ -757,7 +756,6 @@ export const useGetAlertsByPosition = () => {
     const [error, setError] = useState<string | null>(null);
 
     const fetchAlertsByPosition = async (position: GeoPosition) => {
-        console.log("fetchAlertsByPosition called with position:", position);
         setLoading(true);
         setError(null);
         setAlerts([]);
@@ -771,12 +769,9 @@ export const useGetAlertsByPosition = () => {
                 body: JSON.stringify(position),
             });
 
-            console.log("Response status:", response.status);
             const data: { alerts: MapAlert[] | null; error: string | null } = await response.json();
-            console.log("Response data:", data);
 
             if (response.ok) {
-                console.log("Alerts fetched successfully:", data.alerts);
                 setAlerts(data.alerts || []);
             } else {
                 console.error("Error fetching alerts:", data.error);

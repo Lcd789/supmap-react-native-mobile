@@ -1,4 +1,3 @@
-// globalStyles.ts
 import { StyleSheet } from "react-native";
 
 const primaryColor = "#2196F3";
@@ -16,9 +15,6 @@ const shadow = {
     elevation: 5,
 };
 
-/* ===========================
-   Home (index.tsx) styles
-   =========================== */
 export const homeStyles = StyleSheet.create({
     container: {
         flex: 1,
@@ -44,7 +40,6 @@ export const homeStyles = StyleSheet.create({
         color: "red",
         textAlign: "center",
     },
-    // Nouveaux styles pour index.tsx
     floatingButton: {
         position: "absolute",
         bottom: 30,
@@ -64,9 +59,6 @@ export const homeStyles = StyleSheet.create({
     },
 });
 
-/* ===========================
-   Login (login.tsx) styles
-   =========================== */
 export const loginStyles = StyleSheet.create({
     container: {
         flex: 1,
@@ -124,9 +116,6 @@ export const loginStyles = StyleSheet.create({
     },
 });
 
-/* ===========================
-   Profile (profile.tsx) styles
-   =========================== */
 export const profileStyles = StyleSheet.create({
     container: {
         flexGrow: 1,
@@ -240,24 +229,22 @@ export const profileStyles = StyleSheet.create({
         marginLeft: 5,
     },
     retryButton: {
-        backgroundColor: '#007AFF', // Couleur de fond du bouton
+        backgroundColor: '#007AFF',
         paddingVertical: 12,
         paddingHorizontal: 25,
         borderRadius: 8,
-        marginTop: 15, // Espace après le message d'erreur
+        marginTop: 15,
         alignItems: 'center',
         justifyContent: 'center',
     },
     retryButtonText: {
-        color: '#fff', // Couleur du texte du bouton
+        color: '#fff',
         fontSize: 16,
         fontWeight: '600',
     },
 });
 
-/* ===========================
-   Register (register.tsx) styles
-   =========================== */
+
 export const registerStyles = StyleSheet.create({
     container: {
         flex: 1,
@@ -288,9 +275,6 @@ export const registerStyles = StyleSheet.create({
     },
 });
 
-/* ===========================
-   Settings (settings.tsx) styles
-   =========================== */
 export const settingsStyles = StyleSheet.create({
     container: {
         flex: 1,
@@ -299,7 +283,6 @@ export const settingsStyles = StyleSheet.create({
         alignItems: "center",
         padding,
     },
-    // Nouveaux styles pour settings.tsx
     title: {
         fontSize: 24,
         fontWeight: "bold",
@@ -341,9 +324,6 @@ export const settingsStyles = StyleSheet.create({
     },
 });
 
-/* ===========================
-   Button (Button.tsx) styles
-   =========================== */
 export const buttonStyles = StyleSheet.create({
     buttonContainer: {
         width: "90%",
@@ -362,9 +342,6 @@ export const buttonStyles = StyleSheet.create({
     },
 });
 
-/* ===========================
-   ImageViewer (ImageViewer.tsx) styles
-   =========================== */
 export const imageViewerStyles = StyleSheet.create({
     imageContainer: {
         justifyContent: "center",
@@ -376,9 +353,6 @@ export const imageViewerStyles = StyleSheet.create({
     },
 });
 
-/* ===========================
-   RouteInfo (RouteInfo.tsx) styles
-   =========================== */
 export const routeInfoStyles = StyleSheet.create({
     routeInfoContainer: {
         position: "absolute",
@@ -434,9 +408,6 @@ export const routeInfoStyles = StyleSheet.create({
     },
 });
 
-/* ===========================
-   RouteMap (RouteMap.tsx) styles
-   =========================== */
 export const routeMapStyles = StyleSheet.create({
     map: {
         flex: 1,
@@ -457,9 +428,6 @@ export const routeMapStyles = StyleSheet.create({
     },
 });
 
-/* ===========================
-   SearchBar (SearchBar.tsx) styles
-   =========================== */
 export const searchBarStyles = StyleSheet.create({
     searchContainer: {
         position: "absolute",
@@ -554,9 +522,6 @@ export const searchBarStyles = StyleSheet.create({
       
 });
 
-/* ===========================
-   TransportModeSelector (TransportModeSelector.tsx) styles
-   =========================== */
 export const transportModeStyles = StyleSheet.create({
     transportMode: {
         flexDirection: "row",

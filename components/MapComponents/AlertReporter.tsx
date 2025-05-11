@@ -20,7 +20,6 @@ import Animated, {
 import * as Haptics from "expo-haptics";
 import { useCreateMapAlert } from "@/hooks/map/MapHooks";
 
-// Mise à jour du type AlertType pour correspondre à votre modèle
 export type AlertType =
     | "ACCIDENT"
     | "CONSTRUCTION"
@@ -38,7 +37,6 @@ export interface AlertMarker {
   createdByMe?: boolean;
 }
 
-// Icônes et catégories - mise à jour pour correspondre à vos types
 export const categoryIcons: Record<string, string> = {
   POLICE: "https://img.icons8.com/color/96/policeman-male.png",
   TRAFFIC_JAM: "https://img.icons8.com/color/96/traffic-jam.png",
@@ -64,7 +62,6 @@ interface AlertReporterProps {
   navigationLaunched: boolean;
 }
 
-// Composant principal
 export const AlertReporter: React.FC<AlertReporterProps> = ({
                                                               onAddAlert,
                                                               navigationLaunched,
@@ -72,7 +69,6 @@ export const AlertReporter: React.FC<AlertReporterProps> = ({
   const [modalVisible, setModalVisible] = useState(false);
   const { createAlert, loading, error, success } = useCreateMapAlert();
 
-  // animation de la position du bouton
   const buttonOffset = useSharedValue(100);
 
   useEffect(() => {
@@ -82,14 +78,12 @@ export const AlertReporter: React.FC<AlertReporterProps> = ({
     });
   }, [navigationLaunched]);
 
-  // Surveiller le succès de création d'alerte
   useEffect(() => {
     if (success) {
       Alert.alert("Merci !", "Alerte ajoutée avec succès.");
     }
   }, [success]);
 
-  // Surveiller les erreurs de création d'alerte
   useEffect(() => {
     if (error) {
       Alert.alert("Erreur", error);
@@ -122,15 +116,12 @@ export const AlertReporter: React.FC<AlertReporterProps> = ({
 
     const location = await Location.getCurrentPositionAsync({});
 
-    // Créer l'alerte en utilisant votre hook
     await createAlert({
       alertType: type,
       latitude: location.coords.latitude,
       longitude: location.coords.longitude
     });
 
-    // Si succès, mettre également à jour l'interface utilisateur locale
-    console.log("Alert created successfully2:", success);
     if (true) {
       const newMarker: AlertMarker = {
         id: Date.now().toString(),
@@ -149,7 +140,7 @@ export const AlertReporter: React.FC<AlertReporterProps> = ({
         <Animated.View style={animatedStyle}>
           <TouchableOpacity
               onPress={() => setModalVisible(true)}
-              disabled={loading} // Désactiver le bouton pendant le chargement
+              disabled={loading}
           >
             <MaterialIcons name="warning" size={24} color="#fff" />
           </TouchableOpacity>
@@ -172,7 +163,7 @@ export const AlertReporter: React.FC<AlertReporterProps> = ({
                       <TouchableOpacity
                           style={styles.categoryItem}
                           onPress={() => handleSelect(item.value as AlertType)}
-                          disabled={loading} // Désactiver pendant le chargement
+                          disabled={loading}
                       >
                         <Image
                             source={{ uri: categoryIcons[item.value] }}
@@ -186,12 +177,11 @@ export const AlertReporter: React.FC<AlertReporterProps> = ({
               <TouchableOpacity
                   onPress={() => setModalVisible(false)}
                   style={styles.closeButton}
-                  disabled={loading} // Désactiver pendant le chargement
+                  disabled={loading}
               >
                 <Text style={styles.closeText}>Annuler</Text>
               </TouchableOpacity>
 
-              {/* Indicateur de chargement si nécessaire */}
               {loading && (
                   <View style={styles.loadingIndicator}>
                     <Text>Création de l'alerte...</Text>

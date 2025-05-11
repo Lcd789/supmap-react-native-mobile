@@ -74,7 +74,6 @@ const RouteCard = ({
                 onPressOut={() => (scale.value = withSpring(1))}
                 activeOpacity={0.9}
             >
-                {/* Header avec titre et bouton navigation */}
                 <View style={styles.cardHeader}>
                     <Text style={styles.title}>🚗 Itinéraire {index + 1}</Text>
                     <TouchableOpacity
@@ -185,7 +184,6 @@ const RouteSelector: React.FC<RouteSelectorProps> = ({
 
     const isSingle = routes.length === 1;
 
-    // Indicateur de pagination pour le défilement
     const renderPaginationIndicator = () => {
         if (isSingle) return null;
 
@@ -219,15 +217,13 @@ const RouteSelector: React.FC<RouteSelectorProps> = ({
                     viewPosition: 0.5,
                 });
             } catch (error) {
-                console.log("Erreur de défilement:", error);
+                console.warn("Scroll to index failed:", error);
             }
         }
     };
 
-    // Effet pour faire défiler jusqu'à la route sélectionnée
     useEffect(() => {
         if (selectedRouteId && routes.length > 1) {
-            // Léger délai pour s'assurer que la FlatList est rendue
             setTimeout(scrollToSelectedRoute, 100);
         }
     }, [selectedRouteId, routes.length]);
@@ -268,22 +264,19 @@ const RouteSelector: React.FC<RouteSelectorProps> = ({
                         horizontal
                         showsHorizontalScrollIndicator={false}
                         contentContainerStyle={styles.flatListContent}
-                        snapToInterval={screenWidth * 0.65 + 12} // Largeur de la carte + marge
+                        snapToInterval={screenWidth * 0.65 + 12}
                         snapToAlignment="center"
                         decelerationRate="fast"
                         onContentSizeChange={() => {
-                            // Léger délai pour s'assurer que la FlatList est prête
                             setTimeout(scrollToSelectedRoute, 50);
                         }}
                         onScrollToIndexFailed={() => {
-                            // Fallback si le scroll échoue
                             setTimeout(() => {
                                 if (flatListRef.current) {
                                     flatListRef.current.scrollToOffset({
                                         offset: 0,
                                         animated: false,
                                     });
-                                    // Réessayer après le reset
                                     setTimeout(scrollToSelectedRoute, 50);
                                 }
                             }, 100);

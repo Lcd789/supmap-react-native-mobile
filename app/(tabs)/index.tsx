@@ -100,11 +100,6 @@ export default function Home() {
         unitsMetric,
     } = useSettings();
 
-    /**
-     * Recalcule un itinéraire complet depuis la position actuelle (liveCoords),
-     * en géocodant d’abord la position pour passer une adresse à calculateRoute.
-     */
-
     const recalculateRouteFromCurrentPosition = useCallback(async () => {
         if (recalculationLock.current) return;
         if (!liveCoords) {
@@ -144,7 +139,6 @@ export default function Home() {
                 setCurrentStepIndex(0);
                 announcedSteps.current.clear();
 
-                // recentre la carte
                 const b = withIds[0].bounds;
                 const region = {
                     latitude: (b.northeast.lat + b.southwest.lat) / 2,
@@ -233,7 +227,6 @@ export default function Home() {
                     " "
                 );
                 if (instruction) {
-                    console.log("📢 Pré-annonce :", instruction);
                     Speech.stop();
                     Speech.speak(instruction, {
                         language: "fr-FR",
@@ -250,7 +243,6 @@ export default function Home() {
                 if (nextIndex >= selectedRoute.steps.length) {
                     setHasArrived(true);
                     setNavigationLaunched(false);
-                    console.log("🎉 Arrivé à destination !");
                     return;
                 }
 
@@ -269,7 +261,6 @@ export default function Home() {
                         " "
                     );
                     const message = `Dans ${km} kilomètres, ${cleanInstruction}`;
-                    console.log("🔮 Pré-étape suivante :", message);
                     Speech.stop();
                     Speech.speak(message, {
                         language: "fr-FR",
@@ -329,9 +320,6 @@ export default function Home() {
 
         const interval = setInterval(() => {
             if (!recalculationLock.current && isOffRoute()) {
-                console.log(
-                    "⛔️ Off-route détecté – déclenchement recalculateRouteFromCurrentPosition"
-                );
                 recalculateRouteFromCurrentPosition();
             }
         }, 3000);
@@ -358,8 +346,6 @@ export default function Home() {
         if (index !== -1) {
             lastPolylineIndex.current = index;
         }
-        console.log("📍 Live position:", liveCoords);
-        console.log("🔎 Recherche du point le plus proche sur la polyline...");
 
         return selectedRoute.polyline.slice(lastPolylineIndex.current);
     };
@@ -578,14 +564,11 @@ export default function Home() {
     }
 
     const updateStepFromCurrentPosition = () => {
-        console.log("📣 Appel de updateStepFromCurrentPosition()");
         if (!liveCoords || !selectedRoute?.steps) return;
-        console.log("📍 Étape actuelle:", currentStepIndex);
 
         let closestStepIndex = currentStepIndex;
         let minDistance = Infinity;
 
-        // 🔁 On ne teste que les étapes à venir (ou en cours)
         for (
             let index = currentStepIndex;
             index < selectedRoute.steps.length;
@@ -599,9 +582,6 @@ export default function Home() {
             };
 
             const distanceToEnd = getDistance(liveCoords, end);
-            console.log(
-                `🧩 Étape ${index} : dEnd=${distanceToEnd.toFixed(1)}m`
-            );
 
             if (distanceToEnd < minDistance) {
                 minDistance = distanceToEnd;
@@ -609,15 +589,10 @@ export default function Home() {
             }
         }
 
-        console.log("📍 Étape la plus proche détectée:", closestStepIndex);
-
-        // ✅ Mise à jour uniquement si changement
         if (closestStepIndex !== currentStepIndex) {
             setCurrentStepIndex(closestStepIndex);
-            announcedSteps.current.add(closestStepIndex); // ❌ ne jamais re-parler
-            console.log(`📍 Étape mise à jour : ${closestStepIndex}`);
+            announcedSteps.current.add(closestStepIndex);
         } else {
-            console.log("♻️ Étape inchangée, pas de recalage");
         }
     };
 
@@ -1034,8 +1009,6 @@ export default function Home() {
                 onDismiss={(id) => {}}
                 onAlertsUpdate={(newAlerts) => {
                     setAlertMarkers(newAlerts);
-
-                    console.log("Nouvelles alertes reçues:", newAlerts.length);
                 }}
             />
         </SafeAreaView>

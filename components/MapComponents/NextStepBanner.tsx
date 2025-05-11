@@ -34,7 +34,6 @@ export const NextStepBanner: React.FC<NextStepBannerProps> = ({
                 /<[^>]*>/g,
                 " "
             );
-            console.log("🔊 Nouvelle instruction vocale :", instruction);
             Speech.stop();
             Speech.speak(instruction, {
                 language: "fr-FR",

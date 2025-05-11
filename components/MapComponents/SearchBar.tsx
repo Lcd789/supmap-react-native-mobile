@@ -104,7 +104,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                 }));
             }
         } catch (err) {
-            console.error("Erreur autocomplétion :", err);
+            console.error("Autocomplétion error  :", err);
         }
         return [];
     };
@@ -301,7 +301,6 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                 />
             )}
 
-            {/* Étapes */}
             {waypoints.map((wp, index) => (
                 <View
                     key={wp.id}

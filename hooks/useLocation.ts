@@ -57,7 +57,6 @@ export function useLocation(navigationLaunched: boolean) {
     const startTracking = async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
-        console.warn("Permission de localisation refusée");
         return;
       }
 

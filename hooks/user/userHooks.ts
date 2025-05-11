@@ -5,7 +5,6 @@ import {
     UserData,
 } from "../../utils/apiUtils";
 
-// --- Interfaces spécifiques à l'utilisateur ---
 export interface UpdateUserPayload {
     username?: string;
     email?: string;
@@ -18,18 +17,15 @@ export interface LocationData {
     longitude: number;
 }
 
-// Interface pour la réponse de mise à jour d'image (si elle est spécifique)
 export interface UpdateProfileImageResponse
     extends ApiResponse<{ imageUrl?: string; message?: string }> {
     imageUrl?: string;
     message?: string;
 }
 
-// --- Fonctions API ---
 
 /**
- * Récupère les données de l'utilisateur connecté.
- * @returns {Promise<any>} Les données de l'utilisateur.
+ * @returns {Promise<any>}
  */
 export async function getUserDataApi(): Promise<any> {
     try {
@@ -38,12 +34,10 @@ export async function getUserDataApi(): Promise<any> {
             "POST"
         );
         
-        // Vérifier si la réponse contient une erreur
         if (response && response.error) {
             throw new Error(response.error);
         }
         
-        // Vérifier que la réponse contient les données attendues (par exemple, au moins username et email)
         if (response && response.username && response.email) {
             return response as UserData;
         }
@@ -56,14 +50,12 @@ export async function getUserDataApi(): Promise<any> {
 }
 
 /**
- * Met à jour les informations de l'utilisateur connecté.
- * @param data Les champs à mettre à jour.
- * @returns {Promise<any>} Les données utilisateur mises à jour.
+ * @param data
+ * @returns {Promise<any>}
  */
 export async function updateUserApi(
     data: UpdateUserPayload
 ): Promise<UserData> {
-    // Filtrer les clés non vides/null/undefined pour n'envoyer que les modifications
     const payload: Partial<UpdateUserPayload> = {};
     (Object.keys(data) as Array<keyof UpdateUserPayload>).forEach((key) => {
         if (
@@ -75,7 +67,6 @@ export async function updateUserApi(
         }
     });
 
-    console.log("updateUserApi payload:", payload); // Pour le débogage
     if (Object.keys(payload).length === 0) {
         throw new Error("No fields provided to update.");
     }
@@ -86,11 +77,9 @@ export async function updateUserApi(
             "PUT",
             payload
         );
-        console.log("updateUserApi response:", response); // Pour le débogage
+        console.log("updateUserApi response:", response);
         
-        // Vérifier si le texte contient "successfully"
         if (response.includes("successfully")) {
-            // Récupérer les données actualisées de l'utilisateur
             return await getUserDataApi();
         } else {
             throw new Error(response || "Update failed");
@@ -102,9 +91,8 @@ export async function updateUserApi(
 }
 
 /**
- * Met à jour l'image de profil de l'utilisateur.
- * @param imageFile L'objet fichier image (souvent { uri, name, type } dans RN).
- * @returns {Promise<UpdateProfileImageResponse>} Réponse de l'API (peut contenir URL ou message).
+ * @param imageFile
+ * @returns {Promise<UpdateProfileImageResponse>}
  */
 export async function updateProfileImageApi(imageFile: {
     uri: string;
@@ -120,7 +108,6 @@ export async function updateProfileImageApi(imageFile: {
     };
     formData.append("file", fileData);
 
-    // Utiliser l'endpoint /private/user/profile-image comme suggéré dans l'ancien code
     return makeAuthenticatedFormDataRequest<UpdateProfileImageResponse>(
         "/private/user/profile-image",
         "POST",
@@ -129,17 +116,15 @@ export async function updateProfileImageApi(imageFile: {
 }
 
 /**
- * Supprime le compte de l'utilisateur connecté.
- * @returns {Promise<void>} Résout si la suppression réussit.
+ * @returns {Promise<void>}
  */
 export async function deleteProfileApi(): Promise<void> {
     await makeAuthenticatedRequest<void>("/private/user", "DELETE");
 }
 
 /**
- * Met à jour la localisation de l'utilisateur.
- * @param location Coordonnées latitude et longitude.
- * @returns {Promise<UserData>} Les données utilisateur mises à jour (si l'API les renvoie).
+ * @param location
+ * @returns {Promise<UserData>}
  */
 export async function updateUserLocationApi(
     location: LocationData
@@ -169,7 +154,6 @@ export async function rateApp(
             payload
         );
         
-        // Vérifier si la réponse contient une erreur
         if (response && response.error) {
             throw new Error(response.error);
         }

@@ -9,8 +9,7 @@ if (!AUTH_TOKEN_KEY_FROM_ENV) {
 const AUTH_TOKEN_KEY: string = AUTH_TOKEN_KEY_FROM_ENV;
 
 /**
- * Retrieves the authentication token from secure storage.
- * @returns {Promise<string | null>} The auth token or null if not found or an error occurs.
+ * @returns {Promise<string | null>}
  */
 export async function getAuthToken(): Promise<string | null> {
     try {
@@ -23,8 +22,7 @@ export async function getAuthToken(): Promise<string | null> {
 }
 
 /**
- * Checks if the user is currently authenticated based on token presence.
- * @returns {Promise<boolean>} True if an auth token exists, false otherwise.
+ * @returns {Promise<boolean>}
  */
 export async function isAuthenticated(): Promise<boolean> {
     const token = await getAuthToken();
@@ -32,8 +30,7 @@ export async function isAuthenticated(): Promise<boolean> {
 }
 
 /**
- * Stores the authentication token securely.
- * @param {string} token The token to store.
+ * @param {string} token
  * @returns {Promise<void>}
  */
 export async function setAuthToken(token: string): Promise<void> {
@@ -46,7 +43,6 @@ export async function setAuthToken(token: string): Promise<void> {
 }
 
 /**
- * Deletes the authentication token from secure storage.
  * @returns {Promise<void>}
  */
 export async function deleteAuthToken(): Promise<void> {

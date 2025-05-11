@@ -1,4 +1,3 @@
-// hooks/user/AuthContext.tsx
 import React, {
     createContext,
     useContext,
@@ -41,13 +40,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         };
 
         checkAuthStatus();
-    }, []); // Le tableau vide [] assure que cela ne s'exécute qu'une fois au montage
+    }, []);
 
     const login = useCallback(async (token: string) => {
         try {
             await AuthUtils.setAuthToken(token);
             setAuthenticated(true);
-            console.log("User logged in and token stored.");
         } catch (error) {
             console.error("Login failed:", error);
             throw error;
@@ -58,10 +56,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
             await AuthUtils.deleteAuthToken();
             setAuthenticated(false);
-            console.log("User logged out and token deleted.");
         } catch (error) {
             console.error("Logout failed:", error);
-            // Gérer l'erreur
             throw error;
         }
     }, []);
@@ -70,7 +66,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
             await AuthUtils.deleteAuthToken();
             setAuthenticated(false);
-            console.log("User logged out and token deleted.");
             router.replace("/login");
         } catch (error) {
             console.error("Logout failed:", error);
@@ -79,7 +74,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }, [router]);
 
     if (isLoading) {
-        // Optionnel: Vous pouvez retourner un écran de chargement global ici
         return (
             <View
                 style={{

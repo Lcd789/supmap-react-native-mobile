@@ -37,7 +37,7 @@ export const useHistory = () => {
       parsed.slice(-3);
       return parsed;
     } catch (err) {
-      console.error("Erreur de lecture de l'historique :", err);
+      console.error(err);
       return [];
     }
   };
@@ -46,7 +46,7 @@ export const useHistory = () => {
     try {
       await AsyncStorage.removeItem(HISTORY_KEY);
     } catch (err) {
-      console.error("Erreur de suppression de l'historique :", err);
+      console.error(err);
     }
   };
 
