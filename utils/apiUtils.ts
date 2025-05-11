@@ -37,6 +37,7 @@ export interface UserData {
     profileImage?: string;
 }
 
+
 async function makeRequest<T>(
     endpoint: string,
     method: "GET" | "POST" | "PUT" | "DELETE",
@@ -111,7 +112,7 @@ async function makeRequest<T>(
         return (responseData ?? {}) as T;
     } catch (error) {
         if (error instanceof ApiError) {
-            throw error;
+            throw error; 
         }
         console.error(
             `ApiUtils : Network or unexpected error during fetch to ${endpoint}:`,
@@ -152,4 +153,61 @@ export function makeAuthenticatedFormDataRequest<T>(
         );
     }
     return makeRequest<T>(endpoint, method, formData, true, true);
+}
+
+export interface UserData {
+    id: string | number;
+    username: string;
+    email: string;
+    profileImage?: string;
+    role: string;
+
+    navigationPreferences: {
+        avoidTolls: boolean;
+        avoidHighways: boolean;
+        avoidTraffic: boolean;
+        showUsers: boolean;
+        proximityAlertDistance: number;
+        preferredTransportMode: string;
+    };
+
+    favoriteLocations: {
+        name: string;
+        formattedAddress: string;
+        coordinates: {
+            latitude: number;
+            longitude: number;
+        };
+        placeId: string;
+        street: string;
+        city: string;
+        postalCode: string;
+        country: string;
+        locationType: string;
+    }[];
+
+    stats: {
+        totalReportsSubmitted: number;
+        validatedReports: number;
+        totalRoutesCompleted: number;
+        totalDistanceTraveled: number;
+        totalTimeSaved: number;
+        reportsValidatedByOthers: number;
+        rank: string;
+        rankImage: string;
+        error: string | null;
+    };
+
+    notificationSettings: {
+        emailEnabled: boolean;
+    };
+
+    lastKnownLocation: {
+        latitude: number;
+        longitude: number;
+    };
+
+    isValidEmail: boolean;
+    hasVoted: boolean;
+    error: string | null;
 }

@@ -18,8 +18,11 @@ import Animated, {
   Easing,
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
+import * as SecureStore from "expo-secure-store";
 import { useCreateMapAlert } from "@/hooks/map/MapHooks";
+import {router} from "expo-router";
 
+// Mise à jour du type AlertType pour correspondre à votre modèle
 export type AlertType =
     | "ACCIDENT"
     | "CONSTRUCTION"
@@ -37,6 +40,7 @@ export interface AlertMarker {
   createdByMe?: boolean;
 }
 
+// Icônes et catégories - mise à jour pour correspondre à vos types
 export const categoryIcons: Record<string, string> = {
   POLICE: "https://img.icons8.com/color/96/policeman-male.png",
   TRAFFIC_JAM: "https://img.icons8.com/color/96/traffic-jam.png",
@@ -62,12 +66,14 @@ interface AlertReporterProps {
   navigationLaunched: boolean;
 }
 
+// Composant principal
 export const AlertReporter: React.FC<AlertReporterProps> = ({
                                                               onAddAlert,
                                                               navigationLaunched,
                                                             }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const { createAlert, loading, error, success } = useCreateMapAlert();
+
 
   const buttonOffset = useSharedValue(100);
 
@@ -78,12 +84,14 @@ export const AlertReporter: React.FC<AlertReporterProps> = ({
     });
   }, [navigationLaunched]);
 
+  // Surveiller le succès de création d'alerte
   useEffect(() => {
     if (success) {
       Alert.alert("Merci !", "Alerte ajoutée avec succès.");
     }
   }, [success]);
 
+  // Surveiller les erreurs de création d'alerte
   useEffect(() => {
     if (error) {
       Alert.alert("Erreur", error);
@@ -93,7 +101,7 @@ export const AlertReporter: React.FC<AlertReporterProps> = ({
   const animatedStyle = useAnimatedStyle(() => ({
     position: "absolute",
     right: 20,
-    bottom: buttonOffset.value,
+    bottom: buttonOffset.value - 60,
     width: 50,
     height: 50,
     borderRadius: 25,
@@ -103,6 +111,39 @@ export const AlertReporter: React.FC<AlertReporterProps> = ({
     zIndex: 999,
     elevation: 6,
   }));
+
+  // Vérifier si l'utilisateur est connecté
+  const checkAuth = async () => {
+    try {
+      const token = await SecureStore.getItemAsync("authToken");
+
+      if (token) {
+        // L'utilisateur est connecté, ouvrir le modal des alertes
+        setModalVisible(true);
+      } else {
+        // L'utilisateur n'est pas connecté, afficher un message
+        Alert.alert(
+            "Connexion requise",
+            "Vous devez être connecté pour signaler une alerte.",
+            [
+              {
+                text: "Se connecter",
+                onPress: () => {
+                  router.replace("/login")
+                }
+              },
+              {
+                text: "Annuler",
+                style: "cancel"
+              }
+            ]
+        );
+      }
+    } catch (error) {
+      console.error("Erreur lors de la vérification d'authentification:", error);
+      Alert.alert("Erreur", "Une erreur est survenue lors de la vérification de votre compte.");
+    }
+  };
 
   const handleSelect = async (type: AlertType) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -116,12 +157,15 @@ export const AlertReporter: React.FC<AlertReporterProps> = ({
 
     const location = await Location.getCurrentPositionAsync({});
 
+    // Créer l'alerte en utilisant votre hook
     await createAlert({
       alertType: type,
       latitude: location.coords.latitude,
       longitude: location.coords.longitude
     });
 
+    // Si succès, mettre également à jour l'interface utilisateur locale
+    console.log("Alert created successfully2:", success);
     if (true) {
       const newMarker: AlertMarker = {
         id: Date.now().toString(),
@@ -139,8 +183,8 @@ export const AlertReporter: React.FC<AlertReporterProps> = ({
       <>
         <Animated.View style={animatedStyle}>
           <TouchableOpacity
-              onPress={() => setModalVisible(true)}
-              disabled={loading}
+              onPress={checkAuth} // Modification ici : appeler checkAuth au lieu de setModalVisible(true)
+              disabled={loading} // Désactiver le bouton pendant le chargement
           >
             <MaterialIcons name="warning" size={24} color="#fff" />
           </TouchableOpacity>
@@ -163,7 +207,7 @@ export const AlertReporter: React.FC<AlertReporterProps> = ({
                       <TouchableOpacity
                           style={styles.categoryItem}
                           onPress={() => handleSelect(item.value as AlertType)}
-                          disabled={loading}
+                          disabled={loading} // Désactiver pendant le chargement
                       >
                         <Image
                             source={{ uri: categoryIcons[item.value] }}
@@ -177,11 +221,12 @@ export const AlertReporter: React.FC<AlertReporterProps> = ({
               <TouchableOpacity
                   onPress={() => setModalVisible(false)}
                   style={styles.closeButton}
-                  disabled={loading}
+                  disabled={loading} // Désactiver pendant le chargement
               >
                 <Text style={styles.closeText}>Annuler</Text>
               </TouchableOpacity>
 
+              {/* Indicateur de chargement si nécessaire */}
               {loading && (
                   <View style={styles.loadingIndicator}>
                     <Text>Création de l'alerte...</Text>

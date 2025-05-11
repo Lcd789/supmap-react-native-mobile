@@ -56,7 +56,7 @@ export const useUpdateNavigationPreferences = () => {
 
 
 
-export type LocationType = "HOME" | "WORK" | "OTHER";
+export type LocationType = "HOME" | "WORK" | "CUSTOM";
 
 export interface FavoriteLocationUpdate {
     name: string;
@@ -160,6 +160,7 @@ export const useCreateFavoriteLocation = () => {
 
         try {
             const token = await SecureStore.getItemAsync("authToken");
+            console.log("data",JSON.stringify(data))
 
             const response = await fetch(`${API_BASE_URL}/private/map/favorite/location`, {
                 method: "POST",
@@ -172,9 +173,11 @@ export const useCreateFavoriteLocation = () => {
 
             if (response.ok) {
                 setSuccess(true);
+                console.log("Favorite location created successfully");
             } else {
                 const errorText = await response.text();
                 setError(errorText || "Erreur lors de la création du favori.");
+                console.error("Error creating favorite location:", errorText);
             }
         } catch (err) {
             setError("Erreur réseau ou inconnue.");
@@ -548,6 +551,7 @@ export const useCreateMapAlert = () => {
 
         try {
             const token = await SecureStore.getItemAsync("authToken");
+
 
             const response = await fetch(`${API_BASE_URL}/private/map/alert`, {
                 method: "POST",

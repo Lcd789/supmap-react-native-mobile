@@ -186,6 +186,10 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({
                     }
                 }
             } catch (error) {
+                console.error(
+                    "Erreur lors du chargement des paramètres:",
+                    error
+                );
                 resetToDefaults(isAuthenticated);
             } finally {
                 setIsSettingsLoading(false);
@@ -233,7 +237,10 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({
                     JSON.stringify(settings)
                 );
             } catch (error) {
-                console.error("Error saving settings:", error);
+                console.error(
+                    "Erreur lors de l'enregistrement des paramètres:",
+                    error
+                );
             }
         };
 
@@ -256,6 +263,10 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({
             await AsyncStorage.removeItem(HISTORY_STORAGE_KEY);
             return Promise.resolve();
         } catch (error) {
+            console.error(
+                "Erreur lors de la suppression de l'historique de navigation:",
+                error
+            );
             return Promise.reject(error);
         }
     }, []);

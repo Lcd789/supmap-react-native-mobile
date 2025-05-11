@@ -22,6 +22,7 @@ interface RouteMapProps extends MapViewProps {
     alertMarkers?: AlertMarker[];
     nextStepCoord?: { latitude: number; longitude: number } | null;
     animatedHeading?: Animated.SharedValue<string>;
+    destinationCoord?: { latitude: number; longitude: number } | null;
 }
 
 export const RouteMap: React.FC<RouteMapProps> = ({
@@ -33,6 +34,7 @@ export const RouteMap: React.FC<RouteMapProps> = ({
     alertMarkers = [],
     nextStepCoord,
     animatedHeading,
+    destinationCoord,
     ...mapProps
 }) => {
     const { showTraffic } = useSettings();
@@ -127,6 +129,21 @@ export const RouteMap: React.FC<RouteMapProps> = ({
                     title="Étape suivante"
                     pinColor="#2196F3"
                 />
+            )}
+
+            {/* Marqueur d’arrivée en drapeau */}
+            {destinationCoord && (
+                <Marker
+                    coordinate={destinationCoord}
+                    title="Arrivée"
+                    anchor={{ x: 0.5, y: 1 }}
+                >
+                    <Image
+                        source={require("@/assets/images/finish.png")}
+                        style={{ width: 40, height: 40 }}
+                        resizeMode="contain"
+                    />
+                </Marker>
             )}
 
             {alertMarkers.map((marker) => (
